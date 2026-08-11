@@ -700,13 +700,13 @@ class SiteRelatedTestCase(TestCase):
         self.assertEqual(current_site_id(), 1)
 
     def test_nested_override_site_id(self):
+        # 020 done: nestable override (no RecursionError).
         self.assertEqual(current_site_id(), 1)
         with override_current_site_id(2):
             self.assertEqual(current_site_id(), 2)
-            with self.assertRaises(RecursionError):
-                with override_current_site_id(3):
-                    self.assertEqual(current_site_id(), 3)
-                self.assertEqual(current_site_id(), 2)
+            with override_current_site_id(3):
+                self.assertEqual(current_site_id(), 3)
+            self.assertEqual(current_site_id(), 2)
         self.assertEqual(current_site_id(), 1)
 
 

@@ -1,8 +1,8 @@
 """Characterization suite. Flip comments mark Wave 3 PRs.
 
 Locks *current* kernel behaviour (design 2.4) before 020–022c cut over.
-Do not "fix" staff-sees-drafts or nested ``override_current_site_id``
-here — later PRs flip the assertions in this file.
+Do not "fix" staff-sees-drafts here — later PRs flip the assertions
+in this file. 020 nestable ``override_current_site_id`` is done.
 """
 
 import os
@@ -46,11 +46,12 @@ pytestmark = pytest.mark.django_db
 
 @pytest.fixture(autouse=True)
 def _clear_site_override():
-    """020 currently forbids nesting; never leave the thread-local set."""
-    loc = override_current_site_id.thread_local
+    """020 done: reset nestable override stack so tests do not leak."""
+    from mezzanine.utils.sites import _site_id_override_stack
+
+    token = _site_id_override_stack.set(())
     yield
-    if hasattr(loc, "site_id"):
-        del loc.site_id
+    _site_id_override_stack.reset(token)
 
 
 @pytest.fixture
@@ -60,18 +61,13 @@ def rf():
 
 @contextmanager
 def _thread_request(request):
-    from mezzanine.core.request import _thread_local
+    from mezzanine.core.request import _current_request
 
-    previous = getattr(_thread_local, "request", None)
-    _thread_local.request = request
+    token = _current_request.set(request)
     try:
         yield request
     finally:
-        if previous is None:
-            if hasattr(_thread_local, "request"):
-                del _thread_local.request
-        else:
-            _thread_local.request = previous
+        _current_request.reset(token)
 
 
 @contextmanager
@@ -541,36 +537,34 @@ def test_file_view_cross_site_404(author_user, rf):
 
 
 # ---------------------------------------------------------------------------
-# 8. current_site_id resolution + nested override RecursionError
+# 8. current_site_id resolution + nested override (020 done)
 # ---------------------------------------------------------------------------
 
 
 def test_current_site_id_falls_back_to_settings_site_id():
     """Last resort is SITE_ID when override / request / env are absent."""
-    from mezzanine.core.request import _thread_local
+    from mezzanine.core.request import _current_request
 
     old = os.environ.pop("MEZZANINE_SITE_ID", None)
-    had_request = hasattr(_thread_local, "request")
-    previous = getattr(_thread_local, "request", None)
-    if had_request:
-        del _thread_local.request
+    token = _current_request.set(None)
     try:
         assert current_site_id() == settings.SITE_ID
     finally:
         if old is not None:
             os.environ["MEZZANINE_SITE_ID"] = old
-        if had_request:
-            _thread_local.request = previous
+        _current_request.reset(token)
 
 
 def test_current_site_id_mezzanine_env_beats_settings(monkeypatch):
-    from mezzanine.core.request import _thread_local
+    from mezzanine.core.request import _current_request
 
     site2 = Site.objects.create(domain="env-site.example.com", name="Env")
     monkeypatch.setenv("MEZZANINE_SITE_ID", str(site2.pk))
-    if hasattr(_thread_local, "request"):
-        del _thread_local.request
-    assert int(current_site_id()) == site2.pk
+    token = _current_request.set(None)
+    try:
+        assert int(current_site_id()) == site2.pk
+    finally:
+        _current_request.reset(token)
 
 
 @override_settings(ALLOWED_HOSTS=["*"])
@@ -619,13 +613,12 @@ def test_current_site_id_override_beats_request_attr(rf):
 
 
 def test_nested_override_current_site_id_raises_recursion_error():
-    """020: nestable override (flip this assertion; drop RecursionError)."""
+    """020 done: nestable override (no RecursionError)."""
     assert current_site_id() == settings.SITE_ID
     with override_current_site_id(2):
         assert current_site_id() == 2
-        with pytest.raises(RecursionError):
-            with override_current_site_id(3):
-                assert current_site_id() == 3
+        with override_current_site_id(3):
+            assert current_site_id() == 3
         assert current_site_id() == 2
     assert current_site_id() == settings.SITE_ID
 
