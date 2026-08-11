@@ -43,28 +43,51 @@ def SuperUserFactory(*, password=DEFAULT_PASSWORD, **kwargs):
 
 def AuthorFactory(*, password=DEFAULT_PASSWORD, site_id=None, **kwargs):
     """
-    Non-superuser staff user with ``SitePermission`` on the current site.
-
-    This is the Wave 3 "author" stand-in until ``SiteRole`` exists (PR-023a).
+    Non-superuser staff user with a ``SiteRole`` of ``author`` on
+    the current site.
     """
     kwargs.setdefault("is_staff", True)
     kwargs.setdefault("is_superuser", False)
     kwargs.setdefault("username", f"author-{next(_user_seq)}")
     user = UserFactory(password=password, **kwargs)
-    grant_site_permission(user, site_id=site_id)
+    grant_site_permission(user, site_id=site_id, role="author")
     return user
 
 
-def grant_site_permission(user, site_id=None):
-    """Attach ``SitePermission`` for ``site_id`` (default: current site)."""
-    from mezzanine.core.models import SitePermission
+def EditorFactory(*, password=DEFAULT_PASSWORD, site_id=None, **kwargs):
+    """Staff user with an ``editor`` SiteRole."""
+    kwargs.setdefault("is_staff", True)
+    kwargs.setdefault("is_superuser", False)
+    kwargs.setdefault("username", f"editor-{next(_user_seq)}")
+    user = UserFactory(password=password, **kwargs)
+    grant_site_permission(user, site_id=site_id, role="editor")
+    return user
+
+
+def PublisherFactory(*, password=DEFAULT_PASSWORD, site_id=None, **kwargs):
+    """Staff user with a ``publisher`` SiteRole (can issue preview tokens)."""
+    kwargs.setdefault("is_staff", True)
+    kwargs.setdefault("is_superuser", False)
+    kwargs.setdefault("username", f"publisher-{next(_user_seq)}")
+    user = UserFactory(password=password, **kwargs)
+    grant_site_permission(user, site_id=site_id, role="publisher")
+    return user
+
+
+def grant_site_permission(user, site_id=None, role="editor"):
+    """Attach a ``SiteRole`` for ``site_id`` (default: current site)."""
+    from django.contrib.sites.models import Site
+
+    from mezzanine.core.models import SiteRole
     from mezzanine.utils.sites import current_site_id
 
     if site_id is None:
         site_id = current_site_id()
-    perm, _created = SitePermission.objects.get_or_create(user=user)
-    perm.sites.add(site_id)
-    return perm
+    site = Site.objects.get(pk=site_id)
+    role_row, _created = SiteRole.objects.get_or_create(
+        user=user, site=site, defaults={"role": role}
+    )
+    return role_row
 
 
 def PageFactory(**kwargs):

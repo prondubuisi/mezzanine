@@ -20,18 +20,21 @@ from django.template.response import TemplateResponse
 from django.urls import reverse
 from django.utils.translation import gettext_lazy as _
 from django.views.decorators.csrf import requires_csrf_token
+from django.views.decorators.http import require_POST
 
 from mezzanine.conf import settings
 from mezzanine.core.forms import get_edit_form
-from mezzanine.core.models import Displayable, SitePermission
+from mezzanine.core.capabilities import user_can_edit
+from mezzanine.core.models import Displayable, SiteRole
 from mezzanine.utils.sites import has_site_permission
 from mezzanine.utils.urls import next_url
-from mezzanine.utils.views import is_editable, paginate
+from mezzanine.utils.views import paginate
 
 mimetypes.init()
 
 
 @staff_member_required
+@require_POST
 def set_site(request):
     """
     Put the selected site ID into the session - posted to from
@@ -39,11 +42,9 @@ def set_site(request):
     site ID is then used in favour of the current request's
     domain in ``mezzanine.core.managers.CurrentSiteManager``.
     """
-    site_id = int(request.GET["site_id"])
+    site_id = int(request.POST["site_id"])
     if not request.user.is_superuser:
-        try:
-            SitePermission.objects.get(user=request.user, sites=site_id)
-        except SitePermission.DoesNotExist:
+        if not SiteRole.objects.filter(user=request.user, site_id=site_id).exists():
             raise PermissionDenied
     request.session["site_id"] = site_id
     admin_url = reverse("admin:index")
@@ -80,7 +81,7 @@ def edit(request):
     form = get_edit_form(
         obj, request.POST["fields"], data=request.POST, files=request.FILES
     )
-    if not (is_editable(obj, request) and has_site_permission(request.user)):
+    if not user_can_edit(request.user, obj):
         response = _("Permission denied")
     elif form.is_valid():
         form.save()

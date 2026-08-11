@@ -30,7 +30,7 @@ from mezzanine.core.management.commands.createdb import (
 from mezzanine.core.models import (
     PREVIEW_ROLE_STAFF,
     PreviewToken,
-    SitePermission,
+    SiteRole,
 )
 from mezzanine.utils.cache import (
     cache_get,
@@ -94,18 +94,17 @@ class SitePermissionMiddleware(MiddlewareMixin):
         if request.user.is_superuser:
             has_site_permission = True
         elif request.user.is_staff:
-            lookup = {"user": request.user, "sites": current_site_id()}
-            try:
-                SitePermission.objects.get(**lookup)
-            except SitePermission.DoesNotExist:
+            if SiteRole.objects.filter(
+                user=request.user, site_id=current_site_id()
+            ).exists():
+                has_site_permission = True
+            else:
                 admin_index = reverse("admin:index")
                 if request.path.startswith(admin_index):
                     logout(request)
                     view_func = admin.site.login
                     extra_context = {"no_site_permission": True}
                     return view_func(request, extra_context=extra_context)
-            else:
-                has_site_permission = True
         request.user.has_site_permission = has_site_permission
 
 

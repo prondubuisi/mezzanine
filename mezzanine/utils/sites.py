@@ -86,13 +86,10 @@ def override_current_site_id(site_id):
 
 def has_site_permission(user):
     """
-    Checks if a staff user has staff-level access for the current site.
-    The actual permission lookup occurs in ``SitePermissionMiddleware``
-    which then marks the request with the ``has_site_permission`` flag,
-    so that we only query the db once per request, so this function
-    serves as the entry point for everything else to check access. We
-    also fall back to an ``is_staff`` check if the middleware is not
-    installed, to ease migration.
+    Checks if a staff user has a ``SiteRole`` for the current site
+    (or is a superuser). ``SitePermissionMiddleware`` caches the result
+    on ``user.has_site_permission`` so we only query once per request.
+    Falls back to ``is_staff`` if the middleware is not installed.
     """
     if not middlewares_or_subclasses_installed([SITE_PERMISSION_MIDDLEWARE]):
         return user.is_staff and user.is_active
