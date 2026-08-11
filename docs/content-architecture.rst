@@ -542,3 +542,14 @@ as active in the navigation, and to generate breadcrumbs for the
 
 An example of this setup is Mezzanine's blog application, which does not
 use :class:`.Page` content types, and is just a regular Django app.
+
+Kernel contracts
+================
+
+The mixin kernel — :class:`.SiteRelated` → :class:`.Slugged` →
+:class:`.Displayable`, the :class:`.Page` tree, page processors,
+``current_site_id``, and ``published()`` — is locked by characterization
+tests in ``tests/test_kernel_contracts.py``. Those tests record *current*
+behaviour, including staff-sees-drafts and a non-nestable
+``override_current_site_id``. Wave 3 PRs flip assertions in that file
+rather than rewriting the contract surface.
