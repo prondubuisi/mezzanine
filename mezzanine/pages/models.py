@@ -127,7 +127,12 @@ class Page(BasePage, ContentTyped):
                     kwargs["preview"] = preview
                 with override_current_site_id(self.site_id):
                     pages = Page.objects.with_ascendants_for_slug(self.slug, **kwargs)
-                self._ascendants = pages[0]._ascendants
+                if pages:
+                    self._ascendants = pages[0]._ascendants
+                else:
+                    # Draft / unpublished chain: fall through to the
+                    # parent-walk below instead of crashing.
+                    self._ascendants = []
             else:
                 self._ascendants = []
         if not self._ascendants:

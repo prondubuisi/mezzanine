@@ -3,7 +3,7 @@ Test object factories.
 
 Callables, not factory_boy — keep the testing extra lean. Wave 3 tests
 (PR-019+) should build on these instead of ``Model.objects.create``.
-Do not rewrite the existing unittest suite onto them in this PR.
+Page/BlogPost factories default to Published; the model default is Draft.
 """
 
 from itertools import count
@@ -68,17 +68,21 @@ def grant_site_permission(user, site_id=None):
 
 
 def PageFactory(**kwargs):
+    from mezzanine.core.models import CONTENT_STATUS_PUBLISHED
     from mezzanine.pages.models import Page
 
     kwargs.setdefault("title", f"Page {next(_page_seq)}")
+    kwargs.setdefault("status", CONTENT_STATUS_PUBLISHED)
     return Page.objects.create(**kwargs)
 
 
 def RichTextPageFactory(**kwargs):
+    from mezzanine.core.models import CONTENT_STATUS_PUBLISHED
     from mezzanine.pages.models import RichTextPage
 
     kwargs.setdefault("title", f"Rich text page {next(_page_seq)}")
     kwargs.setdefault("content", "<p>Content</p>")
+    kwargs.setdefault("status", CONTENT_STATUS_PUBLISHED)
     return RichTextPage.objects.create(**kwargs)
 
 

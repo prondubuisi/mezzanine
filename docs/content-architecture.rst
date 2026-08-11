@@ -567,6 +567,10 @@ queryset unless ``preview`` covers that object. ``for_user``
 stays on the signature because :meth:`PageManager.published` uses
 it for ``login_required``; it no longer means "staff see drafts."
 
+New ``Displayable`` rows default to **Draft**. Existing published
+rows are not rewritten. The public URL 404s until an editor
+publishes, or a preview token is issued.
+
 ``published(for_user=)`` call sites (PR-022c)
 --------------------------------------------
 
