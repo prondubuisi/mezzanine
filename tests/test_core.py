@@ -26,6 +26,7 @@ from django.utils.html import strip_tags
 from django.utils.timezone import datetime, now, timedelta
 from requirements import parse
 
+from mezzanine.blog.models import BlogPost
 from mezzanine.conf import settings
 from mezzanine.core.admin import BaseDynamicInlineAdmin
 from mezzanine.core.fields import MultiChoiceField, RichTextField
@@ -309,6 +310,50 @@ class CoreTests(TestCase):
 
         querystring = urlencode([("u", static("test/image.jpg"))])
         self._static_proxy(querystring)
+
+    def test_displayable_links_js_anonymous_denied(self):
+        """
+        CVE-2025-6050: anonymous users must not receive the TinyMCE link list.
+        """
+        self.client.logout()
+        response = self.client.get(reverse("displayable_links_js"))
+        self.assertIn(response.status_code, (302, 403))
+
+    def test_displayable_links_js_staff_json(self):
+        """
+        CVE-2025-6050: staff receive application/json, never text/html.
+        """
+        self.client.login(username=self._username, password=self._password)
+        response = self.client.get(reverse("displayable_links_js"))
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response["Content-Type"].split(";")[0], "application/json")
+        data = response.json()
+        self.assertIsInstance(data, list)
+
+    @skipUnless("mezzanine.blog" in settings.INSTALLED_APPS, "blog app required")
+    def test_displayable_links_js_script_title_not_html(self):
+        """
+        CVE-2025-6050: a script in a blog title is JSON data, not HTML.
+        """
+        self.client.login(username=self._username, password=self._password)
+        xss_title = "</script><script>alert(1)</script>"
+        BlogPost.objects.create(
+            title=xss_title, user=self._user, status=CONTENT_STATUS_PUBLISHED
+        )
+        response = self.client.get(reverse("displayable_links_js"))
+        self.assertEqual(response.status_code, 200)
+        content_type = response["Content-Type"]
+        self.assertNotIn("text/html", content_type)
+        self.assertEqual(content_type.split(";")[0], "application/json")
+        body = response.content.decode("utf-8").lstrip()
+        self.assertTrue(body.startswith("[") or body.startswith("{"))
+        data = response.json()
+        self.assertIsInstance(data, list)
+        titles = [item.get("title", "") for item in data]
+        self.assertTrue(
+            any(xss_title in title for title in titles),
+            "XSS title missing from JSON link list: %r" % titles,
+        )
 
     def _get_csrftoken(self, response):
         csrf = re.findall(
