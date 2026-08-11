@@ -105,7 +105,8 @@ def is_spam_akismet(request, form, url):
     headers = {"User-Agent": "Django/%s | Mezzanine/%s" % versions}
     try:
         response = urlopen(
-            Request(api_url, urlencode(data).encode("utf-8"), headers)
+            Request(api_url, urlencode(data).encode("utf-8"), headers),
+            timeout=5,
         ).read()
     except Exception:
         # Key is set (we returned earlier if not). Fail closed.

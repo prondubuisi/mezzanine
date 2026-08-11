@@ -310,6 +310,7 @@ class GenericTests(TestCase):
             sent.full_url,
             "https://testkey.rest.akismet.com/1.1/comment-check",
         )
+        self.assertEqual(mock_urlopen.call_args.kwargs.get("timeout"), 5)
 
     @override_settings(AKISMET_API_KEY="testkey")
     @patch("mezzanine.utils.views.urlopen")
@@ -321,6 +322,18 @@ class GenericTests(TestCase):
         request = self._request_factory.post("/comment/", {"comment": "x"})
         request.META["REMOTE_ADDR"] = "127.0.0.1"
         self.assertTrue(is_spam_akismet(request, self._akismet_form(), "/post/"))
+
+    @override_settings(AKISMET_API_KEY="testkey")
+    @patch("mezzanine.utils.views.urlopen")
+    def test_is_spam_akismet_timeout_is_spam(self, mock_urlopen):
+        """
+        A hung Akismet times out and is treated as spam.
+        """
+        mock_urlopen.side_effect = TimeoutError("akismet hung")
+        request = self._request_factory.post("/comment/", {"comment": "x"})
+        request.META["REMOTE_ADDR"] = "127.0.0.1"
+        self.assertTrue(is_spam_akismet(request, self._akismet_form(), "/post/"))
+        self.assertEqual(mock_urlopen.call_args.kwargs.get("timeout"), 5)
 
     @override_settings(AKISMET_API_KEY="testkey")
     @patch("mezzanine.utils.views.urlopen")
