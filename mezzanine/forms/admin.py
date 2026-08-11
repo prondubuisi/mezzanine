@@ -92,6 +92,8 @@ class FormAdmin(PageAdmin):
     form entries as CSV and downloading files uploaded via the forms app.
     """
 
+    change_form_template = "admin/forms/change_form.html"
+
     class Media:
         css = {"all": (static("mezzanine/css/admin/form.css"),)}
 

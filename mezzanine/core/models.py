@@ -1,5 +1,12 @@
+import hashlib
+import hmac
+import secrets
+from datetime import timedelta
+
 from django.apps import apps
 from django.contrib.contenttypes.fields import GenericForeignKey
+from django.contrib.contenttypes.models import ContentType
+from django.contrib.sites.models import Site
 from django.db import models
 from django.db.models.base import ModelBase
 from django.template.defaultfilters import truncatewords_html
@@ -612,3 +619,109 @@ class SitePermission(models.Model):
     class Meta:
         verbose_name = _("Site permission")
         verbose_name_plural = _("Site permissions")
+
+
+PREVIEW_ROLE_ANON = "anon"
+PREVIEW_ROLE_STAFF = "staff"
+PREVIEW_ROLE_CHOICES = (
+    (PREVIEW_ROLE_ANON, "anon"),
+    (PREVIEW_ROLE_STAFF, "staff"),
+)
+PREVIEW_TOKEN_DEFAULT_TTL = timedelta(hours=24)
+
+
+class PreviewToken(models.Model):
+    """
+    Opaque, hashed preview capability for a single Displayable.
+
+    The raw token is returned once from ``issue()`` and never stored.
+    Presentation compares with ``hmac.compare_digest`` on the sha256 hex.
+    """
+
+    token_hash = models.CharField(max_length=64, unique=True)
+    content_type = models.ForeignKey(
+        ContentType, on_delete=models.CASCADE, related_name="preview_tokens"
+    )
+    object_pk = models.TextField()
+    site = models.ForeignKey(
+        Site, on_delete=models.CASCADE, related_name="preview_tokens"
+    )
+    as_role = models.CharField(
+        max_length=8, choices=PREVIEW_ROLE_CHOICES, default=PREVIEW_ROLE_ANON
+    )
+    created_by = models.ForeignKey(
+        user_model_name,
+        on_delete=models.CASCADE,
+        related_name="preview_tokens",
+    )
+    expires_at = models.DateTimeField()
+    last_seen_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        verbose_name = _("Preview token")
+        verbose_name_plural = _("Preview tokens")
+
+    def __str__(self):
+        return "%s:%s" % (self.content_type, self.object_pk)
+
+    def covers(self, model):
+        """True when this token's content type is exactly ``model``."""
+        return self.content_type.model_class() is model
+
+    @staticmethod
+    def hash_token(raw):
+        return hashlib.sha256(raw.encode("utf-8")).hexdigest()
+
+    @classmethod
+    def issue(
+        cls, obj, created_by, as_role=PREVIEW_ROLE_ANON, expires_at=None, site=None
+    ):
+        """
+        Persist a sha256 of a fresh token and return the raw secret once.
+        """
+        if as_role not in (PREVIEW_ROLE_ANON, PREVIEW_ROLE_STAFF):
+            raise ValueError("as_role must be 'anon' or 'staff'")
+        raw = secrets.token_urlsafe(32)
+        if expires_at is None:
+            expires_at = now() + PREVIEW_TOKEN_DEFAULT_TTL
+        if site is None:
+            site_id = getattr(obj, "site_id", None) or current_site_id()
+            site = Site.objects.get(pk=site_id)
+        if isinstance(obj, Displayable):
+            model = base_concrete_model(Displayable, obj)
+        else:
+            model = obj.__class__
+        cls.objects.create(
+            token_hash=cls.hash_token(raw),
+            content_type=ContentType.objects.get_for_model(model),
+            object_pk=str(obj.pk),
+            site=site,
+            as_role=as_role,
+            created_by=created_by,
+            expires_at=expires_at,
+        )
+        return raw
+
+    @classmethod
+    def lookup(cls, raw):
+        """
+        Hash ``raw`` and return the matching row, or ``None``.
+
+        Uses ``hmac.compare_digest`` on the hex even after the unique
+        lookup so presentation never does a raw ``==`` on the secret.
+        """
+        if not raw:
+            return None
+        incoming_hash = cls.hash_token(raw)
+        try:
+            token = cls.objects.select_related("content_type", "site").get(
+                token_hash=incoming_hash
+            )
+        except cls.DoesNotExist:
+            return None
+        try:
+            if not hmac.compare_digest(token.token_hash, incoming_hash):
+                return None
+        except (TypeError, ValueError):
+            return None
+        return token

@@ -397,7 +397,7 @@ def test_page_middleware_blog_post_uses_blog_listing_page(rf):
 
 
 # ---------------------------------------------------------------------------
-# 6. published() split + no PreviewToken
+# 6. published() split + PreviewToken (022b)
 # ---------------------------------------------------------------------------
 
 
@@ -458,10 +458,12 @@ def test_anon_get_draft_is_404(rf):
     assert response is None
 
 
-def test_no_preview_token_model():
-    """022b: PreviewToken model is introduced."""
-    with pytest.raises(LookupError):
-        apps.get_model("core", "PreviewToken")
+def test_preview_token_model_exists():
+    """022b: PreviewToken is a hashed DB capability, not a signed blob."""
+    PreviewToken = apps.get_model("core", "PreviewToken")
+    assert PreviewToken._meta.get_field("token_hash").max_length == 64
+    assert PreviewToken._meta.get_field("token_hash").unique
+    assert PreviewToken._meta.get_field("as_role").max_length == 8
 
 
 # ---------------------------------------------------------------------------

@@ -1,0 +1,6 @@
+{% load i18n admin_urls %}
+{% if original %}
+<li>
+    <a href="{% url opts|admin_urlname:'view_draft' original.pk|admin_urlquote %}" class="viewdraftlink">{% trans "View draft" %}</a>
+</li>
+{% endif %}
