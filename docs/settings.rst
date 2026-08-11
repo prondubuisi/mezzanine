@@ -135,15 +135,6 @@ Key for `http://akismet.com <http://akismet.com>`_ spam filtering service. Used 
 
 Default: ``''``
 
-.. _BITLY_ACCESS_TOKEN:
-
-``BITLY_ACCESS_TOKEN``
-----------------------
-
-Access token for `http://bit.ly <http://bit.ly>`_ URL shortening service.
-
-Default: ``''``
-
 .. _BLOG_POST_PER_PAGE:
 
 ``BLOG_POST_PER_PAGE``
@@ -215,33 +206,6 @@ Default: ``False``
 If ``True``, built-in comments are approved by default.
 
 Default: ``True``
-
-.. _COMMENTS_DISQUS_API_PUBLIC_KEY:
-
-``COMMENTS_DISQUS_API_PUBLIC_KEY``
-----------------------------------
-
-Public key for `http://disqus.com <http://disqus.com>`_ developer API
-
-Default: ``''``
-
-.. _COMMENTS_DISQUS_API_SECRET_KEY:
-
-``COMMENTS_DISQUS_API_SECRET_KEY``
-----------------------------------
-
-Secret key for `http://disqus.com <http://disqus.com>`_ developer API
-
-Default: ``''``
-
-.. _COMMENTS_DISQUS_SHORTNAME:
-
-``COMMENTS_DISQUS_SHORTNAME``
------------------------------
-
-Shortname for the `http://disqus.com <http://disqus.com>`_ comments service.
-
-Default: ``''``
 
 .. _COMMENTS_NOTIFICATION_EMAILS:
 
@@ -386,15 +350,6 @@ Default: ``''``
 If ``True``, website forms will use HTML5 features.
 
 Default: ``False``
-
-.. _GOOGLE_ANALYTICS_ID:
-
-``GOOGLE_ANALYTICS_ID``
------------------------
-
-Google Analytics ID (`http://www.google.com/analytics/ <http://www.google.com/analytics/>`_)
-
-Default: ``''``
 
 .. _HOST_THEMES:
 
@@ -709,7 +664,7 @@ Default: ``4``
 
 Sequence of setting names available within templates.
 
-Default: ``('ACCOUNTS_APPROVAL_REQUIRED', 'ACCOUNTS_VERIFICATION_REQUIRED', 'ADMIN_MENU_COLLAPSED', 'BITLY_ACCESS_TOKEN', 'BLOG_USE_FEATURED_IMAGE', 'COMMENTS_DISQUS_SHORTNAME', 'COMMENTS_NUM_LATEST', 'COMMENTS_DISQUS_API_PUBLIC_KEY', 'COMMENTS_DISQUS_API_SECRET_KEY', 'COMMENTS_USE_RATINGS', 'DEV_SERVER', 'FORMS_USE_HTML5', 'GRAPPELLI_INSTALLED', 'GOOGLE_ANALYTICS_ID', 'JQUERY_FILENAME', 'JQUERY_UI_FILENAME', 'LOGIN_URL', 'LOGOUT_URL', 'SITE_TITLE', 'SITE_TAGLINE', 'USE_L10N', 'USE_MODELTRANSLATION')``
+Default: ``('ACCOUNTS_APPROVAL_REQUIRED', 'ACCOUNTS_VERIFICATION_REQUIRED', 'ADMIN_MENU_COLLAPSED', 'BLOG_USE_FEATURED_IMAGE', 'COMMENTS_NUM_LATEST', 'COMMENTS_USE_RATINGS', 'DEV_SERVER', 'FORMS_USE_HTML5', 'GRAPPELLI_INSTALLED', 'JQUERY_FILENAME', 'JQUERY_UI_FILENAME', 'LOGIN_URL', 'LOGOUT_URL', 'SITE_TITLE', 'SITE_TAGLINE', 'USE_L10N', 'USE_MODELTRANSLATION')``
 
 .. _THUMBNAILS_DIR_NAME:
 

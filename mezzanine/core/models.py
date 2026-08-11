@@ -1,7 +1,3 @@
-from json import loads
-from urllib.parse import urlencode
-from urllib.request import urlopen
-
 from django.apps import apps
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.db import models
@@ -332,42 +328,30 @@ class Displayable(Slugged, MetaData, TimeStamped):
 
     def set_short_url(self):
         """
-        Generates the ``short_url`` attribute if the model does not
-        already have one. Used by the ``set_short_url_for`` template
-        tag.
+        Ensure ``short_url`` is available for templates.
 
-        If no sharing service is defined (bitly is the one implemented,
-        but others could be by overriding ``generate_short_url``), the
-        ``SHORT_URL_UNSET`` marker gets stored in the DB. In this case,
-        ``short_url`` is temporarily (eg not persisted) set to
-        host + ``get_absolute_url`` - this is so that we don't
-        permanently store ``get_absolute_url``, since it may change
-        over time.
+        No shortening service is called. A stored value is kept; the
+        legacy ``"unset"`` marker (previously written when bit.ly was
+        unavailable) is treated as empty. Otherwise the full absolute
+        URL is used in memory and is not persisted.
         """
-        if not self.short_url or self.short_url == SHORT_URL_UNSET:
-            self.short_url = self.generate_short_url()
+        if self.short_url and self.short_url != SHORT_URL_UNSET:
+            return
+        generated = self.generate_short_url()
+        if generated and generated != SHORT_URL_UNSET:
+            self.short_url = generated
             self.save()
-        if self.short_url == SHORT_URL_UNSET:
+        else:
             self.short_url = self.get_absolute_url_with_host()
 
     def generate_short_url(self):
         """
-        Returns a new short URL generated using bit.ly if credentials for the
-        service have been specified.
-        """
-        from mezzanine.conf import settings
+        Return a shortened URL, or ``None``.
 
-        if settings.BITLY_ACCESS_TOKEN:
-            url = "https://api-ssl.bit.ly/v3/shorten?%s" % urlencode(
-                {
-                    "access_token": settings.BITLY_ACCESS_TOKEN,
-                    "uri": self.get_absolute_url_with_host(),
-                }
-            )
-            response = loads(urlopen(url).read().decode("utf-8"))
-            if response["status_code"] == 200:
-                return response["data"]["url"]
-        return SHORT_URL_UNSET
+        Previously called bit.ly. No network request is made. Subclasses
+        may override. The ``"unset"`` sentinel is no longer written.
+        """
+        return None
 
     def _get_next_or_previous_by_publish_date(self, is_next, **kwargs):
         """

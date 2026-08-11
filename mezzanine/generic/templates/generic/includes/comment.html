@@ -8,13 +8,9 @@
     {% editable comment.is_public comment.is_removed %}
     {% if not comment.is_removed and comment.is_public or request.user.is_staff %}
     {% if comment.url %}
-    <a href="{{ comment.url }}">
-        <img class="pull-left media-object" src="{% gravatar_url comment.email %}">
-    </a>
     <div class="media-body">
         <h4 class="media-heading"><a href="{{ comment.url }}">{{ comment.user_name }}</a>
     {% else %}
-    <img class="pull-left media-object" src="{% gravatar_url comment.email %}">
     <div class="media-body">
         <h4 class="media-heading">{{ comment.user_name }}
     {% endif %}

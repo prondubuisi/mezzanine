@@ -169,12 +169,6 @@ within Mezzanine that are added to ``settings.INSTALLED_APPS``.
 .. automodule:: mezzanine.generic.templatetags.comment_tags
    :members:
 
-``mezzanine.generic.templatetags.disqus_tags``
------------------------------------------------
-
-.. automodule:: mezzanine.generic.templatetags.disqus_tags
-   :members:
-
 ``mezzanine.generic.templatetags.keyword_tags``
 -----------------------------------------------
 

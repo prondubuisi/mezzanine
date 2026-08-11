@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load i18n mezzanine_tags blog_tags keyword_tags disqus_tags %}
+{% load i18n mezzanine_tags blog_tags keyword_tags %}
 
 {% block meta_title %}{% if page %}{{ page.meta_title }}{% else %}{% trans "Blog" %}{% endif %}{% endblock %}
 
@@ -130,16 +130,9 @@
     <a href="{{ blog_post.get_absolute_url }}">{% trans "read more" %}</a>
     {% if blog_post.allow_comments %}
     /
-    {% if settings.COMMENTS_DISQUS_SHORTNAME %}
-    <a href="{{ blog_post.get_absolute_url }}#disqus_thread"
-        data-disqus-identifier="{% disqus_id_for blog_post %}">
-        {% trans "Comments" %}
-    </a>
-    {% else %}
     <a href="{{ blog_post.get_absolute_url }}#comments">
         {% blocktrans count comments_count=blog_post.comments_count %}{{ comments_count }} comment{% plural %}{{ comments_count }} comments{% endblocktrans %}
     </a>
-    {% endif %}
     {% endif %}
     </p>
 </div>
@@ -147,10 +140,6 @@
 {% endfor %}
 
 {% pagination_for blog_posts %}
-
-{% if settings.COMMENTS_DISQUS_SHORTNAME %}
-{% include "generic/includes/disqus_counts.html" %}
-{% endif %}
 
 {% endblock %}
 

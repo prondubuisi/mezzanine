@@ -61,13 +61,6 @@ the above instructions:
 Note that various systems may contain
 `specialized instructions for installing Pillow`_.
 
-Themes
-======
-
-A handful of attractive `Free Themes`_ are available thanks to
-`@abhinavsohani`_.
-
-
 Browser Support
 ===============
 
@@ -460,8 +453,6 @@ certain sites.
 * `Caffeinated Lifestyle <https://caffeinatedlifestyle.com>`_
 * `The National: New Australian Art <https://the-national.com.au>`_
 
-.. _`@abhinavsohani`: https://twitter.com/abhinavsohani
-.. _`@joshcartme`: https://twitter.com/joshcartme
 .. _`Mezzanine Grid on djangopackages.com`: http://www.djangopackages.com/grids/g/mezzanine/
 .. _`Cartridge`: http://cartridge.jupo.org/
 .. _`Drum`: https://github.com/stephenmcd/drum
