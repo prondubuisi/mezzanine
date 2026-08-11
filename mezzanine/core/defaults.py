@@ -459,10 +459,16 @@ register_setting(
     name="RICHTEXT_FILTERS",
     description=_(
         "List of dotted paths to functions, called in order, on a "
-        "``RichTextField`` value before it is rendered to the template."
+        "``RichTextField`` value before it is rendered to the template. "
+        "The default pipeline thumbnails images, then sanitizes with "
+        "bleach (``mezzanine.utils.html.escape``) so unsafe HTML is "
+        "stripped on read after any BeautifulSoup rewrite."
     ),
     editable=False,
-    default=("mezzanine.utils.html.thumbnails",),
+    default=(
+        "mezzanine.utils.html.thumbnails",
+        "mezzanine.utils.html.escape",
+    ),
 )
 
 RICHTEXT_FILTER_LEVEL_HIGH = 1

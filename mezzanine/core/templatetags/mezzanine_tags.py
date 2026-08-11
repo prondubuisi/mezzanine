@@ -480,15 +480,21 @@ def richtext_filters(content):
     """
     Takes a value edited via the WYSIWYG editor, and passes it through
     each of the functions specified by the RICHTEXT_FILTERS setting.
+
+    The default pipeline applies ``thumbnails`` then ``escape`` (bleach)
+    so unsafe HTML is stripped on read, after any BeautifulSoup rewrite.
+
+    A custom filter that returns a value that is not ``SafeText`` emits a
+    ``FutureWarning`` and the result is ``mark_safe``'d. This does not
+    raise — operators on this tree have custom filters. A later release
+    will raise instead.
     """
     for filter_name in settings.RICHTEXT_FILTERS:
         filter_func = import_dotted_path(filter_name)
         content = filter_func(content)
         if not isinstance(content, SafeText):
-            # raise TypeError(
-            # filter_name + " must mark it's return value as safe. See "
-            # "https://docs.djangoproject.com/en/stable/topics/security/"
-            # "#cross-site-scripting-xss-protection")
+            # Wave 1 (PR-005b) will raise TypeError here. Wave 0 only warns
+            # so existing custom filters keep working.
             import warnings
 
             warnings.warn(

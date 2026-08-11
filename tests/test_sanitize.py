@@ -1,5 +1,5 @@
 """
-XSS / sanitize regression suite (Wave 0 / PR-003).
+XSS / sanitize regression suite (Wave 0 / PR-003 + PR-004).
 
 Asserts save-time bleach on RichTextField *and* render of that saved
 content under the default RICHTEXT_FILTERS pipeline. Also covers the
@@ -8,10 +8,14 @@ two public XSS CVEs already fixed in PR-001 / PR-002:
 * CVE-2025-6050 — title-in-JSON served by displayable_links_js
 * CVE-2025-29573 — form-upload filename ``"><img…>``
 
+PR-004: default pipeline bleaches on read (after thumbnails). A custom
+filter that returns non-SafeText still FutureWarns and does not raise.
 Does not assert that RICHTEXT_FILTER_LEVEL_NONE is absent from the
 Setting admin (that is PR-005b).
 """
 import re
+import warnings
+from pathlib import Path
 from unittest import skipUnless
 
 from bs4 import BeautifulSoup
@@ -19,6 +23,7 @@ from django.forms.models import modelform_factory
 from django.template import Context, Template
 from django.urls import reverse
 from django.utils.html import escape as html_escape
+from django.utils.safestring import SafeText
 from django.utils.timezone import now
 
 from mezzanine.blog.models import BlogPost
@@ -27,7 +32,13 @@ from mezzanine.core.models import CONTENT_STATUS_PUBLISHED
 from mezzanine.forms import fields
 from mezzanine.forms.models import FieldEntry, Form, FormEntry
 from mezzanine.pages.models import RichTextPage
+from mezzanine.utils.importing import path_for_import
 from mezzanine.utils.tests import TestCase
+
+
+def plain_string_filter(content):
+    """Custom RICHTEXT_FILTERS entry that returns a plain str, not SafeText."""
+    return "%s" % content
 
 
 # Payloads that must not survive default HIGH filtering as live markup.
@@ -237,3 +248,76 @@ class SanitizeRegressionTests(TestCase):
             any(TITLE_XSS in title for title in titles),
             "XSS title missing from JSON link list: %r" % titles,
         )
+
+    def test_default_richtext_filters_bleach_after_thumbnails(self):
+        """Last default filter is bleach; it runs after thumbnails (mXSS)."""
+        filters = list(settings.RICHTEXT_FILTERS)
+        self.assertEqual(filters[-1], "mezzanine.utils.html.escape")
+        self.assertIn("mezzanine.utils.html.thumbnails", filters)
+        self.assertLess(
+            filters.index("mezzanine.utils.html.thumbnails"),
+            filters.index("mezzanine.utils.html.escape"),
+        )
+
+    @skipUnless("mezzanine.pages" in settings.INSTALLED_APPS, "pages app required")
+    def test_script_bypassing_form_clean_stripped_on_read(self):
+        """
+        ``Model.save()`` skips ``RichTextField.clean``; |richtext_filters
+        must still bleach so ``<script>`` does not survive render.
+        """
+        page = RichTextPage.objects.create(
+            title="Unclean save",
+            content=SCRIPT,
+            status=CONTENT_STATUS_PUBLISHED,
+        )
+        self.assertIn("<script>", page.content.lower())
+        rendered = self._render_filters(page.content)
+        self._assert_absent(rendered, LIVE_SCRIPT, "|richtext_filters")
+        self._assert_dom_safe(rendered, "|richtext_filters")
+        response = self.client.get(page.get_absolute_url())
+        self.assertEqual(response.status_code, 200)
+        self._assert_absent(
+            response.content.decode("utf-8"), LIVE_SCRIPT_ALERT, "HTTP render"
+        )
+
+    def test_custom_filter_non_safetext_warns_does_not_raise(self):
+        """Custom filters that return non-SafeText FutureWarn; they do not raise."""
+        original = settings.RICHTEXT_FILTERS
+        settings.RICHTEXT_FILTERS = ("tests.test_sanitize.plain_string_filter",)
+        try:
+            with warnings.catch_warnings(record=True) as caught:
+                warnings.simplefilter("always", FutureWarning)
+                rendered = self._render_filters("<p>ok</p>")
+            self.assertTrue(
+                any(issubclass(w.category, FutureWarning) for w in caught),
+                "expected FutureWarning for non-SafeText custom filter, got %r"
+                % [w.category for w in caught],
+            )
+            self.assertIsInstance(rendered, SafeText)
+            self.assertIn("ok", rendered)
+        finally:
+            settings.RICHTEXT_FILTERS = original
+
+    def test_description_templates_stop_raw_safe(self):
+        """Blog list and search results must not mark descriptions |safe."""
+        root = Path(path_for_import("mezzanine"))
+        blog_list = (root / "blog/templates/blog/blog_post_list.html").read_text()
+        search = (root / "core/templates/search_results.html").read_text()
+        self.assertNotIn("description_from_content|safe", blog_list)
+        self.assertNotIn("|safe", search.split("result.description")[1].split("}}")[0])
+
+    @skipUnless("mezzanine.pages" in settings.INSTALLED_APPS, "pages app required")
+    def test_search_description_html_is_escaped(self):
+        """User-supplied MetaData.description is not rendered as raw HTML."""
+        RichTextPage.objects.create(
+            title="Search desc xss",
+            content="<p>visible body</p>",
+            status=CONTENT_STATUS_PUBLISHED,
+            description=FILENAME_XSS,
+            gen_description=False,
+        )
+        response = self.client.get(reverse("search") + "?q=Search+desc+xss")
+        self.assertEqual(response.status_code, 200)
+        body = response.content.decode("utf-8")
+        self.assertNotIn(FILENAME_XSS, body)
+        self._assert_absent(body, LIVE_ONERROR_ATTR, "search description")
