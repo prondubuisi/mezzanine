@@ -6,10 +6,12 @@ from django.contrib.auth.admin import UserAdmin
 from django.contrib.auth.models import User as AuthUser
 from django.contrib.messages import error
 from django.contrib.redirects.admin import RedirectAdmin
+from django.core.exceptions import PermissionDenied
 from django.forms import ModelForm, ValidationError
 from django.http import HttpResponseRedirect
 from django.shortcuts import get_object_or_404
-from django.urls import NoReverseMatch
+from django.urls import NoReverseMatch, path, reverse
+from django.utils.html import format_html
 from django.utils.translation import gettext_lazy as _
 
 from mezzanine.conf import settings
@@ -18,6 +20,7 @@ from mezzanine.core.models import (
     CONTENT_STATUS_PUBLISHED,
     ContentTyped,
     Orderable,
+    PreviewToken,
     SitePermission,
 )
 from mezzanine.utils.models import base_concrete_model
@@ -81,10 +84,11 @@ class DisplayableAdmin(BaseTranslationModelAdmin):
     Admin class for subclasses of the abstract ``Displayable`` model.
     """
 
-    list_display = ("title", "status", "admin_link")
+    list_display = ("title", "status", "admin_link", "view_draft_link")
     list_display_links = ("title",)
     list_editable = ("status",)
     list_filter = ("status", "keywords__keyword")
+    change_form_template = "admin/displayable/change_form.html"
     # modeltranslation breaks date hierarchy links, see:
     # https://github.com/deschler/django-modeltranslation/issues/324
     # Once that's resolved we can restore this.
@@ -113,6 +117,43 @@ class DisplayableAdmin(BaseTranslationModelAdmin):
     )
 
     form = DisplayableAdminForm
+
+    def get_urls(self):
+        opts = self.model._meta
+        info = opts.app_label, opts.model_name
+        custom = [
+            path(
+                "<path:object_id>/view-draft/",
+                self.admin_site.admin_view(self.view_draft_view),
+                name="%s_%s_view_draft" % info,
+            ),
+        ]
+        return custom + super().get_urls()
+
+    def view_draft_view(self, request, object_id):
+        """Issue an opaque preview token and redirect to ``?preview=``."""
+        obj = get_object_or_404(self.model, pk=object_id)
+        if not self.has_view_or_change_permission(request, obj):
+            raise PermissionDenied
+        raw = PreviewToken.issue(obj, created_by=request.user)
+        url = obj.get_absolute_url()
+        sep = "&" if "?" in url else "?"
+        return HttpResponseRedirect("%s%spreview=%s" % (url, sep, raw))
+
+    def view_draft_link(self, obj):
+        if not obj.pk:
+            return ""
+        opts = obj._meta
+        try:
+            url = reverse(
+                "admin:%s_%s_view_draft" % (opts.app_label, opts.model_name),
+                args=[obj.pk],
+            )
+        except NoReverseMatch:
+            return ""
+        return format_html('<a href="{}">{}</a>', url, _("View draft"))
+
+    view_draft_link.short_description = _("View draft")
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)

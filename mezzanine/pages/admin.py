@@ -167,6 +167,7 @@ link_fieldsets[0][1]["fields"].insert(1, "slug")
 class LinkAdmin(PageAdmin):
 
     fieldsets = link_fieldsets
+    change_form_template = "admin/pages/link/change_form.html"
 
     def formfield_for_dbfield(self, db_field, request, **kwargs):
         """

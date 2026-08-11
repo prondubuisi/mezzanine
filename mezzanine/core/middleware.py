@@ -16,9 +16,10 @@ from django.http import (
 from django.middleware.csrf import CsrfViewMiddleware, get_token
 from django.template import RequestContext, Template
 from django.urls import reverse
-from django.utils.cache import get_max_age
+from django.utils.cache import get_max_age, patch_cache_control
 from django.utils.deprecation import MiddlewareMixin
 from django.utils.safestring import mark_safe
+from django.utils.timezone import now
 from django.utils.translation import gettext as _
 
 from mezzanine.conf import settings
@@ -26,7 +27,11 @@ from mezzanine.core.management.commands.createdb import (
     DEFAULT_PASSWORD,
     DEFAULT_USERNAME,
 )
-from mezzanine.core.models import SitePermission
+from mezzanine.core.models import (
+    PREVIEW_ROLE_STAFF,
+    PreviewToken,
+    SitePermission,
+)
 from mezzanine.utils.cache import (
     cache_get,
     cache_installed,
@@ -119,6 +124,55 @@ class TemplateForHostMiddleware(MiddlewareMixin):
         )
 
 
+class PreviewTokenMiddleware(MiddlewareMixin):
+    """
+    Resolve ``?preview=`` into ``request.preview``.
+
+    Must run after ``AuthenticationMiddleware`` (needs ``request.user``)
+    and before ``PageMiddleware``. Expired, unknown, site-mismatched, or
+    staff-role-without-staff tokens leave ``request.preview`` unset —
+    this middleware does not 404.
+
+    Preview responses are ``Cache-Control: private, no-store`` and are
+    not written by ``UpdateCacheMiddleware``.
+    """
+
+    def process_request(self, request):
+        raw = request.GET.get("preview")
+        if not raw:
+            return None
+        token = PreviewToken.lookup(raw)
+        if token is None:
+            return None
+        if token.expires_at <= now():
+            return None
+        if token.site_id != current_site_id():
+            return None
+        if token.as_role == PREVIEW_ROLE_STAFF:
+            user = getattr(request, "user", None)
+            if (
+                user is None
+                or not is_authenticated(user)
+                or not user.is_staff
+            ):
+                return None
+        seen = now()
+        PreviewToken.objects.filter(pk=token.pk).update(last_seen_at=seen)
+        token.last_seen_at = seen
+        request.preview = token
+        # FetchFromCacheMiddleware runs later and would otherwise mark
+        # a cache miss for storage. Force the nevercache-style skip.
+        request._update_cache = False
+        return None
+
+    def process_response(self, request, response):
+        if not getattr(request, "preview", None):
+            return response
+        request._update_cache = False
+        patch_cache_control(response, private=True, no_store=True)
+        return response
+
+
 class UpdateCacheMiddleware(MiddlewareMixin):
     """
     Response phase for Mezzanine's cache middleware. Handles caching
@@ -148,6 +202,9 @@ class UpdateCacheMiddleware(MiddlewareMixin):
         timeout = get_max_age(response)
         if timeout is None:
             timeout = settings.CACHE_MIDDLEWARE_SECONDS
+        # Preview responses must never enter the public page cache.
+        if getattr(request, "preview", None):
+            marked_for_update = False
         if anon and valid_status and marked_for_update and timeout:
             cache_key = cache_key_prefix(request) + request.get_full_path()
             _cache_set = lambda r: cache_set(cache_key, r.content, timeout)
@@ -212,6 +269,8 @@ class FetchFromCacheMiddleware(MiddlewareMixin):
     """
 
     def process_request(self, request):
+        if getattr(request, "preview", None):
+            return None
         if (
             cache_installed()
             and request.method == "GET"

@@ -1,0 +1,19 @@
+{% load i18n %}
+{% if request.preview %}
+<div id="preview-bar" role="status">
+    {% trans "Draft preview" %}
+    · {% trans "not cached" %}
+</div>
+<style>
+#preview-bar {
+    position: sticky;
+    top: 0;
+    z-index: 2000;
+    background: #111;
+    color: #fff;
+    text-align: center;
+    padding: .4em .8em;
+    font: 13px/1.4 sans-serif;
+}
+</style>
+{% endif %}

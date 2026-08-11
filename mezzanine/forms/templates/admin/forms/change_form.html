@@ -3,6 +3,7 @@
 
 {% block object-tools-items %}
     <li><a href="{% url "admin:form_entries" object_id %}">{% trans "View entries" %}</a></li>
+    {% include "admin/includes/view_draft_tool.html" %}
     {{ block.super }}
 {% endblock %}
 
