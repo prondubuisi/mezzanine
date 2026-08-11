@@ -386,38 +386,6 @@ within Mezzanine that are added to ``settings.INSTALLED_APPS``.
 
 
 
-``mezzanine.twitter``
-=====================
-
-.. automodule:: mezzanine.twitter
-
-``mezzanine.twitter.models``
-----------------------------
-
-.. automodule:: mezzanine.twitter.models
-   :members:
-
-``mezzanine.twitter.managers``
-------------------------------
-
-.. automodule:: mezzanine.twitter.managers
-   :members:
-
-``mezzanine.twitter.templatetags.twitter_tags``
------------------------------------------------
-
-.. automodule:: mezzanine.twitter.templatetags.twitter_tags
-   :members:
-
-``mezzanine.twitter.management.commands``
------------------------------------------
-
-.. automodule:: mezzanine.twitter.management.commands.poll_twitter
-   :members:
-
-
-
-
 ``mezzanine.utils``
 ===================
 

@@ -334,7 +334,7 @@ class Displayable(Slugged, MetaData, TimeStamped):
         """
         Generates the ``short_url`` attribute if the model does not
         already have one. Used by the ``set_short_url_for`` template
-        tag and ``TweetableAdmin``.
+        tag.
 
         If no sharing service is defined (bitly is the one implemented,
         but others could be by overriding ``generate_short_url``), the

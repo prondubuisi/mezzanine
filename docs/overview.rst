@@ -56,7 +56,7 @@ the above instructions:
 * `chardet`_ - for supporting arbitrary encoding in file uploads
 * `django-modeltranslation`_ - for multi-lingual content (optional)
 * `django-compressor`_ - for merging JS/CSS assets (optional)
-* `requests`_ and `requests_oauthlib`_ - for interacting with external APIs
+* `requests`_ - for interacting with external APIs
 
 Note that various systems may contain
 `specialized instructions for installing Pillow`_.
@@ -557,7 +557,6 @@ certain sites.
 .. _`FileBrowser`: http://code.google.com/p/django-filebrowser/
 .. _`pip`: http://www.pip-installer.org/
 .. _`requests`: http://docs.python-requests.org/en/latest/
-.. _`requests_oauthlib`: http://requests-oauthlib.readthedocs.org/
 .. _`chardet`: https://chardet.readthedocs.org
 .. _`specialized instructions for installing Pillow`: https://pillow.readthedocs.io/en/latest/installation.html
 .. _`Homebrew`: http://mxcl.github.com/homebrew/
