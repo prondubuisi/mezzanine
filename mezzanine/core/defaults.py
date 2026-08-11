@@ -543,6 +543,18 @@ register_setting(
 )
 
 register_setting(
+    name="SEARCH_MAX_RESULTS",
+    label=_("Maximum search results to materialize"),
+    description=_(
+        "Upper bound on rows materialized when scoring search results "
+        "and when unioning matches across models. Prevents unbounded "
+        "Python materialization of the matching queryset."
+    ),
+    editable=False,
+    default=200,
+)
+
+register_setting(
     name="SITE_PREFIX",
     description=_(
         "A URL prefix for mounting all of Mezzanine's urlpatterns "

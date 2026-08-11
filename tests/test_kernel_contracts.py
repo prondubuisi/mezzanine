@@ -1,8 +1,8 @@
 """Characterization suite. Flip comments mark Wave 3 PRs.
 
 Locks *current* kernel behaviour (design 2.4) before 020–022c cut over.
-Do not "fix" staff-sees-drafts or nested ``override_current_site_id``
-here — later PRs flip the assertions in this file.
+Do not "fix" staff-sees-drafts here — later PRs flip the assertions
+in this file. 020 nestable ``override_current_site_id`` is done.
 """
 
 import os
@@ -12,11 +12,13 @@ import pytest
 from django.apps import apps
 from django.contrib import admin
 from django.contrib.auth.models import AnonymousUser
+from django.contrib.redirects.models import Redirect
 from django.contrib.sites.models import Site
 from django.db.models import UniqueConstraint
 from django.http import Http404, HttpResponse
 from django.template import Context, Template
 from django.test import RequestFactory, override_settings
+from django.utils.deprecation import MiddlewareMixin
 from django.utils.timezone import now
 
 from mezzanine.conf import settings
@@ -46,11 +48,12 @@ pytestmark = pytest.mark.django_db
 
 @pytest.fixture(autouse=True)
 def _clear_site_override():
-    """020 currently forbids nesting; never leave the thread-local set."""
-    loc = override_current_site_id.thread_local
+    """020 done: reset nestable override stack so tests do not leak."""
+    from mezzanine.utils.sites import _site_id_override_stack
+
+    token = _site_id_override_stack.set(())
     yield
-    if hasattr(loc, "site_id"):
-        del loc.site_id
+    _site_id_override_stack.reset(token)
 
 
 @pytest.fixture
@@ -60,18 +63,13 @@ def rf():
 
 @contextmanager
 def _thread_request(request):
-    from mezzanine.core.request import _thread_local
+    from mezzanine.core.request import _current_request
 
-    previous = getattr(_thread_local, "request", None)
-    _thread_local.request = request
+    token = _current_request.set(request)
     try:
         yield request
     finally:
-        if previous is None:
-            if hasattr(_thread_local, "request"):
-                del _thread_local.request
-        else:
-            _thread_local.request = previous
+        _current_request.reset(token)
 
 
 @contextmanager
@@ -158,13 +156,13 @@ def test_non_http_link_slug_is_rewritten_on_set_parent():
 
 
 # ---------------------------------------------------------------------------
-# 3. Slug uniqueness (application-level via unique_slug; no UniqueConstraint)
+# 3. Slug uniqueness (UniqueConstraint(site, slug) — 021 done)
 # ---------------------------------------------------------------------------
 
 
 def test_auto_slugs_unique_per_concrete_slugged_type():
     """unique_slug on save: two Pages on the same site cannot share an
-    auto-generated slug. 021: UniqueConstraint(site, slug) on pages.Page.
+    auto-generated slug. 021 done: UniqueConstraint(site, slug) on pages.Page.
     """
     first = RichTextPageFactory(title="Shared Auto Title")
     second = RichTextPageFactory(title="Shared Auto Title")
@@ -176,7 +174,7 @@ def test_auto_slugs_unique_per_concrete_slugged_type():
 def test_page_and_richtextpage_share_page_slug_namespace():
     """All Page MTI children share the Page (base_concrete_model(Slugged)) ns.
 
-    021: UniqueConstraint lives on pages_page, not pages_richtextpage.
+    021 done: UniqueConstraint lives on pages_page, not pages_richtextpage.
     """
     bare = PageFactory(title="Mti Namespace")
     typed = RichTextPageFactory(title="Mti Namespace")
@@ -186,32 +184,99 @@ def test_page_and_richtextpage_share_page_slug_namespace():
 def test_blogpost_slug_namespace_is_separate_from_page():
     """BlogPost slugs are a separate unique_slug namespace from Page.
 
-    021: UniqueConstraint(site, slug) on blog.BlogPost independently.
+    021 done: UniqueConstraint(site, slug) on blog.BlogPost independently.
     """
     page = RichTextPageFactory(title="Cross App Slug")
     post = BlogPostFactory(title="Cross App Slug")
     assert page.slug == post.slug == "cross-app-slug"
 
 
-def test_no_unique_constraint_on_page_or_blogpost_slug():
-    """021: add UniqueConstraint(fields=['site', 'slug'])."""
+def test_unique_constraint_on_page_and_blogpost_site_slug():
+    """021 done: UniqueConstraint(fields=['site', 'slug'])."""
     for model in (Page, apps.get_model("blog", "BlogPost")):
         slug_constraints = [
             c
             for c in model._meta.constraints
             if isinstance(c, UniqueConstraint) and "slug" in c.fields
         ]
-        assert slug_constraints == []
+        assert len(slug_constraints) == 1
+        constraint = slug_constraints[0]
+        assert list(constraint.fields) == ["site", "slug"]
+        assert constraint.name == f"{model._meta.model_name}_site_slug"
 
 
-def test_explicit_duplicate_page_slugs_currently_persist():
-    """unique_slug only runs when slug is blank. Explicit dupes save today.
+def test_explicit_duplicate_page_slugs_raise_integrity_error():
+    """021 done: second save raises IntegrityError under UniqueConstraint(site, slug).
 
-    021: second save raises IntegrityError under UniqueConstraint(site, slug).
+    unique_slug only runs when slug is blank. Explicit dupes used to persist.
     """
-    first = RichTextPageFactory(title="Explicit A", slug="manual-dup")
-    second = RichTextPageFactory(title="Explicit B", slug="manual-dup")
-    assert first.slug == second.slug == "manual-dup"
+    from django.db import IntegrityError, transaction
+
+    RichTextPageFactory(title="Explicit A", slug="manual-dup")
+    with pytest.raises(IntegrityError):
+        with transaction.atomic():
+            RichTextPageFactory(title="Explicit B", slug="manual-dup")
+
+
+def test_explicit_duplicate_blogpost_slugs_raise_integrity_error():
+    """021 done: UniqueConstraint(site, slug) on blog.BlogPost independently."""
+    from django.db import IntegrityError, transaction
+
+    BlogPostFactory(title="Explicit A", slug="manual-dup-post")
+    with pytest.raises(IntegrityError):
+        with transaction.atomic():
+            BlogPostFactory(title="Explicit B", slug="manual-dup-post")
+
+
+def test_same_slug_allowed_across_sites():
+    """UniqueConstraint is per (site, slug), not global."""
+    site2 = Site.objects.create(domain="slug-site2.example.com", name="Slug 2")
+    page = RichTextPageFactory(title="Cross Site", slug="cross-site-slug")
+    with override_current_site_id(site2.pk):
+        other = RichTextPageFactory(
+            title="Cross Site", slug="cross-site-slug", site=site2
+        )
+    assert page.slug == other.slug == "cross-site-slug"
+    assert page.site_id != other.site_id
+
+
+def test_nova_dedupe_slugs_dry_run_on_unique_slugs():
+    """021 done: command is registered; unique rows are a no-op."""
+    from io import StringIO
+
+    from django.core.management import call_command
+
+    RichTextPageFactory(title="Unique A", slug="unique-a-cmd")
+    BlogPostFactory(title="Unique Post", slug="unique-post-cmd")
+    out = StringIO()
+    call_command("nova_dedupe_slugs", "--dry-run", stdout=out)
+    text = out.getvalue()
+    assert "no (site, slug) collisions" in text
+    assert "dry-run: no slugs rewritten" in text
+
+
+def test_rewrite_page_slug_updates_children_like_set_slug():
+    """021 done: dedupe child rewrite follows Page.set_slug prefix rules."""
+    from mezzanine.core.management.commands.nova_dedupe_slugs import (
+        is_http_link,
+        rewrite_page_slug,
+    )
+
+    parent = RichTextPageFactory(title="P", slug="rewrite-parent")
+    child = RichTextPageFactory(
+        title="C", slug="rewrite-parent/kid", parent=parent
+    )
+    http_link = Link.objects.create(
+        title="Out", slug="https://example.com/rewrite", parent=parent
+    )
+    assert is_http_link(http_link)
+    rewrite_page_slug(parent, "rewrite-parent-99")
+    parent.refresh_from_db()
+    child.refresh_from_db()
+    http_link.refresh_from_db()
+    assert parent.slug == "rewrite-parent-99"
+    assert child.slug == "rewrite-parent-99/kid"
+    assert http_link.slug == "https://example.com/rewrite"
 
 
 # ---------------------------------------------------------------------------
@@ -474,36 +539,34 @@ def test_file_view_cross_site_404(author_user, rf):
 
 
 # ---------------------------------------------------------------------------
-# 8. current_site_id resolution + nested override RecursionError
+# 8. current_site_id resolution + nested override (020 done)
 # ---------------------------------------------------------------------------
 
 
 def test_current_site_id_falls_back_to_settings_site_id():
     """Last resort is SITE_ID when override / request / env are absent."""
-    from mezzanine.core.request import _thread_local
+    from mezzanine.core.request import _current_request
 
     old = os.environ.pop("MEZZANINE_SITE_ID", None)
-    had_request = hasattr(_thread_local, "request")
-    previous = getattr(_thread_local, "request", None)
-    if had_request:
-        del _thread_local.request
+    token = _current_request.set(None)
     try:
         assert current_site_id() == settings.SITE_ID
     finally:
         if old is not None:
             os.environ["MEZZANINE_SITE_ID"] = old
-        if had_request:
-            _thread_local.request = previous
+        _current_request.reset(token)
 
 
 def test_current_site_id_mezzanine_env_beats_settings(monkeypatch):
-    from mezzanine.core.request import _thread_local
+    from mezzanine.core.request import _current_request
 
     site2 = Site.objects.create(domain="env-site.example.com", name="Env")
     monkeypatch.setenv("MEZZANINE_SITE_ID", str(site2.pk))
-    if hasattr(_thread_local, "request"):
-        del _thread_local.request
-    assert int(current_site_id()) == site2.pk
+    token = _current_request.set(None)
+    try:
+        assert int(current_site_id()) == site2.pk
+    finally:
+        _current_request.reset(token)
 
 
 @override_settings(ALLOWED_HOSTS=["*"])
@@ -552,15 +615,72 @@ def test_current_site_id_override_beats_request_attr(rf):
 
 
 def test_nested_override_current_site_id_raises_recursion_error():
-    """020: nestable override (flip this assertion; drop RecursionError)."""
+    """020 done: nestable override (no RecursionError)."""
     assert current_site_id() == settings.SITE_ID
     with override_current_site_id(2):
         assert current_site_id() == 2
-        with pytest.raises(RecursionError):
-            with override_current_site_id(3):
-                assert current_site_id() == 3
+        with override_current_site_id(3):
+            assert current_site_id() == 3
         assert current_site_id() == 2
     assert current_site_id() == settings.SITE_ID
+
+
+def test_current_request_survives_inner_process_response(rf):
+    """Reset only after CurrentRequestMiddleware.process_response (last)."""
+    from mezzanine.core.request import CurrentRequestMiddleware, current_request
+
+    seen = {}
+
+    class InnerMiddleware(MiddlewareMixin):
+        def process_response(self, request, response):
+            seen["inner_request"] = current_request()
+            seen["inner_site"] = current_site_id()
+            return response
+
+    def view(request):
+        seen["view_request"] = current_request()
+        seen["view_site"] = current_site_id()
+        return HttpResponse("ok")
+
+    site2 = Site.objects.create(domain="inner.example.com", name="Inner")
+    request = rf.get("/")
+    request.site_id = site2.pk
+    request.session = {}
+
+    inner = InnerMiddleware(view)
+    outer = CurrentRequestMiddleware(inner)
+    response = outer(request)
+
+    assert response.status_code == 200
+    assert seen["view_request"] is request
+    assert seen["view_site"] == site2.pk
+    assert seen["inner_request"] is request
+    assert seen["inner_site"] == site2.pk
+    assert current_request() is None
+
+
+def test_redirect_fallback_on_404_uses_request_site(rf):
+    """404 process_response still resolves Redirect against the request site."""
+    from mezzanine.core.middleware import RedirectFallbackMiddleware
+    from mezzanine.core.request import CurrentRequestMiddleware, current_request
+
+    site2 = Site.objects.create(domain="redir.example.com", name="Redir")
+    Redirect.objects.create(site_id=site2.pk, old_path="/gone/", new_path="/here/")
+
+    def view(request):
+        return HttpResponse("missing", status=404)
+
+    request = rf.get("/gone/")
+    request.site_id = site2.pk
+    request.session = {}
+
+    inner = RedirectFallbackMiddleware(view)
+    outer = CurrentRequestMiddleware(inner)
+    response = outer(request)
+
+    assert response.status_code == 301
+    assert response["Location"] == "/here/"
+    assert current_request() is None
 
 
 # ---------------------------------------------------------------------------

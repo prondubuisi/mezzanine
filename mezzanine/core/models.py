@@ -291,9 +291,15 @@ class Displayable(Slugged, MetaData, TimeStamped):
 
     def published(self):
         """
-        For non-staff users, return True when status is published and
-        the publish and expiry dates fall before and after the
-        current date when specified.
+        Return True when status is published and the publish/expiry
+        dates (when set) contain now.
+
+        This instance method does not inspect the requesting user.
+        Staff visibility of drafts is a *manager* concern:
+        ``PublishedManager.published(for_user=)`` short-circuits to
+        ``self.all()`` for any ``is_staff`` user. PR-022c removes that
+        bypass; preview then requires an opaque token. This method
+        stays date/status-only.
         """
         return (
             self.status == CONTENT_STATUS_PUBLISHED

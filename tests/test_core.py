@@ -133,6 +133,9 @@ class CoreTests(TestCase):
     def test_draft(self):
         """
         Test a draft object as only being viewable by a staff member.
+
+        PR-022c will flip the staff GET (no preview token) from 200
+        to 404; drafts then require an opaque preview token.
         """
         self.client.logout()
         draft = RichTextPage.objects.create(title="Draft", status=CONTENT_STATUS_DRAFT)
@@ -140,6 +143,7 @@ class CoreTests(TestCase):
         self.assertEqual(response.status_code, 404)
         self.client.login(username=self._username, password=self._password)
         response = self.client.get(draft.get_absolute_url(), follow=True)
+        # 022c: staff GET without token → 404 (token required).
         self.assertEqual(response.status_code, 200)
 
     def test_searchable_manager_search_fields(self):
@@ -222,6 +226,32 @@ class CoreTests(TestCase):
         # Test the actual search view.
         response = self.client.get(reverse("search") + "?q=test")
         self.assertEqual(response.status_code, 200)
+
+    @skipUnless("mezzanine.pages" in settings.INSTALLED_APPS, "pages app required")
+    def test_search_respects_max_results(self):
+        """
+        annotate_scores and the cross-model union must not materialize
+        more than SEARCH_MAX_RESULTS rows.
+        """
+        RichTextPage.objects.all().delete()
+        published = {"status": CONTENT_STATUS_PUBLISHED}
+        for i in range(6):
+            RichTextPage.objects.create(
+                title="bounded search page %s" % i, **published
+            )
+        original = settings.SEARCH_MAX_RESULTS
+        settings.SEARCH_MAX_RESULTS = 2
+        try:
+            results = RichTextPage.objects.search("bounded search")
+            self.assertEqual(len(results), 2)
+            scored = list(
+                RichTextPage.objects.get_queryset()
+                .search("bounded search")
+                .annotate_scores()
+            )
+            self.assertEqual(len(scored), 2)
+        finally:
+            settings.SEARCH_MAX_RESULTS = original
 
     def _create_page(self, title, status):
         return RichTextPage.objects.create(title=title, status=status)
@@ -670,13 +700,13 @@ class SiteRelatedTestCase(TestCase):
         self.assertEqual(current_site_id(), 1)
 
     def test_nested_override_site_id(self):
+        # 020 done: nestable override (no RecursionError).
         self.assertEqual(current_site_id(), 1)
         with override_current_site_id(2):
             self.assertEqual(current_site_id(), 2)
-            with self.assertRaises(RecursionError):
-                with override_current_site_id(3):
-                    self.assertEqual(current_site_id(), 3)
-                self.assertEqual(current_site_id(), 2)
+            with override_current_site_id(3):
+                self.assertEqual(current_site_id(), 3)
+            self.assertEqual(current_site_id(), 2)
         self.assertEqual(current_site_id(), 1)
 
 

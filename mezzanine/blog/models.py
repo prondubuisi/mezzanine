@@ -41,6 +41,12 @@ class BlogPost(Displayable, Ownable, RichText, AdminThumbMixin):
         verbose_name = _("Blog post")
         verbose_name_plural = _("Blog posts")
         ordering = ("-publish_date",)
+        constraints = [
+            models.UniqueConstraint(
+                fields=["site", "slug"],
+                name="%(class)s_site_slug",
+            ),
+        ]
 
     def get_absolute_url(self):
         """

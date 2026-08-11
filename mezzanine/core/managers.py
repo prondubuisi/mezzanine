@@ -1,4 +1,5 @@
 from functools import reduce
+from itertools import islice
 from operator import iand, ior
 from string import punctuation
 
@@ -227,10 +228,13 @@ class SearchableQuerySet(QuerySet):
         and search fields contain relationships (double underscores),
         we assume one match for one of the fields, and use the average
         weight of all search fields with relationships.
+
+        Materialization is capped at ``SEARCH_MAX_RESULTS`` (default 200)
+        so a broad query cannot load every matching row into memory.
         """
         results = super().iterator()
         if self._search_terms and not self._search_ordered:
-            results = list(results)
+            results = list(islice(results, settings.SEARCH_MAX_RESULTS))
             for i, result in enumerate(results):
                 count = 0
                 related_weights = []
@@ -379,12 +383,18 @@ class SearchableManager(Manager):
             models = [self.model]
         all_results = []
         user = kwargs.pop("for_user", None)
+        max_results = settings.SEARCH_MAX_RESULTS
         for model in models:
+            if len(all_results) >= max_results:
+                break
             try:
                 queryset = model.objects.published(for_user=user)
             except AttributeError:
                 queryset = model.objects.get_queryset()
-            all_results.extend(queryset.search(*args, **kwargs).annotate_scores())
+            remaining = max_results - len(all_results)
+            all_results.extend(
+                islice(queryset.search(*args, **kwargs).annotate_scores(), remaining)
+            )
         return sorted(all_results, key=lambda r: r.result_count, reverse=True)
 
 
