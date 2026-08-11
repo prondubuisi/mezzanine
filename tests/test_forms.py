@@ -1,8 +1,13 @@
+import shutil
+import tempfile
 from unittest import skipUnless
 
 from django import forms
 from django.contrib.sites.models import Site
+from django.core.exceptions import ImproperlyConfigured
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.template import RequestContext
+from django.test.utils import override_settings
 from django.urls import reverse
 from django.utils.html import escape
 from django.utils.timezone import now
@@ -151,3 +156,132 @@ class TestsForm(TestCase):
         url = reverse("admin:form_file", args=(field_entry.id,))
         response = self.client.get(url)
         self.assertEqual(response.status_code, 404)
+
+    def test_field_default_ssti_is_sandboxed(self):
+        """
+        field.default must not be rendered with RequestContext / settings.
+        SSTI payloads must not leak SECRET_KEY or request attributes.
+        """
+        canary = "super-secret-ssti-canary-key"
+        form_page = Form.objects.create(
+            title="SSTI form", status=CONTENT_STATUS_PUBLISHED
+        )
+        field = form_page.fields.create(
+            label="Name",
+            field_type=fields.TEXT,
+            required=False,
+            visible=True,
+            default=(
+                "{{ settings.SECRET_KEY }}"
+                "{{ request.user.password }}"
+                "{{ request.user.email }}"
+            ),
+        )
+        request = self._request_factory.get("/")
+        request.user = self._user
+        with override_settings(SECRET_KEY=canary):
+            form = FormForForm(form_page, RequestContext(request))
+            initial = str(form.initial.get("field_%s" % field.id, ""))
+            self.assertNotIn(canary, initial)
+            self.assertNotIn(self._user.password, initial)
+            # request.user.email is not an allowlisted var
+            self.assertNotIn(self._emailaddress, initial)
+
+    def test_field_default_allowlisted_vars(self):
+        """Allowlisted sandbox vars user_email, user_name, site_name interpolate."""
+        form_page = Form.objects.create(
+            title="Prefill form", status=CONTENT_STATUS_PUBLISHED
+        )
+        field = form_page.fields.create(
+            label="Name",
+            field_type=fields.TEXT,
+            required=False,
+            visible=True,
+            default="{{ user_email }}|{{ user_name }}|{{ site_name }}",
+        )
+        request = self._request_factory.get("/")
+        request.user = self._user
+        form = FormForForm(form_page, RequestContext(request))
+        initial = form.initial["field_%s" % field.id]
+        self.assertIn(self._emailaddress, initial)
+        self.assertIn(self._username, initial)
+        self.assertIn(Site.objects.get_current().name, initial)
+
+    def test_upload_rejects_disallowed_extension(self):
+        """Disallowed upload extensions must fail form validation."""
+        form_page = Form.objects.create(
+            title="Upload deny", status=CONTENT_STATUS_PUBLISHED
+        )
+        field = form_page.fields.create(
+            label="File", field_type=fields.FILE, required=True, visible=True
+        )
+        request = self._request_factory.post("/")
+        for name, content, content_type in (
+            ("payload.html", b"<script>alert(1)</script>", "text/html"),
+            ("malware.exe", b"MZ", "application/octet-stream"),
+            ("xss.js", b"alert(1)", "text/javascript"),
+            ("image.svg", b"<svg xmlns='http://www.w3.org/2000/svg'></svg>", "image/svg+xml"),
+        ):
+            uploaded = SimpleUploadedFile(name, content, content_type=content_type)
+            form = FormForForm(
+                form_page,
+                RequestContext(request),
+                data={},
+                files={"field_%s" % field.id: uploaded},
+            )
+            self.assertFalse(form.is_valid(), msg="%s should be rejected" % name)
+            self.assertIn("field_%s" % field.id, form.errors)
+
+    def test_upload_accepts_allowlisted_extension(self):
+        """Allowlisted extensions are stored under FORMS_UPLOAD_ROOT."""
+        tmp = tempfile.mkdtemp()
+        try:
+            with override_settings(FORMS_UPLOAD_ROOT=tmp):
+                form_page = Form.objects.create(
+                    title="Upload allow", status=CONTENT_STATUS_PUBLISHED
+                )
+                field = form_page.fields.create(
+                    label="File",
+                    field_type=fields.FILE,
+                    required=True,
+                    visible=True,
+                )
+                uploaded = SimpleUploadedFile(
+                    "ok.pdf", b"%PDF-1.4", content_type="application/pdf"
+                )
+                request = self._request_factory.post("/")
+                form = FormForForm(
+                    form_page,
+                    RequestContext(request),
+                    data={},
+                    files={"field_%s" % field.id: uploaded},
+                )
+                self.assertTrue(form.is_valid())
+                entry = form.save()
+                stored = entry.fields.get(field_id=field.id).value
+                self.assertIn("ok.pdf", stored)
+        finally:
+            shutil.rmtree(tmp)
+
+    def test_empty_forms_upload_root_refused(self):
+        """An empty FORMS_UPLOAD_ROOT must not accept uploads."""
+        form_page = Form.objects.create(
+            title="Empty root", status=CONTENT_STATUS_PUBLISHED
+        )
+        field = form_page.fields.create(
+            label="File", field_type=fields.FILE, required=True, visible=True
+        )
+        uploaded = SimpleUploadedFile(
+            "ok.pdf", b"%PDF-1.4", content_type="application/pdf"
+        )
+        request = self._request_factory.post("/")
+        with override_settings(FORMS_UPLOAD_ROOT=""):
+            form = FormForForm(
+                form_page,
+                RequestContext(request),
+                data={},
+                files={"field_%s" % field.id: uploaded},
+            )
+            self.assertTrue(form.is_valid())
+            with self.assertRaises(ImproperlyConfigured):
+                form.save()
