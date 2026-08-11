@@ -5,6 +5,7 @@ import tempfile
 from pathlib import Path
 
 import django
+import pytest
 
 # Path to the temp mezzanine project folder
 TMP_PATH = Path(tempfile.mkdtemp()) / "project_template"
@@ -59,3 +60,19 @@ def pytest_unconfigure():
         shutil.rmtree(str(TMP_PATH))
     except OSError:
         pass
+
+
+@pytest.fixture
+def author_user(db):
+    """Non-superuser staff user with a site permission (Wave 3 author)."""
+    from tests.factories import AuthorFactory
+
+    return AuthorFactory()
+
+
+@pytest.fixture
+def author_client(client, author_user):
+    """Logged-in non-superuser staff client for later Wave 3 tests."""
+    client.force_login(author_user)
+    client.user = author_user
+    return client
