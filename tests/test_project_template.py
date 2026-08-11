@@ -100,6 +100,10 @@ def test_template_settings_has_no_imp():
     assert "ContentSecurityPolicyMiddleware" in source
     assert "AUTH_PASSWORD_VALIDATORS" in source
     assert "NEVERCACHE_KEY" in source
+    assert "if not DEBUG:" in source
+    debug_block = source.split("from .local_settings import *", 1)[1]
+    assert "if not DEBUG:" in debug_block
+    assert "SECURE_SSL_REDIRECT = True" in debug_block
 
 
 def test_template_ships_asgi():
@@ -112,6 +116,18 @@ def test_ssl_redirect_middleware_removed():
     source = (REPO_ROOT / "mezzanine/core/middleware.py").read_text()
     assert "class SSLRedirectMiddleware" not in source
     assert "class ContentSecurityPolicyMiddleware" in source
+
+
+def test_ssl_settings_unregistered():
+    from mezzanine.conf import registry
+
+    for name in (
+        "SSL_ENABLED",
+        "SSL_FORCE_HOST",
+        "SSL_FORCE_URL_PREFIXES",
+        "SSL_FORCED_PREFIXES_ONLY",
+    ):
+        assert name not in registry
 
 
 def test_nova_project_writes_hardened_project(tmp_path):
@@ -145,8 +161,44 @@ def test_nova_project_writes_hardened_project(tmp_path):
     assert "SecurityMiddleware" in settings_text
     assert "ContentSecurityPolicyMiddleware" in settings_text
     assert "AUTH_PASSWORD_VALIDATORS" in settings_text
-    local_text = (project_app / "local_settings.py").read_text()
+    local_path = project_app / "local_settings.py"
+    local_text = local_path.read_text()
+    assert "SESSION_COOKIE_SECURE = False" not in local_text
+    assert "SECURE_SSL_REDIRECT = False" not in local_text
+    assert "if not DEBUG:" in settings_text
     match = re.search(r'NEVERCACHE_KEY = "([^"]+)"', local_text)
     assert match, local_text
     assert len(match.group(1)) == 50
     assert "{{" not in match.group(1)
+
+    probe = (
+        "import sys; sys.path.insert(0, '.'); "
+        "from mysite import settings; "
+        "print(settings.DEBUG, "
+        "settings.SESSION_COOKIE_SECURE, "
+        "settings.SECURE_SSL_REDIRECT)"
+    )
+    debug_true = subprocess.run(
+        [sys.executable, "-c", probe],
+        cwd=tmp_path / "mysite",
+        env=env,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert debug_true.returncode == 0, debug_true.stderr
+    assert debug_true.stdout.strip() == "True False False"
+
+    local_path.write_text(
+        re.sub(r"^DEBUG = True$", "DEBUG = False", local_text, count=1, flags=re.M)
+    )
+    debug_false = subprocess.run(
+        [sys.executable, "-c", probe],
+        cwd=tmp_path / "mysite",
+        env=env,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert debug_false.returncode == 0, debug_false.stderr
+    assert debug_false.stdout.strip() == "False True True"

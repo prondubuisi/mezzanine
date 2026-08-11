@@ -25,7 +25,7 @@ if "mezzanine.accounts" not in INSTALLED_APPS:
 # Use the MD5 password hasher by default for quicker test runs.
 PASSWORD_HASHERS = ('django.contrib.auth.hashers.MD5PasswordHasher',)
 
-# Template settings default to production TLS flags; tests run over HTTP.
+# HTTP test client: keep TLS redirects off regardless of DEBUG.
 SECURE_SSL_REDIRECT = False
 SESSION_COOKIE_SECURE = False
 CSRF_COOKIE_SECURE = False

@@ -588,51 +588,6 @@ register_setting(
 )
 
 register_setting(
-    name="SSL_ENABLED",
-    label=_("Enable SSL"),
-    description=_(
-        "If ``True``, users will be automatically redirected to "
-        "HTTPS for the URLs specified by the ``SSL_FORCE_URL_PREFIXES`` "
-        "setting."
-    ),
-    editable=False,
-    default=False,
-)
-
-register_setting(
-    name="SSL_FORCE_HOST",
-    label=_("Force Host"),
-    description=_(
-        "Host name that the site should always be accessed via that "
-        "matches the SSL certificate."
-    ),
-    editable=False,
-    default="",
-)
-
-register_setting(
-    name="SSL_FORCE_URL_PREFIXES",
-    description="Sequence of URL prefixes that will be forced to run over "
-    "SSL when ``SSL_ENABLED`` is ``True``. i.e. "
-    "('/admin', '/example') would force all URLs beginning with "
-    "/admin or /example to run over SSL.",
-    editable=False,
-    default=("/admin", "/account"),
-)
-
-register_setting(
-    name="SSL_FORCED_PREFIXES_ONLY",
-    description=_(
-        "If ``True``, only URLs specified by the "
-        "``SSL_FORCE_URL_PREFIXES`` setting will be accessible over SSL, "
-        "and all other URLs will be redirected back to HTTP if accessed "
-        "over HTTPS."
-    ),
-    editable=False,
-    default=True,
-)
-
-register_setting(
     name="STOP_WORDS",
     description=_("List of words which will be stripped from search queries."),
     editable=False,
