@@ -23,7 +23,7 @@ from django.template.loader import get_template
 from django.urls import NoReverseMatch, resolve, reverse
 from django.utils import translation
 from django.utils.html import strip_tags
-from django.utils.safestring import SafeText, mark_safe
+from django.utils.safestring import SafeText
 from django.utils.text import capfirst
 
 from mezzanine import template
@@ -498,28 +498,21 @@ def richtext_filters(content):
     The default pipeline applies ``thumbnails`` then ``escape`` (bleach)
     so unsafe HTML is stripped on read, after any BeautifulSoup rewrite.
 
-    A custom filter that returns a value that is not ``SafeText`` emits a
-    ``FutureWarning`` and the result is ``mark_safe``'d. This does not
-    raise — operators on this tree have custom filters. A later release
-    will raise instead.
+    A custom filter that returns a value that is not ``SafeText`` raises
+    ``TypeError``. Filters must escape untrusted input and mark the
+    returned HTML as safe.
     """
     for filter_name in settings.RICHTEXT_FILTERS:
         filter_func = import_dotted_path(filter_name)
         content = filter_func(content)
         if not isinstance(content, SafeText):
-            # Wave 1 (PR-005b) will raise TypeError here. Wave 0 only warns
-            # so existing custom filters keep working.
-            import warnings
-
-            warnings.warn(
-                filter_name + " needs to ensure that any untrusted inputs are "
-                "properly escaped and mark the html it returns as safe. In a "
-                "future release this will cause an exception. See "
+            raise TypeError(
+                filter_name + " must return django.utils.safestring.SafeText. "
+                "Ensure untrusted inputs are properly escaped and mark the "
+                "html as safe. See "
                 "https://docs.djangoproject.com/en/stable/topics/security/"
-                "cross-site-scripting-xss-protection",
-                FutureWarning,
+                "cross-site-scripting-xss-protection"
             )
-            content = mark_safe(content)
     return content
 
 

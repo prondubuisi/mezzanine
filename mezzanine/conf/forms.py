@@ -34,6 +34,10 @@ class SettingsForm(forms.Form):
         active_language = get_language()
         for name in sorted(registry.keys()):
             setting = registry[name]
+            # PR-005b: never expose the sanitizer kill-switch in admin,
+            # even if a stale registry entry is still marked editable.
+            if name == "RICHTEXT_FILTER_LEVEL":
+                continue
             if setting["editable"]:
                 field_class = FIELD_TYPES.get(setting["type"], forms.CharField)
                 if settings.USE_MODELTRANSLATION and setting["translatable"]:
@@ -88,6 +92,15 @@ class SettingsForm(forms.Form):
         if setting["choices"]:
             field_class = forms.ChoiceField
             kwargs["choices"] = setting["choices"]
+            if name == "RICHTEXT_FILTER_LEVEL":
+                # Belt-and-suspenders: NONE must never appear as a choice.
+                from mezzanine.core.defaults import RICHTEXT_FILTER_LEVEL_NONE
+
+                kwargs["choices"] = [
+                    choice
+                    for choice in setting["choices"]
+                    if choice[0] != RICHTEXT_FILTER_LEVEL_NONE
+                ]
         field_instance = field_class(**kwargs)
         code_name = "_modeltranslation_" + code if code else ""
         self.fields[name + code_name] = field_instance

@@ -1,5 +1,6 @@
+import os
 import warnings
-from unittest import skipUnless
+from unittest import mock, skipUnless
 
 from django.conf import settings as django_settings
 from django.core.checks import Error, Warning
@@ -8,6 +9,7 @@ from django.utils.encoding import force_str
 
 from mezzanine.conf import register_setting, registry, settings
 from mezzanine.conf.context_processors import TemplateSettings
+from mezzanine.conf.forms import SettingsForm
 from mezzanine.conf.models import Setting
 from mezzanine.core.checks import (
     EXTRA_MODEL_FIELDS_WARNING,
@@ -19,6 +21,7 @@ from mezzanine.core.checks import (
     check_richtext_filter_level_none,
 )
 from mezzanine.core.defaults import (
+    RICHTEXT_FILTER_LEVEL_HIGH,
     RICHTEXT_FILTER_LEVEL_LOW,
     RICHTEXT_FILTER_LEVEL_NONE,
 )
@@ -247,6 +250,18 @@ class ConfTests(TestCase):
             issues = check_richtext_filter_level_none(None)
             self.assertEqual(issues, expected)
 
+    def test_nova_force_raw_html_warns(self):
+        """System check warns when the env escape hatch is set."""
+        settings.clear_cache()
+        expected = [
+            Warning(
+                RICHTEXT_FILTER_LEVEL_NONE_WARNING,
+                id="mezzanine.core.W06",
+            )
+        ]
+        with mock.patch.dict(os.environ, {"NOVA_FORCE_RAW_HTML": "1"}):
+            self.assertEqual(check_richtext_filter_level_none(None), expected)
+
     def test_richtext_filter_level_default_no_warning(self):
         """Default HIGH and explicit LOW do not warn."""
         settings.clear_cache()
@@ -254,31 +269,45 @@ class ConfTests(TestCase):
         with override_settings(RICHTEXT_FILTER_LEVEL=RICHTEXT_FILTER_LEVEL_LOW):
             self.assertEqual(check_richtext_filter_level_none(None), [])
 
-    def test_richtext_filter_level_none_db_warns(self):
-        """NONE saved via the Setting admin still triggers the warning."""
+    def test_richtext_filter_level_db_none_ignored(self):
+        """Stale Setting rows cannot re-enable NONE once the setting is not editable."""
         settings.clear_cache()
         Setting.objects.create(
             name="RICHTEXT_FILTER_LEVEL",
             value=str(RICHTEXT_FILTER_LEVEL_NONE),
         )
-        expected = [
-            Warning(
-                RICHTEXT_FILTER_LEVEL_NONE_WARNING,
-                id="mezzanine.core.W06",
-            )
-        ]
         try:
-            self.assertEqual(check_richtext_filter_level_none(None), expected)
+            self.assertEqual(
+                settings.RICHTEXT_FILTER_LEVEL, RICHTEXT_FILTER_LEVEL_HIGH
+            )
+            self.assertEqual(check_richtext_filter_level_none(None), [])
+            form = SettingsForm()
+            self.assertNotIn("RICHTEXT_FILTER_LEVEL", form.fields)
         finally:
             Setting.objects.filter(name="RICHTEXT_FILTER_LEVEL").delete()
             settings.clear_cache()
 
-    def test_richtext_filter_level_none_still_editable(self):
-        """Wave 0: NONE stays in the admin; the setting is not removed."""
+    def test_richtext_filter_level_not_admin_editable(self):
+        """Wave 1: the setting is not admin-editable and NONE is not a choice."""
         setting = registry["RICHTEXT_FILTER_LEVEL"]
-        self.assertTrue(setting["editable"])
+        self.assertFalse(setting["editable"])
         choice_values = [value for value, label in setting["choices"]]
-        self.assertIn(RICHTEXT_FILTER_LEVEL_NONE, choice_values)
+        self.assertNotIn(RICHTEXT_FILTER_LEVEL_NONE, choice_values)
+
+    def test_richtext_filter_level_none_not_in_settings_form(self):
+        """NONE is not offered on the Setting admin form."""
+        form = SettingsForm()
+        self.assertNotIn("RICHTEXT_FILTER_LEVEL", form.fields)
+        for field in form:
+            choices = getattr(field.field, "choices", None)
+            if not choices:
+                continue
+            values = [value for value, label in choices]
+            self.assertNotIn(
+                RICHTEXT_FILTER_LEVEL_NONE,
+                values,
+                "%s still offers NONE" % field.name,
+            )
 
     def test_extra_model_fields_empty_no_warning(self):
         settings.clear_cache()

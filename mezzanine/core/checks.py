@@ -5,6 +5,7 @@ from mezzanine.conf import settings
 from mezzanine.core.defaults import (
     RICHTEXT_FILTER_LEVEL_HIGH,
     RICHTEXT_FILTER_LEVEL_NONE,
+    nova_force_raw_html,
 )
 from mezzanine.utils.conf import middlewares_or_subclasses_installed
 from mezzanine.utils.sites import SITE_PERMISSION_MIDDLEWARE
@@ -17,9 +18,10 @@ LOADER_TAGS_WARNING = (
 )
 
 RICHTEXT_FILTER_LEVEL_NONE_WARNING = (
-    "RICHTEXT_FILTER_LEVEL is set to NONE (no filtering). This disables HTML "
-    "sanitization and allows staff to persist script tags. This option is "
-    "deprecated and will be removed from the admin. Use HIGH or LOW instead."
+    "HTML sanitization is disabled (RICHTEXT_FILTER_LEVEL=NONE or "
+    "NOVA_FORCE_RAW_HTML=1). This allows staff to persist script tags. "
+    "RICHTEXT_FILTER_LEVEL is not admin-editable. NONE is only honored "
+    "when NOVA_FORCE_RAW_HTML=1."
 )
 
 EXTRA_MODEL_FIELDS_WARNING = (
@@ -74,9 +76,10 @@ def check_sites_middleware(app_configs, **kwargs):
 
 @register()
 def check_richtext_filter_level_none(app_configs, **kwargs):
-    """Warn if RICHTEXT_FILTER_LEVEL_NONE is the configured filter level.
+    """Warn if raw HTML is enabled via NONE or NOVA_FORCE_RAW_HTML=1.
 
-    Warning only: the setting stays admin-editable and can still be saved.
+    The setting is not admin-editable. A leftover database row is
+    ignored; settings.py NONE still warns so operators clean it up.
     """
     try:
         level = settings.RICHTEXT_FILTER_LEVEL
@@ -89,7 +92,7 @@ def check_richtext_filter_level_none(app_configs, **kwargs):
             django_settings, "RICHTEXT_FILTER_LEVEL", RICHTEXT_FILTER_LEVEL_HIGH
         )
 
-    if level == RICHTEXT_FILTER_LEVEL_NONE:
+    if level == RICHTEXT_FILTER_LEVEL_NONE or nova_force_raw_html():
         return [
             Warning(
                 RICHTEXT_FILTER_LEVEL_NONE_WARNING,
