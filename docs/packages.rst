@@ -237,13 +237,7 @@ within Mezzanine that are added to ``settings.INSTALLED_APPS``.
 .. automodule:: mezzanine.blog.management.commands.import_rss
    :members:
 
-.. automodule:: mezzanine.blog.management.commands.import_blogger
-   :members:
-
 .. automodule:: mezzanine.blog.management.commands.import_wordpress
-   :members:
-
-.. automodule:: mezzanine.blog.management.commands.import_tumblr
    :members:
 
 
