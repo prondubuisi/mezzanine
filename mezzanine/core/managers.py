@@ -50,25 +50,31 @@ if django.VERSION >= (1, 10):
 
 class PublishedManager(Manager):
     """
-    Provides filter for restricting items returned by status and
-    publish date when the given user is not a staff member.
+    Restrict items by published status and the publish/expiry window.
+
+    ``for_user`` stays on the signature because ``PageManager.published``
+    uses it for ``login_required``. It no longer means "staff see drafts."
+    A valid ``preview`` token unions that one object.
     """
 
-    def published(self, for_user=None):
+    def published(self, for_user=None, preview=None):
         """
-        For non-staff users, return items with a published status and
-        whose publish and expiry dates fall before and after the
-        current date when specified.
+        Return items with a published status whose publish and expiry
+        dates (when set) contain now.
+
+        Staff membership is ignored. If ``preview`` covers this model,
+        the previewed pk is unioned in (draft, scheduled, or expired).
         """
         from mezzanine.core.models import CONTENT_STATUS_PUBLISHED
 
-        if for_user is not None and for_user.is_staff:
-            return self.all()
-        return self.filter(
+        qs = self.filter(
             Q(publish_date__lte=now()) | Q(publish_date__isnull=True),
             Q(expiry_date__gte=now()) | Q(expiry_date__isnull=True),
-            Q(status=CONTENT_STATUS_PUBLISHED),
+            status=CONTENT_STATUS_PUBLISHED,
         )
+        if preview is not None and preview.covers(self.model):
+            return self.filter(pk=preview.object_pk) | qs
+        return qs
 
     def get_by_natural_key(self, slug):
         return self.get(slug=slug)
@@ -388,6 +394,7 @@ class SearchableManager(Manager):
             if len(all_results) >= max_results:
                 break
             try:
+                # Search never unions a preview token — drafts stay out.
                 queryset = model.objects.published(for_user=user)
             except AttributeError:
                 queryset = model.objects.get_queryset()
@@ -434,6 +441,9 @@ class DisplayableManager(CurrentSiteManager, PublishedManager, SearchableManager
         Returns a dictionary of urls mapped to Displayable subclass
         instances, including a fake homepage instance if none exists.
         Used in ``mezzanine.core.sitemaps``.
+
+        Drafts are never included. ``for_user`` is kept for call-site
+        compatibility and is not a staff bypass.
         """
 
         class Home:

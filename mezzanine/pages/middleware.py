@@ -63,7 +63,10 @@ class PageMiddleware(MiddlewareMixin):
         # request object. If none found, skip all further processing.
         slug = path_to_slug(request.path_info)
         pages = Page.objects.with_ascendants_for_slug(
-            slug, for_user=request.user, include_login_required=True
+            slug,
+            for_user=request.user,
+            include_login_required=True,
+            preview=getattr(request, "preview", None),
         )
         if pages:
             page = pages[0]

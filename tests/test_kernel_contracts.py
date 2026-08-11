@@ -1,8 +1,8 @@
 """Characterization suite. Flip comments mark Wave 3 PRs.
 
-Locks *current* kernel behaviour (design 2.4) before 020–022c cut over.
-Do not "fix" staff-sees-drafts here — later PRs flip the assertions
-in this file. 020 nestable ``override_current_site_id`` is done.
+022c done: ``published()`` no longer short-circuits on ``is_staff``.
+Drafts are 404 without a preview token. 020 nestable
+``override_current_site_id`` is done.
 """
 
 import os
@@ -26,6 +26,7 @@ from mezzanine.core.models import (
     CONTENT_STATUS_DRAFT,
     CONTENT_STATUS_PUBLISHED,
     Displayable,
+    PreviewToken,
 )
 from mezzanine.core.templatetags.mezzanine_tags import richtext_filters
 from mezzanine.forms import fields
@@ -404,19 +405,16 @@ def test_page_middleware_blog_post_uses_blog_listing_page(rf):
 def test_displayable_published_instance_ignores_staff():
     """Instance method does NOT look at is_staff.
 
-    022a: document this. 022c: staff GET without token → 404 (view/manager),
-    instance method stays date/status-only.
+    022c: staff GET without token → 404 (view/manager).
+    Instance method stays date/status-only.
     """
     draft = RichTextPageFactory(title="Draft Instance", status=CONTENT_STATUS_DRAFT)
     AuthorFactory()  # staff exists; instance method still ignores them
     assert draft.published() is False
 
 
-def test_published_manager_staff_short_circuits_to_all():
-    """PublishedManager.published(for_user=staff) returns self.all().
-
-    022c: stop short-circuiting on is_staff; staff drafts need a token.
-    """
+def test_published_manager_does_not_short_circuit_on_staff():
+    """PublishedManager.published ignores is_staff; drafts need a token."""
     draft = RichTextPageFactory(title="Draft Manager", status=CONTENT_STATUS_DRAFT)
     staff = AuthorFactory()
     anon = AnonymousUser()
@@ -425,26 +423,30 @@ def test_published_manager_staff_short_circuits_to_all():
 
     assert draft.pk not in pks(Page.objects.published())
     assert draft.pk not in pks(Page.objects.published(for_user=anon))
-    assert draft.pk in pks(Page.objects.published(for_user=staff))
+    assert draft.pk not in pks(Page.objects.published(for_user=staff))
 
 
-def test_staff_get_draft_is_200_without_token(author_user, rf):
-    """Staff published() bypass attaches the draft; page view would be 200.
+def test_published_manager_unions_preview_token(author_user):
+    """A valid token unions pk=token.object_pk into published()."""
+    draft = RichTextPageFactory(title="Token Draft", status=CONTENT_STATUS_DRAFT)
+    raw = PreviewToken.issue(draft, created_by=author_user)
+    token = PreviewToken.lookup(raw)
+    pks = set(Page.objects.published(preview=token).values_list("pk", flat=True))
+    assert draft.pk in pks
 
-    Full template render is skipped (Django 6.1 widget ``__proxy__`` on
-    ``{% editable %}``). 022c: staff GET without token → 404.
-    """
+
+def test_staff_get_draft_is_404_without_token(author_user, rf):
+    """Staff GET without a token does not attach the draft (view 404s)."""
     draft = RichTextPageFactory(
-        title="Staff Visible Draft", status=CONTENT_STATUS_DRAFT
+        title="Staff Hidden Draft", status=CONTENT_STATUS_DRAFT
     )
     request = rf.get(draft.get_absolute_url())
     request.user = author_user
     response = PageMiddleware(lambda req: None).process_view(
         request, page_view, [], {}
     )
-    assert request.page.pk == draft.pk
-    assert response is not None
-    assert response.status_code == 200
+    assert getattr(request, "page", None) is None
+    assert response is None
 
 
 def test_anon_get_draft_is_404(rf):
@@ -498,8 +500,8 @@ def test_page_objects_filtered_to_current_site():
 def test_staff_get_other_site_draft_404s_when_site_id_is_theirs(author_user, rf):
     """Staff on site 1 cannot resolve a site-2 draft (manager is site-scoped).
 
-    Staff-sees-drafts does not pierce CurrentSiteManager. 022c: same-site
-    draft GET without token also 404s. 023a: per-(user, site) SiteRole.
+    CurrentSiteManager still hides the other site. Same-site drafts
+    also 404 without a token. 023a: per-(user, site) SiteRole.
     """
     site2 = Site.objects.create(domain="draft-site2.example.com", name="Draft 2")
     with override_current_site_id(site2.pk):
@@ -719,14 +721,11 @@ def test_url_map_anon_excludes_drafts():
     assert draft.get_absolute_url() not in mapping
 
 
-def test_url_map_staff_currently_includes_drafts():
-    """url_map(for_user=staff) includes drafts because published() short-circuits.
-
-    022c: staff map excludes drafts unless a preview token covers them.
-    """
+def test_url_map_staff_excludes_drafts():
+    """url_map never unions drafts, including for staff."""
     draft = RichTextPageFactory(
         title="Urlmap Staff Draft", status=CONTENT_STATUS_DRAFT
     )
     staff = AuthorFactory()
     mapping = Displayable.objects.url_map(for_user=staff)
-    assert draft.get_absolute_url() in mapping
+    assert draft.get_absolute_url() not in mapping

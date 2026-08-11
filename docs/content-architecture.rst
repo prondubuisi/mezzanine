@@ -561,13 +561,11 @@ rather than rewriting the contract surface.
 status and the publish/expiry window only. It does **not** look at
 ``is_staff``.
 
-``PublishedManager.published(for_user=)`` is the method that
-short-circuits to ``self.all()`` for any staff user. That is how
-staff see drafts today. PR-022c removes the short-circuit and
-threads ``preview=`` through the call sites below. ``for_user``
+``PublishedManager.published(for_user=, preview=)`` does **not**
+short-circuit on ``is_staff``. A draft is absent from the
+queryset unless ``preview`` covers that object. ``for_user``
 stays on the signature because :meth:`PageManager.published` uses
-it for ``login_required``; after 022c it no longer means "staff
-see drafts."
+it for ``login_required``; it no longer means "staff see drafts."
 
 ``published(for_user=)`` call sites (PR-022c)
 --------------------------------------------
@@ -579,9 +577,9 @@ published-only and must not union a preview.
 
 Production:
 
-* ``mezzanine/core/managers.py:56`` —
-  ``PublishedManager.published``: remove staff short-circuit;
-  add ``preview=``.
+* ``mezzanine/core/managers.py`` —
+  ``PublishedManager.published``: no staff short-circuit;
+  ``preview=`` unions one object.
 * ``mezzanine/core/managers.py:384`` —
   ``SearchableManager.search`` union: pass ``preview=None``
   (search never shows drafts).
@@ -620,6 +618,5 @@ Tests:
 * ``tests/test_pages.py:179-183`` —
   ``login_required`` vs ``published``.
 * ``tests/test_kernel_contracts.py`` —
-  characterization suite added in PR-019 (manager staff
-  short-circuit, staff GET draft, ``url_map``). 022c flips
-  those assertions.
+  staff GET without token is 404; ``url_map`` excludes drafts;
+  a valid token unions that pk.

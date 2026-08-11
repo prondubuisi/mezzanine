@@ -32,7 +32,11 @@ from mezzanine.core.admin import BaseDynamicInlineAdmin
 from mezzanine.core.fields import MultiChoiceField, RichTextField
 from mezzanine.core.managers import DisplayableManager
 from mezzanine.core.middleware import FetchFromCacheMiddleware
-from mezzanine.core.models import CONTENT_STATUS_DRAFT, CONTENT_STATUS_PUBLISHED
+from mezzanine.core.models import (
+    CONTENT_STATUS_DRAFT,
+    CONTENT_STATUS_PUBLISHED,
+    PreviewToken,
+)
 from mezzanine.core.templatetags.mezzanine_tags import initialize_nevercache
 from mezzanine.forms.admin import FieldAdmin
 from mezzanine.forms.models import Form
@@ -132,18 +136,35 @@ class CoreTests(TestCase):
     @skipUnless("mezzanine.pages" in settings.INSTALLED_APPS, "pages app required")
     def test_draft(self):
         """
-        Test a draft object as only being viewable by a staff member.
+        A draft is 404 without a preview token, including for staff.
+        A valid token attaches the page (200).
 
-        PR-022c will flip the staff GET (no preview token) from 200
-        to 404; drafts then require an opaque preview token.
+        Full client 404 render is skipped: staff error pages hit a
+        Django 6.1 ``{% editable %}`` ``__proxy__`` crash.
         """
-        self.client.logout()
+        from django.contrib.auth.models import AnonymousUser
+        from django.test import RequestFactory
+
+        from mezzanine.core.middleware import PreviewTokenMiddleware
+        from mezzanine.pages.middleware import PageMiddleware
+        from mezzanine.pages.views import page as page_view
+
         draft = RichTextPage.objects.create(title="Draft", status=CONTENT_STATUS_DRAFT)
-        response = self.client.get(draft.get_absolute_url(), follow=True)
-        self.assertEqual(response.status_code, 404)
-        self.client.login(username=self._username, password=self._password)
-        response = self.client.get(draft.get_absolute_url(), follow=True)
-        # 022c: staff GET without token → 404 (token required).
+        rf = RequestFactory()
+        page_mw = PageMiddleware(lambda req: None)
+        for user in (AnonymousUser(), self._user):
+            request = rf.get(draft.get_absolute_url())
+            request.user = user
+            response = page_mw.process_view(request, page_view, [], {})
+            self.assertIsNone(getattr(request, "page", None))
+            self.assertIsNone(response)
+
+        raw = PreviewToken.issue(draft, created_by=self._user)
+        request = rf.get(draft.get_absolute_url() + "?preview=" + raw)
+        request.user = AnonymousUser()
+        PreviewTokenMiddleware(lambda req: None).process_request(request)
+        response = page_mw.process_view(request, page_view, [], {})
+        self.assertEqual(request.page.pk, draft.pk)
         self.assertEqual(response.status_code, 200)
 
     def test_searchable_manager_search_fields(self):
@@ -212,16 +233,15 @@ class CoreTests(TestCase):
             # `first` should now be ranked higher.
             self.assertEqual(results[0].id, first)
 
-        # Test results that have a publish date in the future
+        # Search never unions unpublished rows, even when for_user is staff.
         future = RichTextPage.objects.create(
             title="test page to be published in the future",
             publish_date=now() + timedelta(days=10),
             **published,
         ).id
-        results = RichTextPage.objects.search("test", for_user=self._username)
-        self.assertEqual(len(results), 3)
-        if results:
-            self.assertEqual(results[0].id, future)
+        results = RichTextPage.objects.search("test", for_user=self._user)
+        self.assertEqual(len(results), 2)
+        self.assertFalse(any(r.id == future for r in results))
 
         # Test the actual search view.
         response = self.client.get(reverse("search") + "?q=test")
