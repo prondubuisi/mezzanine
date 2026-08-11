@@ -62,11 +62,30 @@ jobs:
       - name: Lint
         run: tox -e package -e lint
 
-  # Create a new semantic release
-  # Only runs on the original repo, not forks
+  # Scan declared + installed runtime deps for known CVEs.
+  # Does not re-expand the living test matrix (py312–314 × dj52/60/61).
+  audit:
+    name: pip-audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install package and pip-audit
+        run: |
+          python -m pip install -U pip pip-audit
+          python -m pip install -e .
+      - name: Audit dependencies
+        run: pip-audit --skip-editable
+
+  # Create a new semantic release (GitHub notes + version bump).
+  # Owner check is for semantic-release on the original repo only — do
+  # not use it as a PyPI gate. Trusted Publishing lives in publish.yml
+  # and runs on this fork for published releases / v* tags.
   release:
     if: github.repository_owner == 'stephenmcd'
-    needs: [test, lint]
+    needs: [test, lint, audit]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
