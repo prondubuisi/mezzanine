@@ -137,9 +137,12 @@ class CheckboxSelectMultiple(forms.CheckboxSelectMultiple):
         return mark_safe("<span class='multicheckbox'>%s</span>" % rendered)
 
 
-def get_edit_form(obj, field_names, data=None, files=None):
+def get_edit_form(obj, field_names, data=None, files=None, textarea=False):
     """
     Returns the in-line editing form for editing a single model field.
+
+    ``textarea=True`` forces visible widgets to ``forms.Textarea``
+    (HTMX island; TinyMCE stays in admin).
     """
 
     # Map these form fields to their types defined in the forms app so
@@ -171,12 +174,15 @@ def get_edit_form(obj, field_names, data=None, files=None):
             self.uuid = str(uuid4())
             for f in self.fields.keys():
                 field_class = self.fields[f].__class__
-                try:
-                    widget = fields.WIDGETS[widget_overrides[field_class]]
-                except KeyError:
-                    pass
+                if textarea and not self.fields[f].widget.is_hidden:
+                    self.fields[f].widget = forms.Textarea()
                 else:
-                    self.fields[f].widget = widget()
+                    try:
+                        widget = fields.WIDGETS[widget_overrides[field_class]]
+                    except KeyError:
+                        pass
+                    else:
+                        self.fields[f].widget = widget()
                 css_class = self.fields[f].widget.attrs.get("class", "")
                 css_class += " " + field_class.__name__.lower()
                 self.fields[f].widget.attrs["class"] = css_class

@@ -28,14 +28,12 @@ from django.utils.text import capfirst
 
 from mezzanine import template
 from mezzanine.conf import settings
-from mezzanine.core.fields import RichTextField
-from mezzanine.core.forms import get_edit_form
+from mezzanine.core.capabilities import user_can_edit
 from mezzanine.utils.cache import cache_installed, nevercache_token
 from mezzanine.utils.html import decode_entities
 from mezzanine.utils.importing import import_dotted_path
 from mezzanine.utils.sites import current_site_id, has_site_permission
 from mezzanine.utils.urls import admin_url, home_slug
-from mezzanine.utils.views import is_editable
 
 register = template.Library()
 
@@ -485,7 +483,6 @@ def editable_loader(context):
         )
         template_vars["accounts_logout_url"] = context.get("accounts_logout_url", None)
         template_vars["toolbar"] = t.render(template_vars)
-        template_vars["richtext_media"] = RichTextField().formfield().widget.media
     return template_vars
 
 
@@ -548,12 +545,13 @@ def editable(parsed, context, token):
 
     if settings.INLINE_EDITING_ENABLED and fields and "request" in context:
         obj = fields[0][0]
-        if isinstance(obj, Model) and is_editable(obj, context["request"]):
+        if isinstance(obj, Model) and user_can_edit(context["request"].user, obj):
+            from mezzanine.core.views import render_editable_island
+
             field_names = ",".join(f[1] for f in fields)
-            context["editable_form"] = get_edit_form(obj, field_names)
-            context["original"] = parsed
-            t = get_template("includes/editable_form.html")
-            return t.render(context.flatten())
+            return render_editable_island(
+                context["request"], obj, field_names, original=parsed
+            )
     return parsed
 
 

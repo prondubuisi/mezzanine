@@ -1,0 +1,11 @@
+{% load i18n %}
+<div class="editable-island"
+     hx-target="this"
+     hx-swap="outerHTML">
+    <div class="editable-content">{{ original }}</div>
+    <button type="button"
+            class="editable-edit"
+            hx-get="{{ edit_url }}"
+            hx-target="closest .editable-island"
+            hx-swap="outerHTML">{% trans "Edit" %}</button>
+</div>
