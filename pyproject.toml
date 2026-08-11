@@ -59,10 +59,7 @@ testing = [
     "requirements-parser>=0.11",
 ]
 codestyle = [
-    "flake8>=3,<4",
-    "black==22.3.0",
-    "isort>=5,<6",
-    "pyupgrade>=2,<3",
+    "ruff>=0.16,<0.17",
 ]
 
 [project.urls]
@@ -78,16 +75,46 @@ path = "mezzanine/__init__.py"
 [tool.hatch.build.targets.wheel]
 packages = ["mezzanine"]
 
-[tool.black]
-exclude = '''
-(
-  /(
-      \.eggs
-    | \.git
-    | \.tox
-    | \.venv
-    | build
-    | dist
-  )/
-)
-'''
+# Replaces black / flake8 / isort / pyupgrade. target-version stays py38
+# until PR-009 raises the Python floor. A full `ruff format` of the tree
+# is deferred: ~81 files still differ from black 22.3.0 (isolated follow-up).
+[tool.ruff]
+target-version = "py38"
+line-length = 88
+required-version = ">=0.16"
+extend-exclude = [
+    ".eggs",
+    ".tox",
+    ".venv",
+    "build",
+    "dist",
+]
+
+[tool.ruff.lint]
+select = [
+    "E",  # pycodestyle errors (flake8)
+    "W",  # pycodestyle warnings (flake8)
+    "F",  # pyflakes (flake8)
+    "I",  # isort
+    "UP", # pyupgrade
+]
+ignore = [
+    "E731",  # lambda assignment — previous flake8 ignore
+    "E713",  # existing; not a tree-wide rewrite
+    "E741",  # existing; not a tree-wide rewrite
+    "F541",  # existing; not a tree-wide rewrite
+    "UP008", # existing super(__class__, self); 2 sites
+    "UP031", # printf → format; 179 sites, old pyupgrade skipped
+    "UP032", # existing .format() → f-string; 2 sites
+]
+
+[tool.ruff.lint.per-file-ignores]
+# Previous flake8 excluded migrations.
+"**/migrations/*.py" = ["E", "W", "F", "I", "UP"]
+
+[tool.ruff.lint.isort]
+# Previous .isort.cfg: profile = black (ruff default).
+
+[tool.ruff.format]
+# Black-compatible defaults. `ruff format --check` is wired in tox/CI
+# but currently fails on ~81 files; do not mix a reformat into this PR.

@@ -31,15 +31,17 @@ Since the test suite is quite big you may want to run only a specific test case:
 Code Style
 ----------
 
-Python code style is enforced with ``flake8`` and  ``black``. You can install and run both as follows:
+Python code style is enforced with ``ruff`` (lint + format, replacing
+``black``, ``flake8``, ``isort``, and ``pyupgrade``). Install and run it as follows:
 
 .. code-block:: bash
 
   pip install -e ".[codestyle]"
-  black . --check # Omit the flag to have black autofix errors
-  flake8 .
+  ruff check .
+  ruff format --check .  # omit --check to apply formatting
 
-If your editor is configured to integrate with ``black`` and ``flake8`` it should pick up the project's configuration automatically.
+If your editor is configured to integrate with ``ruff`` it should pick up the
+project's configuration automatically.
 
 Continous Integration
 ---------------------
