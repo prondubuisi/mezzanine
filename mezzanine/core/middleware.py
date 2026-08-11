@@ -103,22 +103,6 @@ class SitePermissionMiddleware(MiddlewareMixin):
         request.user.has_site_permission = has_site_permission
 
 
-class TemplateForDeviceMiddleware(MiddlewareMixin):
-    """
-    DEPRECATED: Device detection has been removed from Mezzanine.
-    Inserts device-specific templates to the template list.
-    """
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        warnings.warn(
-            "`TemplateForDeviceMiddleware` is deprecated. "
-            "Please remove it from your middleware settings.",
-            FutureWarning,
-            stacklevel=2,
-        )
-
-
 class TemplateForHostMiddleware(MiddlewareMixin):
     """
     Inserts host-specific templates to the template list.

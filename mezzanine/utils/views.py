@@ -157,8 +157,7 @@ def paginate(objects, page_num, per_page, max_paging_links):
 
 def render(request, templates, dictionary=None, context_instance=None, **kwargs):
     """
-    Mimics ``django.shortcuts.render`` but uses a TemplateResponse for
-    ``mezzanine.core.middleware.TemplateForDeviceMiddleware``
+    Mimics ``django.shortcuts.render`` but uses a TemplateResponse.
     """
 
     warnings.warn(
