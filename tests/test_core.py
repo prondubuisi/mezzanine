@@ -227,6 +227,32 @@ class CoreTests(TestCase):
         response = self.client.get(reverse("search") + "?q=test")
         self.assertEqual(response.status_code, 200)
 
+    @skipUnless("mezzanine.pages" in settings.INSTALLED_APPS, "pages app required")
+    def test_search_respects_max_results(self):
+        """
+        annotate_scores and the cross-model union must not materialize
+        more than SEARCH_MAX_RESULTS rows.
+        """
+        RichTextPage.objects.all().delete()
+        published = {"status": CONTENT_STATUS_PUBLISHED}
+        for i in range(6):
+            RichTextPage.objects.create(
+                title="bounded search page %s" % i, **published
+            )
+        original = settings.SEARCH_MAX_RESULTS
+        settings.SEARCH_MAX_RESULTS = 2
+        try:
+            results = RichTextPage.objects.search("bounded search")
+            self.assertEqual(len(results), 2)
+            scored = list(
+                RichTextPage.objects.get_queryset()
+                .search("bounded search")
+                .annotate_scores()
+            )
+            self.assertEqual(len(scored), 2)
+        finally:
+            settings.SEARCH_MAX_RESULTS = original
+
     def _create_page(self, title, status):
         return RichTextPage.objects.create(title=title, status=status)
 
