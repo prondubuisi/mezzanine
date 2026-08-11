@@ -8,27 +8,28 @@ two public XSS CVEs already fixed in PR-001 / PR-002:
 * CVE-2025-6050 — title-in-JSON served by displayable_links_js
 * CVE-2025-29573 — form-upload filename ``"><img…>``
 
-PR-004: default pipeline bleaches on read (after thumbnails). A custom
-filter that returns non-SafeText still FutureWarns and does not raise.
-Does not assert that RICHTEXT_FILTER_LEVEL_NONE is absent from the
-Setting admin (that is PR-005b).
+PR-004: default pipeline bleaches on read (after thumbnails).
+PR-005b: custom filters that return non-SafeText raise TypeError.
+NONE is not in the Setting admin; raw HTML only via NOVA_FORCE_RAW_HTML=1.
 """
+import os
 import re
-import warnings
 from pathlib import Path
-from unittest import skipUnless
+from unittest import mock, skipUnless
 
 from bs4 import BeautifulSoup
 from django.forms.models import modelform_factory
 from django.template import Context, Template
+from django.test.utils import override_settings
 from django.urls import reverse
 from django.utils.html import escape as html_escape
-from django.utils.safestring import SafeText
 from django.utils.timezone import now
 
 from mezzanine.blog.models import BlogPost
 from mezzanine.conf import settings
+from mezzanine.core.defaults import RICHTEXT_FILTER_LEVEL_NONE
 from mezzanine.core.models import CONTENT_STATUS_PUBLISHED
+from mezzanine.utils.html import escape as richtext_escape
 from mezzanine.forms import fields
 from mezzanine.forms.models import FieldEntry, Form, FormEntry
 from mezzanine.pages.models import RichTextPage
@@ -280,23 +281,30 @@ class SanitizeRegressionTests(TestCase):
             response.content.decode("utf-8"), LIVE_SCRIPT_ALERT, "HTTP render"
         )
 
-    def test_custom_filter_non_safetext_warns_does_not_raise(self):
-        """Custom filters that return non-SafeText FutureWarn; they do not raise."""
+    def test_custom_filter_non_safetext_raises(self):
+        """Custom filters that return non-SafeText raise TypeError."""
         original = settings.RICHTEXT_FILTERS
         settings.RICHTEXT_FILTERS = ("tests.test_sanitize.plain_string_filter",)
         try:
-            with warnings.catch_warnings(record=True) as caught:
-                warnings.simplefilter("always", FutureWarning)
-                rendered = self._render_filters("<p>ok</p>")
-            self.assertTrue(
-                any(issubclass(w.category, FutureWarning) for w in caught),
-                "expected FutureWarning for non-SafeText custom filter, got %r"
-                % [w.category for w in caught],
-            )
-            self.assertIsInstance(rendered, SafeText)
-            self.assertIn("ok", rendered)
+            with self.assertRaises(TypeError) as raised:
+                self._render_filters("<p>ok</p>")
+            self.assertIn("SafeText", str(raised.exception))
+            self.assertIn("plain_string_filter", str(raised.exception))
         finally:
             settings.RICHTEXT_FILTERS = original
+
+    def test_configured_none_without_env_still_bleaches(self):
+        """RICHTEXT_FILTER_LEVEL=NONE is ignored unless the env hatch is set."""
+        with mock.patch.dict(os.environ, {"NOVA_FORCE_RAW_HTML": "0"}):
+            with override_settings(RICHTEXT_FILTER_LEVEL=RICHTEXT_FILTER_LEVEL_NONE):
+                cleaned = richtext_escape(SCRIPT)
+        self.assertNotIn("<script>", cleaned.lower())
+
+    def test_nova_force_raw_html_escape_hatch(self):
+        """NOVA_FORCE_RAW_HTML=1 is the only path that disables filtering."""
+        with mock.patch.dict(os.environ, {"NOVA_FORCE_RAW_HTML": "1"}):
+            raw = richtext_escape(SCRIPT)
+        self.assertIn("<script>", raw.lower())
 
     def test_description_templates_stop_raw_safe(self):
         """Blog list and search results must not mark descriptions |safe."""

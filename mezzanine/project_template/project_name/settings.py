@@ -197,7 +197,9 @@ PROJECT_ROOT = BASE_DIR = os.path.dirname(PROJECT_APP_PATH)
 CACHE_MIDDLEWARE_KEY_PREFIX = PROJECT_APP
 
 # Django 4.2+ STORAGES. Filebrowser Safe mixes in filesystem behaviour
-# on the default backend.
+# on the default backend. It still reads DEFAULT_FILE_STORAGE at import
+# (removed from Django 5.1), so keep the alias next to STORAGES.
+DEFAULT_FILE_STORAGE = "django.core.files.storage.FileSystemStorage"
 STORAGES = {
     "default": {
         "BACKEND": "django.core.files.storage.FileSystemStorage",
