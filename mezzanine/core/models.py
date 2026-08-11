@@ -542,9 +542,12 @@ class Ownable(models.Model):
 
     def is_editable(self, request):
         """
-        Restrict in-line editing to the objects's owner and superusers.
+        Author: owner only. Editor+ on this site: any object.
+        Superuser: always.
         """
-        return request.user.is_superuser or request.user.id == self.user_id
+        from mezzanine.core.capabilities import user_can_edit
+
+        return user_can_edit(request.user, self)
 
 
 class ContentTyped(models.Model):
@@ -600,24 +603,52 @@ class ContentTyped(models.Model):
         return getattr(self, self.content_model) if self.content_model else self
 
 
-class SitePermission(models.Model):
+ROLE_AUTHOR = "author"
+ROLE_EDITOR = "editor"
+ROLE_PUBLISHER = "publisher"
+ROLE_ADMIN = "admin"
+SITE_ROLE_CHOICES = (
+    (ROLE_AUTHOR, _("Author")),
+    (ROLE_EDITOR, _("Editor")),
+    (ROLE_PUBLISHER, _("Publisher")),
+    (ROLE_ADMIN, _("Admin")),
+)
+
+
+class SiteRole(models.Model):
     """
-    Permission relationship between a user and a site that's
-    used instead of ``User.is_staff``, for admin and inline-editing
-    access.
+    Per-(user, site) role. Replaces ``SitePermission`` (OneToOne + M2M).
+
+    Superuser is cross-site break-glass and does not need a row.
     """
 
-    user = models.OneToOneField(
+    user = models.ForeignKey(
         user_model_name,
         on_delete=models.CASCADE,
-        verbose_name=_("Author"),
-        related_name="%(class)ss",
+        verbose_name=_("User"),
+        related_name="siteroles",
     )
-    sites = models.ManyToManyField("sites.Site", blank=True, verbose_name=_("Sites"))
+    site = models.ForeignKey(
+        "sites.Site",
+        on_delete=models.CASCADE,
+        verbose_name=_("Site"),
+        related_name="siteroles",
+    )
+    role = models.CharField(
+        max_length=16, choices=SITE_ROLE_CHOICES, default=ROLE_EDITOR
+    )
 
     class Meta:
-        verbose_name = _("Site permission")
-        verbose_name_plural = _("Site permissions")
+        verbose_name = _("Site role")
+        verbose_name_plural = _("Site roles")
+        constraints = [
+            models.UniqueConstraint(
+                fields=["user", "site"], name="nova_siterole_user_site"
+            ),
+        ]
+
+    def __str__(self):
+        return "%s @ %s (%s)" % (self.user, self.site, self.role)
 
 
 PREVIEW_ROLE_ANON = "anon"

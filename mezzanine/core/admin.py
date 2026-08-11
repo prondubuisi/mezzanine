@@ -15,13 +15,14 @@ from django.utils.html import format_html
 from django.utils.translation import gettext_lazy as _
 
 from mezzanine.conf import settings
+from mezzanine.core.capabilities import user_can_issue_preview
 from mezzanine.core.forms import DynamicInlineAdminForm
 from mezzanine.core.models import (
     CONTENT_STATUS_PUBLISHED,
     ContentTyped,
     Orderable,
     PreviewToken,
-    SitePermission,
+    SiteRole,
 )
 from mezzanine.utils.models import base_concrete_model
 from mezzanine.utils.sites import current_site_id
@@ -134,6 +135,8 @@ class DisplayableAdmin(BaseTranslationModelAdmin):
         """Issue an opaque preview token and redirect to ``?preview=``."""
         obj = get_object_or_404(self.model, pk=object_id)
         if not self.has_view_or_change_permission(request, obj):
+            raise PermissionDenied
+        if not user_can_issue_preview(request.user, obj=obj):
             raise PermissionDenied
         raw = PreviewToken.issue(obj, created_by=request.user)
         url = obj.get_absolute_url()
@@ -439,10 +442,9 @@ class ContentTypedAdmin:
 ####################################
 
 
-class SitePermissionInline(admin.TabularInline):
-    model = SitePermission
-    max_num = 1
-    can_delete = False
+class SiteRoleInline(admin.TabularInline):
+    model = SiteRole
+    extra = 0
 
 
 class SitePermissionUserAdminForm(UserAdmin.form):
@@ -456,7 +458,7 @@ class SitePermissionUserAdminForm(UserAdmin.form):
 
 class SitePermissionUserAdmin(UserAdmin):
 
-    inlines = [SitePermissionInline]
+    inlines = [SiteRoleInline]
     form = SitePermissionUserAdminForm
 
     def save_model(self, request, obj, form, change):
@@ -466,7 +468,7 @@ class SitePermissionUserAdmin(UserAdmin):
         super().save_model(request, obj, form, change)
         user = self.model.objects.get(id=obj.id)
         has_perms = len(user.get_all_permissions()) > 0
-        has_sites = SitePermission.objects.filter(user=user).exists()
+        has_sites = SiteRole.objects.filter(user=user).exists()
         if (
             user.is_active
             and user.is_staff
