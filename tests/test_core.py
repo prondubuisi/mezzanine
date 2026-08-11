@@ -355,6 +355,18 @@ class CoreTests(TestCase):
             "XSS title missing from JSON link list: %r" % titles,
         )
 
+    def test_admin_does_not_expose_csrf_token_on_window(self):
+        """
+        PR-001b: admin pages must not assign the CSRF token to
+        window.__csrf_token. AJAX reads the csrftoken cookie.
+        """
+        self.client.login(username=self._username, password=self._password)
+        response = self.client.get("/admin/", follow=True)
+        self.assertEqual(response.status_code, 200)
+        self.assertNotContains(response, "__csrf_token")
+        self.assertNotContains(response, "window.__csrf_token")
+        self.assertIn(settings.CSRF_COOKIE_NAME, self.client.cookies)
+
     def _get_csrftoken(self, response):
         csrf = re.findall(
             rb'<input type="hidden" name="csrfmiddlewaretoken" ' rb'value="([^"]+)">',

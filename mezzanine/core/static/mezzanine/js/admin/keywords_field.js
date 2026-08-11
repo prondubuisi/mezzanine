@@ -1,6 +1,23 @@
 
 jQuery(function($) {
 
+    function getCookie(name) {
+        var cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            var cookies = document.cookie.split(';');
+            for (var i = 0; i < cookies.length; i++) {
+                var cookie = $.trim(cookies[i]);
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(
+                        cookie.substring(name.length + 1)
+                    );
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+
     $('.keywords-field').css(window.__grappelli_installed ?
                             {margin: '5px 0 0 130px', width: '700px'} :
                             {margin: '5px 0 0 75px', width: '620px'} );
@@ -44,11 +61,13 @@ jQuery(function($) {
         var submitKeywords = function() {
             var field = fields.shift();
             var keywords = {text_keywords: field.value};
+            var csrftoken = getCookie('csrftoken');
             $.ajax({
                 type: "POST",
                 url: window.__admin_keywords_submit_url,
                 headers: {
-                    'X-CSRFToken': window.__csrf_token,
+                    'X-CSRFToken': csrftoken,
+                    'HX-CSRFToken': csrftoken,
                 },
                 data: keywords,
                 success: function (data) {
