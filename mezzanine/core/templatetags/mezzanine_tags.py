@@ -1,4 +1,5 @@
 import os
+import warnings
 from hashlib import md5
 
 try:
@@ -192,9 +193,15 @@ def ifinstalled(parser, token):
 @register.render_tag
 def set_short_url_for(context, token):
     """
-    Sets the ``short_url`` attribute of the given model for share
-    links in the template.
+    Deprecated. Sets the ``short_url`` attribute of the given model.
+
+    No shortening service is called. Prefer the object's own URL.
     """
+    warnings.warn(
+        "{% set_short_url_for %} is deprecated and will be removed.",
+        DeprecationWarning,
+        stacklevel=2,
+    )
     obj = context[token.split_contents()[1]]
     obj.set_short_url()
     return ""
@@ -203,8 +210,15 @@ def set_short_url_for(context, token):
 @register.simple_tag
 def gravatar_url(email, size=32):
     """
-    Return the full URL for a Gravatar given an email hash.
+    Deprecated. Return a Gravatar URL for an email address.
+
+    Not used by default templates. Prefer a local avatar or omit images.
     """
+    warnings.warn(
+        "{% gravatar_url %} is deprecated and is no longer used by default.",
+        DeprecationWarning,
+        stacklevel=2,
+    )
     bits = (md5(email.lower().encode("utf-8")).hexdigest(), size)
     return "//www.gravatar.com/avatar/%s?s=%s&d=identicon&r=PG" % bits
 

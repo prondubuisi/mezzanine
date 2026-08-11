@@ -26,30 +26,6 @@ if generic_comments:
     )
 
     register_setting(
-        name="COMMENTS_DISQUS_SHORTNAME",
-        label=_("Disqus shortname"),
-        description=_("Shortname for the http://disqus.com comments " "service."),
-        editable=True,
-        default="",
-    )
-
-    register_setting(
-        name="COMMENTS_DISQUS_API_PUBLIC_KEY",
-        label=_("Disqus public key"),
-        description=_("Public key for http://disqus.com developer API"),
-        editable=True,
-        default="",
-    )
-
-    register_setting(
-        name="COMMENTS_DISQUS_API_SECRET_KEY",
-        label=_("Disqus secret key"),
-        description=_("Secret key for http://disqus.com developer API"),
-        editable=True,
-        default="",
-    )
-
-    register_setting(
         name="COMMENTS_DEFAULT_APPROVED",
         label=_("Auto-approve comments"),
         description=_("If ``True``, built-in comments are approved by " "default."),

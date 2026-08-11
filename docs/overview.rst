@@ -56,17 +56,10 @@ the above instructions:
 * `chardet`_ - for supporting arbitrary encoding in file uploads
 * `django-modeltranslation`_ - for multi-lingual content (optional)
 * `django-compressor`_ - for merging JS/CSS assets (optional)
-* `requests`_ and `requests_oauthlib`_ - for interacting with external APIs
+* `requests`_ - for interacting with external APIs
 
 Note that various systems may contain
 `specialized instructions for installing Pillow`_.
-
-Themes
-======
-
-A handful of attractive `Free Themes`_ are available thanks to
-`@abhinavsohani`_.
-
 
 Browser Support
 ===============
@@ -460,8 +453,6 @@ certain sites.
 * `Caffeinated Lifestyle <https://caffeinatedlifestyle.com>`_
 * `The National: New Australian Art <https://the-national.com.au>`_
 
-.. _`@abhinavsohani`: https://twitter.com/abhinavsohani
-.. _`@joshcartme`: https://twitter.com/joshcartme
 .. _`Mezzanine Grid on djangopackages.com`: http://www.djangopackages.com/grids/g/mezzanine/
 .. _`Cartridge`: http://cartridge.jupo.org/
 .. _`Drum`: https://github.com/stephenmcd/drum
@@ -557,7 +548,6 @@ certain sites.
 .. _`FileBrowser`: http://code.google.com/p/django-filebrowser/
 .. _`pip`: http://www.pip-installer.org/
 .. _`requests`: http://docs.python-requests.org/en/latest/
-.. _`requests_oauthlib`: http://requests-oauthlib.readthedocs.org/
 .. _`chardet`: https://chardet.readthedocs.org
 .. _`specialized instructions for installing Pillow`: https://pillow.readthedocs.io/en/latest/installation.html
 .. _`Homebrew`: http://mxcl.github.com/homebrew/

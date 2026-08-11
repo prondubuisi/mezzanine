@@ -41,7 +41,6 @@ class ThreadedCommentAdmin(CommentsAdmin):
 
 
 generic_comments = getattr(settings, "COMMENTS_APP", "") == "mezzanine.generic"
-using_disqus = bool(getattr(settings, "COMMENTS_DISQUS_SHORTNAME", False))
 
-if generic_comments and not using_disqus:
+if generic_comments:
     admin.site.register(ThreadedComment, ThreadedCommentAdmin)

@@ -169,12 +169,6 @@ within Mezzanine that are added to ``settings.INSTALLED_APPS``.
 .. automodule:: mezzanine.generic.templatetags.comment_tags
    :members:
 
-``mezzanine.generic.templatetags.disqus_tags``
------------------------------------------------
-
-.. automodule:: mezzanine.generic.templatetags.disqus_tags
-   :members:
-
 ``mezzanine.generic.templatetags.keyword_tags``
 -----------------------------------------------
 
@@ -243,13 +237,7 @@ within Mezzanine that are added to ``settings.INSTALLED_APPS``.
 .. automodule:: mezzanine.blog.management.commands.import_rss
    :members:
 
-.. automodule:: mezzanine.blog.management.commands.import_blogger
-   :members:
-
 .. automodule:: mezzanine.blog.management.commands.import_wordpress
-   :members:
-
-.. automodule:: mezzanine.blog.management.commands.import_tumblr
    :members:
 
 
@@ -381,38 +369,6 @@ within Mezzanine that are added to ``settings.INSTALLED_APPS``.
 ==================================
 
 .. automodule:: mezzanine.template.loader_tags
-   :members:
-
-
-
-
-``mezzanine.twitter``
-=====================
-
-.. automodule:: mezzanine.twitter
-
-``mezzanine.twitter.models``
-----------------------------
-
-.. automodule:: mezzanine.twitter.models
-   :members:
-
-``mezzanine.twitter.managers``
-------------------------------
-
-.. automodule:: mezzanine.twitter.managers
-   :members:
-
-``mezzanine.twitter.templatetags.twitter_tags``
------------------------------------------------
-
-.. automodule:: mezzanine.twitter.templatetags.twitter_tags
-   :members:
-
-``mezzanine.twitter.management.commands``
------------------------------------------
-
-.. automodule:: mezzanine.twitter.management.commands.poll_twitter
    :members:
 
 

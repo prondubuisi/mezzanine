@@ -81,14 +81,6 @@ register_setting(
 )
 
 register_setting(
-    name="BITLY_ACCESS_TOKEN",
-    label=_("bit.ly access token"),
-    description=_("Access token for http://bit.ly URL shortening service."),
-    editable=True,
-    default="",
-)
-
-register_setting(
     name="CACHE_SET_DELAY_SECONDS",
     description=_(
         "Mezzanine's caching uses a technique know as mint "
@@ -161,14 +153,6 @@ register_setting(
     ),
     editable=False,
     default=(),
-)
-
-register_setting(
-    name="GOOGLE_ANALYTICS_ID",
-    label=_("Google Analytics ID"),
-    description=_("Google Analytics ID (http://www.google.com/analytics/)"),
-    editable=True,
-    default="",
 )
 
 register_setting(
@@ -992,17 +976,12 @@ register_setting(
         "ACCOUNTS_APPROVAL_REQUIRED",
         "ACCOUNTS_VERIFICATION_REQUIRED",
         "ADMIN_MENU_COLLAPSED",
-        "BITLY_ACCESS_TOKEN",
         "BLOG_USE_FEATURED_IMAGE",
-        "COMMENTS_DISQUS_SHORTNAME",
         "COMMENTS_NUM_LATEST",
-        "COMMENTS_DISQUS_API_PUBLIC_KEY",
-        "COMMENTS_DISQUS_API_SECRET_KEY",
         "COMMENTS_USE_RATINGS",
         "DEV_SERVER",
         "FORMS_USE_HTML5",
         "GRAPPELLI_INSTALLED",
-        "GOOGLE_ANALYTICS_ID",
         "JQUERY_FILENAME",
         "JQUERY_UI_FILENAME",
         "LOGIN_URL",

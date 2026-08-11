@@ -10,7 +10,6 @@ from mezzanine.core.admin import (
     DisplayableAdmin,
     OwnableAdmin,
 )
-from mezzanine.twitter.admin import TweetableAdminMixin
 
 blogpost_fieldsets = deepcopy(DisplayableAdmin.fieldsets)
 blogpost_fieldsets[0][1]["fields"].insert(1, "categories")
@@ -27,7 +26,7 @@ blogpost_fieldsets.insert(
 blogpost_list_filter = deepcopy(DisplayableAdmin.list_filter) + ("categories",)
 
 
-class BlogPostAdmin(TweetableAdminMixin, DisplayableAdmin, OwnableAdmin):
+class BlogPostAdmin(DisplayableAdmin, OwnableAdmin):
     """
     Admin class for blog posts.
     """

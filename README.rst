@@ -47,14 +47,11 @@ interface, Mezzanine provides the following:
 * `In-line page editing`_
 * Drag-and-drop HTML5 forms builder with CSV export
 * SEO friendly URLs and meta data
-* Ecommerce / Shopping cart module (`Cartridge`_)
 * Configurable `dashboard`_ widgets
 * Blog engine
 * Tagging
-* `Free Themes`_ Marketplace
 * User accounts and profiles with email verification
 * Translated to over 35 languages
-* Sharing via Facebook or Twitter
 * `Multi-lingual sites`_
 * `Custom templates`_ per page or blog post
 * `Twitter Bootstrap`_ integration
@@ -62,12 +59,8 @@ interface, Mezzanine provides the following:
 * `Search engine and API`_
 * Seamless integration with third-party Django apps
 * One step migration from other blogging engines
-* `Disqus`_ integration, or built-in threaded comments
-* `Gravatar`_ integration
-* `Google Analytics`_ integration
-* `bit.ly`_ integration
+* Built-in threaded comments
 * `Akismet`_ spam filtering
-* `JVM`_ compatible (via `Jython`_)
 
 The Mezzanine admin dashboard:
 
@@ -95,19 +88,16 @@ used, such as operating system, database, and Python version. If
 **you're not sure you've found a reproducible bug**, then please try
 the mailing list first.
 
-Finally, feel free to drop by the `#mezzanine IRC channel`_ on
-`Freenode`_, for a chat! Lastly, communications in all Mezzanine spaces
-are expected to conform to the `Django Code of Conduct`_.
+Communications in all Mezzanine spaces are expected to conform to the
+`Django Code of Conduct`_.
 
 
 Contributing
 ============
 
-Mezzanine is an open source project managed using both the Git and
-Mercurial version control systems. These repositories are hosted on
-both `GitHub`_ and `Bitbucket`_ respectively, so contributing is as
-easy as forking the project on either of these sites and committing
-back your enhancements.
+Mezzanine is an open source project managed using Git. The repository
+is hosted on `GitHub`_, so contributing is as easy as forking the
+project and committing back your enhancements.
 
 
 Donating
@@ -153,27 +143,16 @@ Quotes
 .. _`Mezzanine project page`: http://mezzanine.jupo.org
 .. _`In-line page editing`: http://mezzanine.jupo.org/docs/inline-editing.html
 .. _`custom content types`: http://mezzanine.jupo.org/docs/content-architecture.html#creating-custom-content-types
-.. _`Cartridge`: http://cartridge.jupo.org/
 .. _`Search engine and API`: http://mezzanine.jupo.org/docs/search-engine.html
 .. _`dashboard`: http://mezzanine.jupo.org/docs/admin-customization.html#dashboard
-.. _`Free Themes`: https://github.com/thecodinghouse/mezzanine-themes
 .. _`Custom templates`: http://mezzanine.jupo.org/docs/content-architecture.html#page-templates
 .. _`Multi-lingual sites`: http://mezzanine.jupo.org/docs/multi-lingual-sites.html
-.. _`JVM`: http://en.wikipedia.org/wiki/Java_virtual_machine
-.. _`Jython`: http://www.jython.org/
 .. _`Twitter Bootstrap`: http://getbootstrap.com/
-.. _`Disqus`: http://disqus.com/
-.. _`Gravatar`: http://gravatar.com/
-.. _`Google Analytics`: http://www.google.com/analytics/
-.. _`bit.ly`: http://bit.ly/
 .. _`Akismet`: http://akismet.com/
 .. _`GitHub`: http://github.com/stephenmcd/mezzanine/
-.. _`Bitbucket`: http://bitbucket.org/stephenmcd/mezzanine/
 .. _`mezzanine-users`: http://groups.google.com/group/mezzanine-users/topics
 .. _`core-team@mezzaninecms.com`: mailto:core-team@mezzaninecms.com?subject=Mezzanine+Security+Issue
 .. _`GitHub issue tracker`: http://github.com/stephenmcd/mezzanine/issues
-.. _`#mezzanine IRC channel`: irc://irc.freenode.net/mezzanine
-.. _`Freenode`: http://freenode.net
 .. _`Mezzanine Project`: http://mezzanine.jupo.org
 
 .. _`Python Software Foundation`: http://www.python.org/psf/
