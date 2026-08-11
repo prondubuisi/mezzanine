@@ -7,7 +7,7 @@ from django.core.files.storage import FileSystemStorage
 from django.forms.widgets import SelectDateWidget
 from django.template import Template
 from django.urls import reverse
-from django.utils.safestring import mark_safe
+from django.utils.html import format_html
 from django.utils.timezone import now
 from django.utils.translation import gettext as _
 
@@ -431,8 +431,11 @@ class EntriesForm(forms.Form):
                 url = reverse("admin:form_file", args=(field_entry.id,))
                 field_value = self.request.build_absolute_uri(url)
                 if not csv:
-                    parts = (field_value, split(field_entry.value)[1])
-                    field_value = mark_safe('<a href="%s">%s</a>' % parts)
+                    field_value = format_html(
+                        '<a href="{}">{}</a>',
+                        field_value,
+                        split(field_entry.value)[1],
+                    )
             # Only use values for fields that were selected.
             try:
                 current_row[field_indexes[field_id]] = field_value
