@@ -31,14 +31,16 @@ Since the test suite is quite big you may want to run only a specific test case:
 Code Style
 ----------
 
-Python code style is enforced with ``ruff`` (lint + format, replacing
-``black``, ``flake8``, ``isort``, and ``pyupgrade``). Install and run it as follows:
+Python code style is enforced with ``ruff`` (replacing ``black``, ``flake8``,
+``isort``, and ``pyupgrade``). Install and run it as follows:
 
 .. code-block:: bash
 
   pip install -e ".[codestyle]"
   ruff check .
-  ruff format --check .  # omit --check to apply formatting
+
+A full ``ruff format`` of the tree is deferred to an isolated follow-up.
+``tox -e format-check`` / ``ruff format --check .`` is opt-in until then.
 
 If your editor is configured to integrate with ``ruff`` it should pick up the
 project's configuration automatically.

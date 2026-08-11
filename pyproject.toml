@@ -77,7 +77,7 @@ packages = ["mezzanine"]
 
 # Replaces black / flake8 / isort / pyupgrade. target-version stays py38
 # until PR-009 raises the Python floor. A full `ruff format` of the tree
-# is deferred: ~81 files still differ from black 22.3.0 (isolated follow-up).
+# is deferred: ~80 files still differ from black 22.3.0 (isolated follow-up).
 [tool.ruff]
 target-version = "py38"
 line-length = 88
@@ -116,5 +116,5 @@ ignore = [
 # Previous .isort.cfg: profile = black (ruff default).
 
 [tool.ruff.format]
-# Black-compatible defaults. `ruff format --check` is wired in tox/CI
-# but currently fails on ~81 files; do not mix a reformat into this PR.
+# Black-compatible defaults. `ruff format --check` lives in opt-in
+# `tox -e format-check` (not envlist/CI) until the isolated format commit.
