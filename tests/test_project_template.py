@@ -202,3 +202,63 @@ def test_nova_project_writes_hardened_project(tmp_path):
     )
     assert debug_false.returncode == 0, debug_false.stderr
     assert debug_false.stdout.strip() == "False True True"
+
+    assert (tmp_path / "mysite" / "compose.yaml").is_file()
+    assert (tmp_path / "mysite" / "justfile").is_file()
+    assert (tmp_path / "mysite" / ".env.example").is_file()
+    generated_just = (tmp_path / "mysite" / "justfile").read_text()
+    assert re.search(r"^bootstrap:", generated_just, re.M)
+    assert not re.search(r"^bootstrap[^\n]*\bkit\b", generated_just, re.M)
+
+
+def _justfile_text():
+    return (REPO_ROOT / "justfile").read_text()
+
+
+def test_compose_has_postgres_redis_web():
+    text = (REPO_ROOT / "compose.yaml").read_text()
+    assert re.search(r"^\s+db:", text, re.M)
+    assert re.search(r"^\s+redis:", text, re.M)
+    assert re.search(r"^\s+web:", text, re.M)
+    assert "postgres" in text.lower()
+    assert "redis" in text.lower()
+
+
+def test_justfile_recipes_and_no_kit_on_bootstrap():
+    text = _justfile_text()
+    for name in ("bootstrap", "test", "up", "import-wp"):
+        assert re.search(r"^%s(?: \*args)?:$" % re.escape(name), text, re.M), name
+    assert not re.search(r"^bootstrap[^\n]*\bkit\b", text, re.M)
+    # Django startproject treats the template as a Django template.
+    assert "{{" not in text
+
+
+def test_template_compose_and_justfile_match_repo_root():
+    template = REPO_ROOT / "mezzanine/project_template"
+    assert (template / "compose.yaml").read_text() == (
+        REPO_ROOT / "compose.yaml"
+    ).read_text()
+    assert (template / "justfile").read_text() == _justfile_text()
+    assert (template / ".env.example").is_file()
+    env_sample = (template / ".env.example").read_text()
+    assert "POSTGRES_HOST=" in env_sample
+    assert "REDIS_URL=" in env_sample
+
+
+def test_local_settings_template_reads_compose_env():
+    source = (
+        REPO_ROOT / "mezzanine/project_template/project_name/local_settings.py.template"
+    ).read_text()
+    assert "POSTGRES_HOST" in source
+    assert "REDIS_URL" in source
+    assert "django.db.backends.postgresql" in source
+    assert "django.core.cache.backends.redis.RedisCache" in source
+
+
+def test_overview_documents_friday_just_recipes():
+    text = (REPO_ROOT / "docs/overview.rst").read_text()
+    assert "just bootstrap" in text
+    assert "just up" in text
+    assert "just test" in text
+    assert "just import-wp" in text
+    assert "does not take a kit argument" in text

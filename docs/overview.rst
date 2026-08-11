@@ -4,38 +4,37 @@
 Installation
 ============
 
-The easiest method is to install directly from pypi using `pip`_ by
-running the command below, which will also install the required
-dependencies mentioned above::
+Friday install is Compose + ``just``. Postgres, Redis, and a web
+process::
 
-    $ pip install mezzanine
+    $ uvx nova-project mysite
+    $ cd mysite
+    $ just bootstrap
+    $ just up
 
-If you prefer, you can download Mezzanine and install it directly from
-source::
+``just bootstrap`` starts Postgres and Redis, runs migrations, and
+creates a superuser. It does not take a kit argument — the kit is
+chosen when ``nova-project`` writes the project, not at bootstrap.
 
-    $ python setup.py install
+Then, optionally::
 
-Once installed, the command ``mezzanine-project`` can be used to
-create a new Mezzanine project in similar fashion to
-``django-admin.py``::
+    $ just import-wp ./export.xml
+    $ just test
 
-    $ mezzanine-project project_name
-    $ cd project_name
-    $ python manage.py createdb --noinput
-    $ python manage.py runserver
+``nova-project`` writes ``compose.yaml``, ``justfile``, and
+``.env.example`` into the new project. The same files live at the
+repository root, where ``just test`` runs the package tests and
+``just bootstrap`` / ``just up`` drive a sample site against the
+in-tree project template. Copy ``.env.example`` to ``.env`` if you
+start Compose without ``just bootstrap``.
 
-.. note::
-
-    The ``createdb`` command is a shortcut for using Django's
-    ``migrate`` command, which will also install some demo content,
-    such as a contact form, image gallery, and more. If you'd like to
-    omit this step, use the ``--nodata`` option with ``createdb``.
-
-You should then be able to browse to http://127.0.0.1:8000/admin/ and
-log in using the default account (``username: admin, password:
-default``). If you'd like to specify a different username and password
-during set up, simply exclude the ``--noinput`` option included above
-when running ``createdb``.
+``pip install nova-cms`` (or ``uv add nova-cms``) and
+``mezzanine-project`` (a deprecated alias of ``nova-project``) still
+work. ``createdb`` remains a shortcut for Django's ``migrate``
+command and, unless you pass ``--nodata``, also loads demo content
+such as a contact form and an image gallery. With ``DEBUG=False``,
+``createdb --noinput`` will not create the old ``admin`` / ``default``
+account.
 
 For information on how to add Mezzanine to an existing Django project,
 see the FAQ section of the documentation.

@@ -1,6 +1,7 @@
 *.pyc
 *.pyo
 *.db
+.env
 *.pot
 *.doctree
 *.swp
