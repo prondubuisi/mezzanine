@@ -53,9 +53,10 @@ class PagesTests(TestCase):
         behave as expected.
         """
         # Create related pages.
-        primary, _ = RichTextPage.objects.get_or_create(title="Primary")
-        secondary, _ = primary.children.get_or_create(title="Secondary")
-        tertiary, _ = secondary.children.get_or_create(title="Tertiary")
+        published = {"status": CONTENT_STATUS_PUBLISHED}
+        primary, _ = RichTextPage.objects.get_or_create(title="Primary", **published)
+        secondary, _ = primary.children.get_or_create(title="Secondary", **published)
+        tertiary, _ = secondary.children.get_or_create(title="Tertiary", **published)
 
         # Test that get_ascendants() returns the right thing.
         page = Page.objects.get(id=tertiary.id)
@@ -168,10 +169,16 @@ class PagesTests(TestCase):
 
     def test_login_required(self):
         public, _ = RichTextPage.objects.get_or_create(
-            title="Public", slug="public", login_required=False
+            title="Public",
+            slug="public",
+            login_required=False,
+            status=CONTENT_STATUS_PUBLISHED,
         )
         private, _ = RichTextPage.objects.get_or_create(
-            title="Private", slug="private", login_required=True
+            title="Private",
+            slug="private",
+            login_required=True,
+            status=CONTENT_STATUS_PUBLISHED,
         )
         accounts_installed = "mezzanine.accounts" in settings.INSTALLED_APPS
 
@@ -408,8 +415,12 @@ class PagesTests(TestCase):
         def test_page_processor(request, page):
             return HttpResponse("bar")
 
-        foo, _ = RichTextPage.objects.get_or_create(title="foo")
-        bar, _ = RichTextPage.objects.get_or_create(title="bar", parent=foo)
+        foo, _ = RichTextPage.objects.get_or_create(
+            title="foo", status=CONTENT_STATUS_PUBLISHED
+        )
+        bar, _ = RichTextPage.objects.get_or_create(
+            title="bar", parent=foo, status=CONTENT_STATUS_PUBLISHED
+        )
 
         request = self._request_factory.get("/foo/bar/")
         request.user = self._user
@@ -484,9 +495,15 @@ class PagesTests(TestCase):
     def test_ascendants_different_site(self):
         site2 = Site.objects.create(domain="site2.example.com", name="Site 2")
 
-        parent = Page.objects.create(title="Parent", site=site2)
-        child = parent.children.create(title="Child", site=site2)
-        grandchild = child.children.create(title="Grandchild", site=site2)
+        parent = Page.objects.create(
+            title="Parent", site=site2, status=CONTENT_STATUS_PUBLISHED
+        )
+        child = parent.children.create(
+            title="Child", site=site2, status=CONTENT_STATUS_PUBLISHED
+        )
+        grandchild = child.children.create(
+            title="Grandchild", site=site2, status=CONTENT_STATUS_PUBLISHED
+        )
 
         # Re-retrieve grandchild so its parent attribute is not cached
         with override_current_site_id(site2.id):

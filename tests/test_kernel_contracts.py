@@ -402,6 +402,34 @@ def test_page_middleware_blog_post_uses_blog_listing_page(rf):
 # ---------------------------------------------------------------------------
 
 
+def test_displayable_default_status_is_draft():
+    """New Displayable rows are Draft; factories opt into Published."""
+    page = Page(title="Bare Page")
+    assert page.status == CONTENT_STATUS_DRAFT
+    saved = Page.objects.create(title="Saved Bare Page")
+    assert saved.status == CONTENT_STATUS_DRAFT
+    post = BlogPostFactory(title="Bare Post")
+    # Factory still publishes so Wave 3 tests can hit public URLs.
+    assert post.status == CONTENT_STATUS_PUBLISHED
+    draft = RichTextPageFactory(title="Explicit Draft", status=CONTENT_STATUS_DRAFT)
+    assert draft.status == CONTENT_STATUS_DRAFT
+    assert draft.published() is False
+
+
+def test_get_ascendants_on_draft_chain_does_not_crash():
+    """Unpublished parents still load for breadcrumbs / admin."""
+    parent = RichTextPageFactory(
+        title="Draft Parent Chain", status=CONTENT_STATUS_DRAFT
+    )
+    child = RichTextPageFactory(
+        title="Draft Child Chain",
+        parent=parent,
+        status=CONTENT_STATUS_DRAFT,
+    )
+    page = Page.objects.get(pk=child.pk)
+    assert [p.pk for p in page.get_ascendants()] == [parent.pk]
+
+
 def test_displayable_published_instance_ignores_staff():
     """Instance method does NOT look at is_staff.
 

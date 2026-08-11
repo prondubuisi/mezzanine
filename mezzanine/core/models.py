@@ -248,7 +248,7 @@ class Displayable(Slugged, MetaData, TimeStamped):
     status = models.IntegerField(
         _("Status"),
         choices=CONTENT_STATUS_CHOICES,
-        default=CONTENT_STATUS_PUBLISHED,
+        default=CONTENT_STATUS_DRAFT,
         help_text=_(
             "With Draft chosen, the public URL returns 404 unless a "
             "preview token is used."
