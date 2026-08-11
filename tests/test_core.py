@@ -48,6 +48,8 @@ from mezzanine.utils.sites import current_site_id, override_current_site_id
 from mezzanine.utils.tests import TestCase
 from mezzanine.utils.urls import admin_url
 
+from tests.factories import RichTextPageFactory
+
 BRANCH_NAME = (
     subprocess.check_output(["git", "rev-parse", "--abbrev-ref", "HEAD"])
     .decode()
@@ -56,6 +58,15 @@ BRANCH_NAME = (
 VERSION_WARN = (
     "Unpinned or pre-release dependencies detected in Mezzanine's requirements: {}"
 )
+
+
+@pytest.mark.django_db
+def test_author_client_is_staff_not_superuser(author_client):
+    """author_client is a logged-in non-superuser staff member."""
+    user = author_client.user
+    assert user.is_staff
+    assert not user.is_superuser
+    assert author_client.session.get("_auth_user_id") == str(user.pk)
 
 
 @pytest.mark.skipif(
@@ -115,7 +126,7 @@ class CoreTests(TestCase):
         of content.
         """
         description = "<p>How now brown cow</p>"
-        page = RichTextPage.objects.create(title="Draft", content=description * 3)
+        page = RichTextPageFactory(title="Draft", content=description * 3)
         self.assertEqual(page.description, strip_tags(description))
 
     @skipUnless("mezzanine.pages" in settings.INSTALLED_APPS, "pages app required")

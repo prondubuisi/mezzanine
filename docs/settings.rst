@@ -605,39 +605,10 @@ Default: ``('mezzanine.utils.views.is_spam_akismet',)``
 
 .. _SSL_ENABLED:
 
-``SSL_ENABLED``
----------------
+``SSL_ENABLED`` / ``SSL_FORCE_HOST`` / ``SSL_FORCE_URL_PREFIXES`` / ``SSL_FORCED_PREFIXES_ONLY``
+-----------------------------------------------------------------------------------------------
 
-If ``True``, users will be automatically redirected to HTTPS for the URLs specified by the ``SSL_FORCE_URL_PREFIXES`` setting.
-
-Default: ``False``
-
-.. _SSL_FORCED_PREFIXES_ONLY:
-
-``SSL_FORCED_PREFIXES_ONLY``
-----------------------------
-
-If ``True``, only URLs specified by the ``SSL_FORCE_URL_PREFIXES`` setting will be accessible over SSL, and all other URLs will be redirected back to HTTP if accessed over HTTPS.
-
-Default: ``True``
-
-.. _SSL_FORCE_HOST:
-
-``SSL_FORCE_HOST``
-------------------
-
-Host name that the site should always be accessed via that matches the SSL certificate.
-
-Default: ``''``
-
-.. _SSL_FORCE_URL_PREFIXES:
-
-``SSL_FORCE_URL_PREFIXES``
---------------------------
-
-Sequence of URL prefixes that will be forced to run over SSL when ``SSL_ENABLED`` is ``True``. i.e. ('/admin', '/example') would force all URLs beginning with /admin or /example to run over SSL.
-
-Default: ``('/admin', '/account')``
+Removed. ``SSLRedirectMiddleware`` no longer exists (it could downgrade HTTPS to HTTP). Use Django's ``SecurityMiddleware`` with ``SECURE_SSL_REDIRECT`` (and HSTS / secure cookies) instead. Existing projects that still list ``mezzanine.core.middleware.SSLRedirectMiddleware`` in ``MIDDLEWARE`` must drop that entry.
 
 .. _STOP_WORDS:
 

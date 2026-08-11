@@ -5,6 +5,7 @@ import tempfile
 from pathlib import Path
 
 import django
+import pytest
 
 # Path to the temp mezzanine project folder
 TMP_PATH = Path(tempfile.mkdtemp()) / "project_template"
@@ -23,6 +24,14 @@ if "mezzanine.accounts" not in INSTALLED_APPS:
 
 # Use the MD5 password hasher by default for quicker test runs.
 PASSWORD_HASHERS = ('django.contrib.auth.hashers.MD5PasswordHasher',)
+
+# HTTP test client: keep TLS redirects off regardless of DEBUG.
+SECURE_SSL_REDIRECT = False
+SESSION_COOKIE_SECURE = False
+CSRF_COOKIE_SECURE = False
+SECURE_HSTS_SECONDS = 0
+SECURE_HSTS_INCLUDE_SUBDOMAINS = False
+AUTH_PASSWORD_VALIDATORS = []
 """
 
 
@@ -59,3 +68,19 @@ def pytest_unconfigure():
         shutil.rmtree(str(TMP_PATH))
     except OSError:
         pass
+
+
+@pytest.fixture
+def author_user(db):
+    """Non-superuser staff user with a site permission (Wave 3 author)."""
+    from tests.factories import AuthorFactory
+
+    return AuthorFactory()
+
+
+@pytest.fixture
+def author_client(client, author_user):
+    """Logged-in non-superuser staff client for later Wave 3 tests."""
+    client.force_login(author_user)
+    client.user = author_user
+    return client

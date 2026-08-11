@@ -2,7 +2,7 @@ import warnings
 from unittest import skipUnless
 
 from django.conf import settings as django_settings
-from django.core.checks import Warning
+from django.core.checks import Error, Warning
 from django.test.utils import override_settings
 from django.utils.encoding import force_str
 
@@ -10,7 +10,12 @@ from mezzanine.conf import register_setting, registry, settings
 from mezzanine.conf.context_processors import TemplateSettings
 from mezzanine.conf.models import Setting
 from mezzanine.core.checks import (
+    EXTRA_MODEL_FIELDS_WARNING,
+    NEVERCACHE_KEY_EMPTY_ERROR,
+    NEVERCACHE_KEY_EMPTY_WARNING,
     RICHTEXT_FILTER_LEVEL_NONE_WARNING,
+    check_extra_model_fields,
+    check_nevercache_key,
     check_richtext_filter_level_none,
 )
 from mezzanine.core.defaults import (
@@ -274,6 +279,57 @@ class ConfTests(TestCase):
         self.assertTrue(setting["editable"])
         choice_values = [value for value, label in setting["choices"]]
         self.assertIn(RICHTEXT_FILTER_LEVEL_NONE, choice_values)
+
+    def test_extra_model_fields_empty_no_warning(self):
+        settings.clear_cache()
+        with override_settings(EXTRA_MODEL_FIELDS=()):
+            self.assertEqual(check_extra_model_fields(None), [])
+
+    def test_extra_model_fields_set_warns(self):
+        settings.clear_cache()
+        extra = (
+            (
+                "mezzanine.blog.models.BlogPost.image",
+                "FileField",
+                ("Image",),
+                {"blank": True},
+            ),
+        )
+        with override_settings(EXTRA_MODEL_FIELDS=extra):
+            issues = check_extra_model_fields(None)
+        self.assertEqual(
+            issues,
+            [Warning(EXTRA_MODEL_FIELDS_WARNING, id="mezzanine.core.W07")],
+        )
+
+    def test_nevercache_key_set_no_issue(self):
+        settings.clear_cache()
+        with override_settings(NEVERCACHE_KEY="x" * 50):
+            self.assertEqual(check_nevercache_key(None), [])
+
+    def test_nevercache_key_empty_warns_without_cache_middleware(self):
+        settings.clear_cache()
+        with override_settings(NEVERCACHE_KEY="", MIDDLEWARE=()):
+            issues = check_nevercache_key(None)
+        self.assertEqual(
+            issues,
+            [Warning(NEVERCACHE_KEY_EMPTY_WARNING, id="mezzanine.core.W08")],
+        )
+
+    def test_nevercache_key_empty_errors_with_cache_middleware(self):
+        settings.clear_cache()
+        with override_settings(
+            NEVERCACHE_KEY="",
+            MIDDLEWARE=(
+                "mezzanine.core.middleware.UpdateCacheMiddleware",
+                "mezzanine.core.middleware.FetchFromCacheMiddleware",
+            ),
+        ):
+            issues = check_nevercache_key(None)
+        self.assertEqual(
+            issues,
+            [Error(NEVERCACHE_KEY_EMPTY_ERROR, id="mezzanine.core.E01")],
+        )
 
 
 class TemplateSettingsTests(TestCase):
