@@ -1,5 +1,6 @@
 [build-system]
-# <1.28 still installs on Python 3.8/3.9; PR-009 raises the floor.
+# Floor is Python 3.12+; keep hatchling in the 1.26–1.27 band that
+# accepts the PEP 639 license / license-files fields as written.
 requires = ["hatchling>=1.26,<1.28"]
 build-backend = "hatchling.build"
 
@@ -11,7 +12,7 @@ description = "An open source content management platform built using the Django
 readme = "README.rst"
 license = "BSD-2-Clause"
 license-files = ["LICENSE"]
-requires-python = ">=3.8"
+requires-python = ">=3.12"
 authors = [
     { name = "Stephen McDonald", email = "stephen.mc@gmail.com" },
 ]
@@ -24,24 +25,12 @@ classifiers = [
     "Operating System :: OS Independent",
     "Programming Language :: Python",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.8",
-    "Programming Language :: Python :: 3.9",
-    "Programming Language :: Python :: 3.10",
-    "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
     "Programming Language :: Python :: 3.14",
-    "Framework :: Django",
-    "Framework :: Django :: 2.2",
-    "Framework :: Django :: 3.0",
-    "Framework :: Django :: 3.1",
-    "Framework :: Django :: 3.2",
-    "Framework :: Django :: 4.0",
-    "Framework :: Django :: 4.1",
-    "Framework :: Django :: 4.2",
-    "Framework :: Django :: 5.0",
-    "Framework :: Django :: 5.1",
     "Framework :: Django :: 5.2",
+    "Framework :: Django :: 6.0",
+    "Framework :: Django :: 6.1",
     "Topic :: Internet :: WWW/HTTP",
     "Topic :: Internet :: WWW/HTTP :: Dynamic Content",
     "Topic :: Internet :: WWW/HTTP :: WSGI",
@@ -50,7 +39,7 @@ classifiers = [
 ]
 dependencies = [
     "django-contrib-comments>=2.0",
-    "django>=2.2,<6",
+    "django>=5.2,<6.2",
     "tzlocal>=2",
     "bleach[css]>=5",
     "beautifulsoup4>=4.5.3",
