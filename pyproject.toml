@@ -1,13 +1,120 @@
-[tool.black]
-exclude = '''
-(
-  /(
-      \.eggs
-    | \.git
-    | \.tox
-    | \.venv
-    | build
-    | dist
-  )/
-)
-'''
+[build-system]
+# Floor is Python 3.12+; keep hatchling in the 1.26–1.27 band that
+# accepts the PEP 639 license / license-files fields as written.
+requires = ["hatchling>=1.26,<1.28"]
+build-backend = "hatchling.build"
+
+[project]
+# Publish as nova-cms; import path stays mezzanine (KD1).
+name = "nova-cms"
+dynamic = ["version"]
+description = "An open source content management platform built using the Django framework."
+readme = "README.rst"
+license = "BSD-2-Clause"
+license-files = ["LICENSE"]
+requires-python = ">=3.12"
+authors = [
+    { name = "Stephen McDonald", email = "stephen.mc@gmail.com" },
+]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Environment :: Web Environment",
+    "Framework :: Django",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: BSD License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Framework :: Django :: 5.2",
+    "Framework :: Django :: 6.0",
+    "Framework :: Django :: 6.1",
+    "Topic :: Internet :: WWW/HTTP",
+    "Topic :: Internet :: WWW/HTTP :: Dynamic Content",
+    "Topic :: Internet :: WWW/HTTP :: WSGI",
+    "Topic :: Software Development :: Libraries :: Application Frameworks",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
+dependencies = [
+    "django-contrib-comments>=2.0",
+    "django>=5.2,<6.2",
+    "tzlocal>=2",
+    "bleach[css]>=5",
+    "beautifulsoup4>=4.5.3",
+    "requests>=2.1.0",
+    "requests-oauthlib>=1.3",
+    "pillow>=7",
+    "chardet>=4",
+    "pytz>=2021.1",
+    "filebrowser_safe>=1.1.1",
+    "grappelli_safe>=1.1.1",
+]
+
+[project.optional-dependencies]
+testing = [
+    "pytest-django>=4,<5",
+    "pytest-cov>=2",
+    "requirements-parser>=0.11",
+]
+codestyle = [
+    "ruff>=0.16,<0.17",
+]
+
+[project.urls]
+Homepage = "http://mezzanine.jupo.org/"
+
+[project.scripts]
+mezzanine-project = "mezzanine.bin.mezzanine_project:create_project"
+nova-project = "mezzanine.bin.mezzanine_project:create_project"
+
+[tool.hatch.version]
+path = "mezzanine/__init__.py"
+
+[tool.hatch.build.targets.wheel]
+packages = ["mezzanine"]
+
+# Replaces black / flake8 / isort / pyupgrade. target-version stays py38
+# until PR-009 raises the Python floor. A full `ruff format` of the tree
+# is deferred: ~80 files still differ from black 22.3.0 (isolated follow-up).
+[tool.ruff]
+target-version = "py38"
+line-length = 88
+required-version = ">=0.16"
+extend-exclude = [
+    ".eggs",
+    ".tox",
+    ".venv",
+    "build",
+    "dist",
+]
+
+[tool.ruff.lint]
+select = [
+    "E",  # pycodestyle errors (flake8)
+    "W",  # pycodestyle warnings (flake8)
+    "F",  # pyflakes (flake8)
+    "I",  # isort
+    "UP", # pyupgrade
+]
+ignore = [
+    "E731",  # lambda assignment — previous flake8 ignore
+    "E713",  # existing; not a tree-wide rewrite
+    "E741",  # existing; not a tree-wide rewrite
+    "F541",  # existing; not a tree-wide rewrite
+    "UP008", # existing super(__class__, self); 2 sites
+    "UP031", # printf → format; 179 sites, old pyupgrade skipped
+    "UP032", # existing .format() → f-string; 2 sites
+]
+
+[tool.ruff.lint.per-file-ignores]
+# Previous flake8 excluded migrations.
+"**/migrations/*.py" = ["E", "W", "F", "I", "UP"]
+
+[tool.ruff.lint.isort]
+# Previous .isort.cfg: profile = black (ruff default).
+
+[tool.ruff.format]
+# Black-compatible defaults. `ruff format --check` lives in opt-in
+# `tox -e format-check` (not envlist/CI) until the isolated format commit.

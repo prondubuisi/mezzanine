@@ -6,11 +6,7 @@ from django.shortcuts import redirect
 from django.urls import NoReverseMatch, get_script_prefix, resolve, reverse
 from django.utils import translation
 from django.utils.encoding import smart_str
-
-try:
-    from django.utils.http import url_has_allowed_host_and_scheme
-except ImportError:  # for Django2.2 support
-    from django.utils.http import is_safe_url as url_has_allowed_host_and_scheme
+from django.utils.http import url_has_allowed_host_and_scheme
 
 
 from mezzanine.conf import settings
