@@ -41,7 +41,7 @@ Showing {{ start }} to {{ end }} of {{ total }} results in {{ search_type }} mat
         {% endif %}
     </h5>
     {% if result.description != result|stringformat:"s" %}
-        <p>{{ result.description|truncatewords_html:20|safe }}</p>
+        <p>{{ result.description|truncatewords_html:20 }}</p>
     {% endif %}
     {% if result_url %}
         <a href="{{ result_url }}">{% trans "read more" %}</a>

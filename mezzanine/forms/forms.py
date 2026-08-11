@@ -1,13 +1,15 @@
 from datetime import date, datetime
-from os.path import join, split
+from os.path import join, split, splitext
 from uuid import uuid4
 
 from django import forms
+from django.core.exceptions import ImproperlyConfigured, ValidationError
 from django.core.files.storage import FileSystemStorage
+from django.core.validators import FileExtensionValidator
 from django.forms.widgets import SelectDateWidget
-from django.template import Template
+from django.template import Context, Engine
 from django.urls import reverse
-from django.utils.safestring import mark_safe
+from django.utils.html import format_html
 from django.utils.timezone import now
 from django.utils.translation import gettext as _
 
@@ -16,7 +18,90 @@ from mezzanine.forms import fields
 from mezzanine.forms.models import FieldEntry, FormEntry
 from mezzanine.utils.email import split_addresses as split_choices
 
-fs = FileSystemStorage(location=settings.FORMS_UPLOAD_ROOT)
+# Isolated engine: no project loaders' libraries, never RequestContext.
+_SANDBOX_ENGINE = Engine(autoescape=True, debug=False, libraries={})
+
+
+def get_upload_storage():
+    """Return storage for form uploads, refusing an empty FORMS_UPLOAD_ROOT."""
+    root = settings.FORMS_UPLOAD_ROOT
+    if not root or not str(root).strip():
+        raise ImproperlyConfigured(
+            "FORMS_UPLOAD_ROOT must be a non-empty absolute path "
+            "(default: MEDIA_ROOT/forms)."
+        )
+    return FileSystemStorage(location=root)
+
+
+def allowed_upload_extensions():
+    """Normalized allowlist of form-upload extensions (no leading dots)."""
+    return [
+        str(ext).lower().lstrip(".") for ext in settings.FORMS_UPLOAD_EXTENSIONS
+    ]
+
+
+def _sandbox_context(context):
+    """
+    Allowlisted template context for field defaults.
+
+    Never pass RequestContext (or the request) into the template engine.
+    """
+    user_email = ""
+    user_name = ""
+    site_name = ""
+    request = getattr(context, "request", None)
+    if request is None and hasattr(context, "get"):
+        request = context.get("request")
+    if request is not None:
+        user = getattr(request, "user", None)
+        if user is not None and getattr(user, "is_authenticated", False):
+            user_email = getattr(user, "email", "") or ""
+            get_full_name = getattr(user, "get_full_name", None)
+            full_name = get_full_name() if callable(get_full_name) else ""
+            get_username = getattr(user, "get_username", None)
+            username = (
+                get_username()
+                if callable(get_username)
+                else getattr(user, "username", "") or ""
+            )
+            user_name = full_name or username or ""
+        try:
+            from django.contrib.sites.shortcuts import get_current_site
+
+            site_name = get_current_site(request).name or ""
+        except Exception:
+            site_name = ""
+    if not site_name:
+        try:
+            from django.contrib.sites.models import Site
+
+            from mezzanine.utils.sites import current_site_id
+
+            site = Site.objects.filter(pk=current_site_id()).first()
+            if site is not None:
+                site_name = site.name or ""
+        except Exception:
+            site_name = ""
+    return Context(
+        {
+            "user_email": user_email,
+            "user_name": user_name,
+            "site_name": site_name,
+        }
+    )
+
+
+def render_field_default(source, context):
+    """Render ``field.default`` with a sandboxed Engine and Context."""
+    if not source:
+        return ""
+    try:
+        return str(
+            _SANDBOX_ENGINE.from_string(source).render(_sandbox_context(context))
+        )
+    except Exception:
+        return source
+
 
 ##############################
 # Each type of export filter #
@@ -154,6 +239,12 @@ class FormForForm(forms.ModelForm):
                 field_args["choices"] = choices
             if field_widget is not None:
                 field_args["widget"] = field_widget
+            if field.field_type == fields.FILE:
+                field_args["validators"] = [
+                    FileExtensionValidator(
+                        allowed_extensions=allowed_upload_extensions()
+                    )
+                ]
             #
             #   Initial value for field, in order of preference:
             #
@@ -163,7 +254,8 @@ class FormForForm(forms.ModelForm):
             # - If the developer has provided an explicit "initial"
             #   dict, use it.
             # - The default value for the field instance as given in
-            #   the admin.
+            #   the admin, rendered in a sandboxed template Context
+            #   (never RequestContext).
             #
             initial_val = None
             try:
@@ -172,7 +264,7 @@ class FormForForm(forms.ModelForm):
                 try:
                     initial_val = initial[field_key]
                 except KeyError:
-                    initial_val = str(Template(field.default).render(context))
+                    initial_val = render_field_default(field.default, context)
             if initial_val:
                 if field.is_a(*fields.MULTIPLE):
                     initial_val = split_choices(initial_val)
@@ -213,7 +305,14 @@ class FormForForm(forms.ModelForm):
             field_key = "field_%s" % field.id
             value = self.cleaned_data[field_key]
             if value and self.fields[field_key].widget.needs_multipart_form:
-                value = fs.save(join("forms", str(uuid4()), value.name), value)
+                ext = splitext(getattr(value, "name", "") or "")[1].lower().lstrip(".")
+                if ext not in allowed_upload_extensions():
+                    raise ValidationError(
+                        _("File type not allowed."), code="invalid_extension"
+                    )
+                value = get_upload_storage().save(
+                    join("forms", str(uuid4()), value.name), value
+                )
             if isinstance(value, list):
                 value = ", ".join(v.strip() for v in value)
             if field.id in entry_fields:
@@ -431,8 +530,11 @@ class EntriesForm(forms.Form):
                 url = reverse("admin:form_file", args=(field_entry.id,))
                 field_value = self.request.build_absolute_uri(url)
                 if not csv:
-                    parts = (field_value, split(field_entry.value)[1])
-                    field_value = mark_safe('<a href="%s">%s</a>' % parts)
+                    field_value = format_html(
+                        '<a href="{}">{}</a>',
+                        field_value,
+                        split(field_entry.value)[1],
+                    )
             # Only use values for fields that were selected.
             try:
                 current_row[field_indexes[field_id]] = field_value

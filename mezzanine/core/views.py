@@ -1,6 +1,5 @@
 import mimetypes
 import os
-from json import dumps
 from urllib.parse import urljoin, urlparse
 
 from django.apps import apps
@@ -9,7 +8,12 @@ from django.contrib.admin.options import ModelAdmin
 from django.contrib.admin.views.decorators import staff_member_required
 from django.contrib.staticfiles import finders
 from django.core.exceptions import PermissionDenied
-from django.http import HttpResponse, HttpResponseNotFound, HttpResponseServerError
+from django.http import (
+    HttpResponse,
+    HttpResponseNotFound,
+    HttpResponseServerError,
+    JsonResponse,
+)
 from django.shortcuts import redirect
 from django.template.loader import get_template
 from django.template.response import TemplateResponse
@@ -158,12 +162,15 @@ def static_proxy(request):
     return HttpResponse(response, content_type=content_type)
 
 
+@staff_member_required
 def displayable_links_js(request):
     """
     Renders a list of url/title pairs for all ``Displayable`` subclass
     instances into JSON that's used to populate a list of links in
     TinyMCE.
     """
+    if not has_site_permission(request.user):
+        raise PermissionDenied
     links = []
     if "mezzanine.pages" in settings.INSTALLED_APPS:
         from mezzanine.pages.models import Page
@@ -183,7 +190,7 @@ def displayable_links_js(request):
             title = f"{verbose_name}: {title}"
         links.append((not page and real, {"title": str(title), "value": url}))
     sorted_links = sorted(links, key=lambda link: (link[0], link[1]["value"]))
-    return HttpResponse(dumps([link[1] for link in sorted_links]))
+    return JsonResponse([link[1] for link in sorted_links], safe=False)
 
 
 @requires_csrf_token

@@ -459,10 +459,16 @@ register_setting(
     name="RICHTEXT_FILTERS",
     description=_(
         "List of dotted paths to functions, called in order, on a "
-        "``RichTextField`` value before it is rendered to the template."
+        "``RichTextField`` value before it is rendered to the template. "
+        "The default pipeline thumbnails images, then sanitizes with "
+        "bleach (``mezzanine.utils.html.escape``) so unsafe HTML is "
+        "stripped on read after any BeautifulSoup rewrite."
     ),
     editable=False,
-    default=("mezzanine.utils.html.thumbnails",),
+    default=(
+        "mezzanine.utils.html.thumbnails",
+        "mezzanine.utils.html.escape",
+    ),
 )
 
 RICHTEXT_FILTER_LEVEL_HIGH = 1
@@ -471,7 +477,7 @@ RICHTEXT_FILTER_LEVEL_NONE = 3
 RICHTEXT_FILTER_LEVELS = (
     (RICHTEXT_FILTER_LEVEL_HIGH, _("High")),
     (RICHTEXT_FILTER_LEVEL_LOW, _("Low (allows video, iframe, Flash, etc)")),
-    (RICHTEXT_FILTER_LEVEL_NONE, _("No filtering")),
+    (RICHTEXT_FILTER_LEVEL_NONE, _("No filtering (deprecated)")),
 )
 
 register_setting(
@@ -491,9 +497,10 @@ register_setting(
         "they are still considered dangerous and could potentially be "
         "mis-used by a particularly technical user, and so are filtered out "
         "when the filtering level is set to high.\n\n"
-        "Setting the filtering level to no filtering, will disable all "
-        "filtering, and allow any code to be entered by staff members, "
-        "including script tags."
+        "Setting the filtering level to no filtering is deprecated and "
+        "raises a system check warning. It disables all filtering and "
+        "allows any code to be entered by staff members, including "
+        "script tags. This option will be removed from the admin."
     ),
     editable=True,
     choices=RICHTEXT_FILTER_LEVELS,

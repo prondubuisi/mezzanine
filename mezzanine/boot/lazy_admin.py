@@ -111,7 +111,7 @@ class LazyAdminSite(AdminSite):
             re_path(r"^asset_proxy/$", static_proxy, name="static_proxy"),
             re_path(
                 r"^displayable_links.js$",
-                displayable_links_js,
+                self.admin_view(displayable_links_js),
                 name="displayable_links_js",
             ),
         ]

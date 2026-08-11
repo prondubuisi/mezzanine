@@ -253,8 +253,8 @@ class ProfileForm(Html5Mixin, forms.ModelForm):
 
 class PasswordResetForm(Html5Mixin, forms.Form):
     """
-    Validates the user's username or email for sending a login
-    token for authenticating to change their password.
+    Validates the user's username or email for sending a password
+    reset token.
     """
 
     username = forms.CharField(label=username_label)
@@ -272,7 +272,46 @@ class PasswordResetForm(Html5Mixin, forms.Form):
 
     def save(self):
         """
-        Just return the authenticated user - used for sending login
-        email.
+        Return the user to send a password-reset email to.
         """
         return getattr(self, "_user", None)
+
+
+class PasswordResetConfirmForm(Html5Mixin, forms.Form):
+    """
+    Set a new password after a reset token is verified.
+    Does not log the user in.
+    """
+
+    password1 = forms.CharField(
+        label=_("Password"), widget=forms.PasswordInput(render_value=False)
+    )
+    password2 = forms.CharField(
+        label=_("Password (again)"), widget=forms.PasswordInput(render_value=False)
+    )
+
+    def __init__(self, user, *args, **kwargs):
+        self.user = user
+        super().__init__(*args, **kwargs)
+
+    def clean_password2(self):
+        password1 = self.cleaned_data.get("password1")
+        password2 = self.cleaned_data.get("password2")
+        if password1:
+            errors = []
+            if password1 != password2:
+                errors.append(gettext("Passwords do not match"))
+            if len(password1) < settings.ACCOUNTS_MIN_PASSWORD_LENGTH:
+                errors.append(
+                    gettext("Password must be at least %s characters")
+                    % settings.ACCOUNTS_MIN_PASSWORD_LENGTH
+                )
+            if errors:
+                self._errors["password1"] = self.error_class(errors)
+        return password2
+
+    def save(self):
+        password = self.cleaned_data["password1"]
+        self.user.set_password(password)
+        self.user.save()
+        return self.user

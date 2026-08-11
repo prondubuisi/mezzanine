@@ -22,7 +22,7 @@ if generic_comments:
         label=_("Accounts required for commenting"),
         description=_("If ``True``, users must log in to comment."),
         editable=True,
-        default=False,
+        default=True,
     )
 
     register_setting(
@@ -54,7 +54,7 @@ if generic_comments:
         label=_("Auto-approve comments"),
         description=_("If ``True``, built-in comments are approved by " "default."),
         editable=True,
-        default=True,
+        default=False,
     )
 
     register_setting(

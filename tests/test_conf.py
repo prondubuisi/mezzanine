@@ -2,11 +2,21 @@ import warnings
 from unittest import skipUnless
 
 from django.conf import settings as django_settings
+from django.core.checks import Warning
+from django.test.utils import override_settings
 from django.utils.encoding import force_str
 
 from mezzanine.conf import register_setting, registry, settings
 from mezzanine.conf.context_processors import TemplateSettings
 from mezzanine.conf.models import Setting
+from mezzanine.core.checks import (
+    RICHTEXT_FILTER_LEVEL_NONE_WARNING,
+    check_richtext_filter_level_none,
+)
+from mezzanine.core.defaults import (
+    RICHTEXT_FILTER_LEVEL_LOW,
+    RICHTEXT_FILTER_LEVEL_NONE,
+)
 from mezzanine.utils.tests import TestCase
 
 
@@ -218,6 +228,52 @@ class ConfTests(TestCase):
         new_site_title = settings.SITE_TITLE
         setting.delete()
         self.assertNotEqual(original_site_title, new_site_title)
+
+    def test_richtext_filter_level_none_warns(self):
+        """System check warns when RICHTEXT_FILTER_LEVEL_NONE is configured."""
+        settings.clear_cache()
+        expected = [
+            Warning(
+                RICHTEXT_FILTER_LEVEL_NONE_WARNING,
+                id="mezzanine.core.W06",
+            )
+        ]
+        with override_settings(RICHTEXT_FILTER_LEVEL=RICHTEXT_FILTER_LEVEL_NONE):
+            issues = check_richtext_filter_level_none(None)
+            self.assertEqual(issues, expected)
+
+    def test_richtext_filter_level_default_no_warning(self):
+        """Default HIGH and explicit LOW do not warn."""
+        settings.clear_cache()
+        self.assertEqual(check_richtext_filter_level_none(None), [])
+        with override_settings(RICHTEXT_FILTER_LEVEL=RICHTEXT_FILTER_LEVEL_LOW):
+            self.assertEqual(check_richtext_filter_level_none(None), [])
+
+    def test_richtext_filter_level_none_db_warns(self):
+        """NONE saved via the Setting admin still triggers the warning."""
+        settings.clear_cache()
+        Setting.objects.create(
+            name="RICHTEXT_FILTER_LEVEL",
+            value=str(RICHTEXT_FILTER_LEVEL_NONE),
+        )
+        expected = [
+            Warning(
+                RICHTEXT_FILTER_LEVEL_NONE_WARNING,
+                id="mezzanine.core.W06",
+            )
+        ]
+        try:
+            self.assertEqual(check_richtext_filter_level_none(None), expected)
+        finally:
+            Setting.objects.filter(name="RICHTEXT_FILTER_LEVEL").delete()
+            settings.clear_cache()
+
+    def test_richtext_filter_level_none_still_editable(self):
+        """Wave 0: NONE stays in the admin; the setting is not removed."""
+        setting = registry["RICHTEXT_FILTER_LEVEL"]
+        self.assertTrue(setting["editable"])
+        choice_values = [value for value, label in setting["choices"]]
+        self.assertIn(RICHTEXT_FILTER_LEVEL_NONE, choice_values)
 
 
 class TemplateSettingsTests(TestCase):
