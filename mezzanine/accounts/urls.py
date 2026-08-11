@@ -1,5 +1,4 @@
 from django.urls import re_path
-from django.views.decorators.http import require_POST
 
 from mezzanine.accounts import views
 from mezzanine.conf import settings
@@ -31,9 +30,7 @@ _slash = "/" if settings.APPEND_SLASH else ""
 urlpatterns = [
     re_path(r"^{}{}$".format(LOGIN_URL.strip("/"), _slash), views.login, name="login"),
     re_path(
-        r"^{}{}$".format(LOGOUT_URL.strip("/"), _slash),
-        require_POST(views.logout),
-        name="logout",
+        r"^{}{}$".format(LOGOUT_URL.strip("/"), _slash), views.logout, name="logout"
     ),
     re_path(
         r"^{}{}$".format(SIGNUP_URL.strip("/"), _slash), views.signup, name="signup"

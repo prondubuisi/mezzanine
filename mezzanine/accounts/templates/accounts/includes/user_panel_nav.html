@@ -7,8 +7,12 @@
     <p class="navbar-text">
         <a class="navbar-link" href="{{ profile_url }}">
             <span class="glyphicon glyphicon-user"></span> {{ request.user|username_or:"email" }}</a></p>
-    <a href="{% url "logout" %}?next={{ request.path }}" class="btn btn-default navbar-btn">
-        <span class="glyphicon glyphicon-log-out"></span> {% trans "Log out" %}</a>
+    <form method="post" action="{% url "logout" %}" style="display:inline;">
+        {% csrf_token %}
+        <input type="hidden" name="next" value="{{ request.path }}">
+        <button type="submit" class="btn btn-default navbar-btn">
+            <span class="glyphicon glyphicon-log-out"></span> {% trans "Log out" %}</button>
+    </form>
     {% else %}
     <a href="{% url "login" %}?next={{ request.path }}" class="btn btn-default navbar-btn">
         <span class="glyphicon glyphicon-log-in"></span> {% trans "Log in" %}</a>

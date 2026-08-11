@@ -25,7 +25,7 @@ Default: ``False``
 
 Minimum length for passwords
 
-Default: ``6``
+Default: ``12``
 
 .. _ACCOUNTS_NO_USERNAME:
 

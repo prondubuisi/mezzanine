@@ -5,7 +5,7 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.messages import error, info
 from django.shortcuts import get_object_or_404, redirect
 from django.template.response import TemplateResponse
-from django.urls import NoReverseMatch, get_script_prefix
+from django.urls import NoReverseMatch, get_script_prefix, reverse
 from django.utils.translation import gettext_lazy as _
 from django.views.decorators.cache import never_cache
 from django.views.decorators.debug import sensitive_post_parameters
@@ -22,6 +22,11 @@ from mezzanine.utils.email import send_approve_mail, send_verification_mail
 from mezzanine.utils.urls import login_redirect, next_url
 
 User = get_user_model()
+
+# Django PasswordResetConfirmView: stash the token, then render on a
+# token-free URL so site chrome / Referer / analytics cannot leak it.
+INTERNAL_RESET_SESSION_TOKEN = "_password_reset_token"
+RESET_URL_TOKEN = "set-password"
 
 
 @sensitive_post_parameters("password")
@@ -200,21 +205,47 @@ def password_reset_verify(
 ):
     """
     Validate the password-reset token and let the user set a new
-    password. Does not create a session: a stolen reset mail must
-    not become a logged-in user.
+    password. Does not create a login session: a stolen reset mail
+    must not become a logged-in user.
+
+    A valid email token is stored in the session and the browser is
+    redirected to a token-free ``set-password`` URL before any site
+    chrome is rendered, matching Django's PasswordResetConfirmView.
     """
+    if token == RESET_URL_TOKEN:
+        session_token = request.session.get(INTERNAL_RESET_SESSION_TOKEN)
+        user = (
+            authenticate(uidb36=uidb36, token=session_token, is_active=True)
+            if session_token
+            else None
+        )
+        if user is None:
+            error(request, _("The link you clicked is no longer valid."))
+            return redirect("/")
+        form = form_class(user, request.POST or None)
+        if request.method == "POST" and form.is_valid():
+            form.save()
+            request.session.pop(INTERNAL_RESET_SESSION_TOKEN, None)
+            info(
+                request,
+                _(
+                    "Your password has been reset. Please log in "
+                    "with your new password."
+                ),
+            )
+            return redirect("login")
+        context = {"form": form, "title": _("Password Reset")}
+        context.update(extra_context or {})
+        return TemplateResponse(request, template, context)
+
     user = authenticate(uidb36=uidb36, token=token, is_active=True)
     if user is None:
         error(request, _("The link you clicked is no longer valid."))
         return redirect("/")
-    form = form_class(user, request.POST or None)
-    if request.method == "POST" and form.is_valid():
-        form.save()
-        info(
-            request,
-            _("Your password has been reset. Please log in with your new password."),
+    request.session[INTERNAL_RESET_SESSION_TOKEN] = token
+    return redirect(
+        reverse(
+            "password_reset_verify",
+            kwargs={"uidb36": uidb36, "token": RESET_URL_TOKEN},
         )
-        return redirect("login")
-    context = {"form": form, "title": _("Password Reset")}
-    context.update(extra_context or {})
-    return TemplateResponse(request, template, context)
+    )

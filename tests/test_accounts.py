@@ -7,6 +7,10 @@ from django.utils.http import int_to_base36
 
 from mezzanine.accounts import ProfileNotConfigured
 from mezzanine.accounts.forms import ProfileForm
+from mezzanine.accounts.views import (
+    INTERNAL_RESET_SESSION_TOKEN,
+    RESET_URL_TOKEN,
+)
 from mezzanine.conf import settings
 from mezzanine.utils.tests import TestCase
 
@@ -94,14 +98,28 @@ class AccountsTests(TestCase):
         self.assertEqual(User.objects.filter(email=data["email"]).count(), 0)
         self.assertTrue(response.context["form"].errors)
 
-    def _reset_url(self, user):
+    def _reset_url(self, user, token=None):
+        if token is None:
+            token = default_token_generator.make_token(user)
         return reverse(
             "password_reset_verify",
-            kwargs={
-                "uidb36": int_to_base36(user.id),
-                "token": default_token_generator.make_token(user),
-            },
+            kwargs={"uidb36": int_to_base36(user.id), "token": token},
         )
+
+    def _confirm_url(self, user):
+        return self._reset_url(user, token=RESET_URL_TOKEN)
+
+    def _open_reset_confirm(self, user):
+        """
+        Hit the emailed token URL (must 302 to the token-free confirm
+        URL without rendering chrome) and return the confirm path.
+        """
+        token_url = self._reset_url(user)
+        response = self.client.get(token_url)
+        confirm_url = self._confirm_url(user)
+        self.assertRedirects(response, confirm_url)
+        self.assertNotIn(default_token_generator.make_token(user), response.url)
+        return confirm_url
 
     def test_password_reset_request_sends_mail(self):
         """
@@ -120,26 +138,30 @@ class AccountsTests(TestCase):
 
     def test_password_reset_does_not_log_in(self):
         """
-        Following the reset link must not create a session. The user
+        Following the reset link must not create a login session. The
+        token URL redirects to a token-free confirm page; the user
         sets a new password, then logs in separately.
         """
         user = User.objects.create_user(
             "resetme", "resetme@example.com", "old-password-12"
         )
-        url = self._reset_url(user)
+        confirm_url = self._open_reset_confirm(user)
 
-        response = self.client.get(url)
+        response = self.client.get(confirm_url)
         self.assertEqual(response.status_code, 200)
         self.assertFalse(response.context["user"].is_authenticated)
         self.assertNotIn("_auth_user_id", self.client.session)
 
         new_password = "x" * settings.ACCOUNTS_MIN_PASSWORD_LENGTH
         response = self.client.post(
-            url, {"password1": new_password, "password2": new_password}, follow=True
+            confirm_url,
+            {"password1": new_password, "password2": new_password},
+            follow=True,
         )
         self.assertEqual(response.status_code, 200)
         self.assertFalse(response.context["user"].is_authenticated)
         self.assertNotIn("_auth_user_id", self.client.session)
+        self.assertNotIn(INTERNAL_RESET_SESSION_TOKEN, self.client.session)
 
         user.refresh_from_db()
         self.assertTrue(user.check_password(new_password))
@@ -173,13 +195,50 @@ class AccountsTests(TestCase):
         user = User.objects.create_user(
             "resetshort", "resetshort@example.com", "old-password-12"
         )
-        url = self._reset_url(user)
-        response = self.client.post(url, {"password1": "short", "password2": "short"})
+        confirm_url = self._open_reset_confirm(user)
+        response = self.client.post(
+            confirm_url, {"password1": "short", "password2": "short"}
+        )
         self.assertEqual(response.status_code, 200)
         self.assertTrue(response.context["form"].errors)
         self.assertNotIn("_auth_user_id", self.client.session)
         user.refresh_from_db()
         self.assertTrue(user.check_password("old-password-12"))
+
+    def test_password_reset_token_is_one_time(self):
+        """
+        After a successful confirm, the emailed token and the session
+        key are dead: GET/POST the original URL again does not log in
+        or change the password.
+        """
+        user = User.objects.create_user(
+            "resetonce", "resetonce@example.com", "old-password-12"
+        )
+        token_url = self._reset_url(user)
+        confirm_url = self._open_reset_confirm(user)
+        new_password = "x" * settings.ACCOUNTS_MIN_PASSWORD_LENGTH
+        response = self.client.post(
+            confirm_url, {"password1": new_password, "password2": new_password}
+        )
+        self.assertEqual(response.status_code, 302)
+        self.assertNotIn(INTERNAL_RESET_SESSION_TOKEN, self.client.session)
+
+        other = "y" * settings.ACCOUNTS_MIN_PASSWORD_LENGTH
+        for method, url in (
+            (self.client.get, token_url),
+            (self.client.post, token_url),
+            (self.client.get, confirm_url),
+            (self.client.post, confirm_url),
+        ):
+            kwargs = {}
+            if method is self.client.post:
+                kwargs["data"] = {"password1": other, "password2": other}
+            response = method(url, follow=True, **kwargs)
+            self.assertEqual(response.status_code, 200)
+            self.assertNotIn("_auth_user_id", self.client.session)
+            user.refresh_from_db()
+            self.assertTrue(user.check_password(new_password))
+            self.assertFalse(user.check_password(other))
 
     def test_logout_post_only(self):
         """
@@ -193,3 +252,16 @@ class AccountsTests(TestCase):
         response = self.client.post(reverse("logout"))
         self.assertEqual(response.status_code, 302)
         self.assertNotIn("_auth_user_id", self.client.session)
+
+    def test_logout_template_uses_post_form(self):
+        """
+        In-tree logout controls are POST forms with a CSRF token, not GET links.
+        """
+        self.client.login(username=self._username, password=self._password)
+        response = self.client.get(reverse("profile_update"))
+        self.assertContains(response, 'method="post"')
+        self.assertContains(response, 'action="{}"'.format(reverse("logout")))
+        self.assertContains(response, "csrfmiddlewaretoken")
+        self.assertNotContains(
+            response, 'href="{}"'.format(reverse("logout"))
+        )

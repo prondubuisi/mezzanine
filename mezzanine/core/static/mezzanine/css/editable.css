@@ -26,6 +26,12 @@ particular site's layout.
 
 #editable-toolbar a {border-left:1px solid #bbb; padding:0 8px 0 12px;
     display:none;}
+#editable-toolbar .editable-logout {border-left:1px solid #bbb;
+    padding:0 8px 0 12px; margin:0;}
+#editable-toolbar .editable-logout button {background:transparent; border:0;
+    padding:0; margin:0; cursor:pointer; text-decoration:none;
+    color:#222 !important; font-size:11px !important; font-weight:normal;
+    text-transform:uppercase;}
 a#editable-toolbar-toggle {border-left:0px !important; text-decoration:none;
     display:inline !important; font-weight:bold !important;
     font-size:14px !important;}
