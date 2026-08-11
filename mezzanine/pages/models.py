@@ -54,6 +54,12 @@ class Page(BasePage, ContentTyped):
         verbose_name_plural = _("Pages")
         ordering = ("titles",)
         order_with_respect_to = "parent"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["site", "slug"],
+                name="%(class)s_site_slug",
+            ),
+        ]
 
     def __str__(self):
         return self.titles

@@ -158,13 +158,13 @@ def test_non_http_link_slug_is_rewritten_on_set_parent():
 
 
 # ---------------------------------------------------------------------------
-# 3. Slug uniqueness (application-level via unique_slug; no UniqueConstraint)
+# 3. Slug uniqueness (UniqueConstraint(site, slug) — 021 done)
 # ---------------------------------------------------------------------------
 
 
 def test_auto_slugs_unique_per_concrete_slugged_type():
     """unique_slug on save: two Pages on the same site cannot share an
-    auto-generated slug. 021: UniqueConstraint(site, slug) on pages.Page.
+    auto-generated slug. 021 done: UniqueConstraint(site, slug) on pages.Page.
     """
     first = RichTextPageFactory(title="Shared Auto Title")
     second = RichTextPageFactory(title="Shared Auto Title")
@@ -176,7 +176,7 @@ def test_auto_slugs_unique_per_concrete_slugged_type():
 def test_page_and_richtextpage_share_page_slug_namespace():
     """All Page MTI children share the Page (base_concrete_model(Slugged)) ns.
 
-    021: UniqueConstraint lives on pages_page, not pages_richtextpage.
+    021 done: UniqueConstraint lives on pages_page, not pages_richtextpage.
     """
     bare = PageFactory(title="Mti Namespace")
     typed = RichTextPageFactory(title="Mti Namespace")
@@ -186,32 +186,99 @@ def test_page_and_richtextpage_share_page_slug_namespace():
 def test_blogpost_slug_namespace_is_separate_from_page():
     """BlogPost slugs are a separate unique_slug namespace from Page.
 
-    021: UniqueConstraint(site, slug) on blog.BlogPost independently.
+    021 done: UniqueConstraint(site, slug) on blog.BlogPost independently.
     """
     page = RichTextPageFactory(title="Cross App Slug")
     post = BlogPostFactory(title="Cross App Slug")
     assert page.slug == post.slug == "cross-app-slug"
 
 
-def test_no_unique_constraint_on_page_or_blogpost_slug():
-    """021: add UniqueConstraint(fields=['site', 'slug'])."""
+def test_unique_constraint_on_page_and_blogpost_site_slug():
+    """021 done: UniqueConstraint(fields=['site', 'slug'])."""
     for model in (Page, apps.get_model("blog", "BlogPost")):
         slug_constraints = [
             c
             for c in model._meta.constraints
             if isinstance(c, UniqueConstraint) and "slug" in c.fields
         ]
-        assert slug_constraints == []
+        assert len(slug_constraints) == 1
+        constraint = slug_constraints[0]
+        assert list(constraint.fields) == ["site", "slug"]
+        assert constraint.name == f"{model._meta.model_name}_site_slug"
 
 
-def test_explicit_duplicate_page_slugs_currently_persist():
-    """unique_slug only runs when slug is blank. Explicit dupes save today.
+def test_explicit_duplicate_page_slugs_raise_integrity_error():
+    """021 done: second save raises IntegrityError under UniqueConstraint(site, slug).
 
-    021: second save raises IntegrityError under UniqueConstraint(site, slug).
+    unique_slug only runs when slug is blank. Explicit dupes used to persist.
     """
-    first = RichTextPageFactory(title="Explicit A", slug="manual-dup")
-    second = RichTextPageFactory(title="Explicit B", slug="manual-dup")
-    assert first.slug == second.slug == "manual-dup"
+    from django.db import IntegrityError, transaction
+
+    RichTextPageFactory(title="Explicit A", slug="manual-dup")
+    with pytest.raises(IntegrityError):
+        with transaction.atomic():
+            RichTextPageFactory(title="Explicit B", slug="manual-dup")
+
+
+def test_explicit_duplicate_blogpost_slugs_raise_integrity_error():
+    """021 done: UniqueConstraint(site, slug) on blog.BlogPost independently."""
+    from django.db import IntegrityError, transaction
+
+    BlogPostFactory(title="Explicit A", slug="manual-dup-post")
+    with pytest.raises(IntegrityError):
+        with transaction.atomic():
+            BlogPostFactory(title="Explicit B", slug="manual-dup-post")
+
+
+def test_same_slug_allowed_across_sites():
+    """UniqueConstraint is per (site, slug), not global."""
+    site2 = Site.objects.create(domain="slug-site2.example.com", name="Slug 2")
+    page = RichTextPageFactory(title="Cross Site", slug="cross-site-slug")
+    with override_current_site_id(site2.pk):
+        other = RichTextPageFactory(
+            title="Cross Site", slug="cross-site-slug", site=site2
+        )
+    assert page.slug == other.slug == "cross-site-slug"
+    assert page.site_id != other.site_id
+
+
+def test_nova_dedupe_slugs_dry_run_on_unique_slugs():
+    """021 done: command is registered; unique rows are a no-op."""
+    from io import StringIO
+
+    from django.core.management import call_command
+
+    RichTextPageFactory(title="Unique A", slug="unique-a-cmd")
+    BlogPostFactory(title="Unique Post", slug="unique-post-cmd")
+    out = StringIO()
+    call_command("nova_dedupe_slugs", "--dry-run", stdout=out)
+    text = out.getvalue()
+    assert "no (site, slug) collisions" in text
+    assert "dry-run: no slugs rewritten" in text
+
+
+def test_rewrite_page_slug_updates_children_like_set_slug():
+    """021 done: dedupe child rewrite follows Page.set_slug prefix rules."""
+    from mezzanine.core.management.commands.nova_dedupe_slugs import (
+        is_http_link,
+        rewrite_page_slug,
+    )
+
+    parent = RichTextPageFactory(title="P", slug="rewrite-parent")
+    child = RichTextPageFactory(
+        title="C", slug="rewrite-parent/kid", parent=parent
+    )
+    http_link = Link.objects.create(
+        title="Out", slug="https://example.com/rewrite", parent=parent
+    )
+    assert is_http_link(http_link)
+    rewrite_page_slug(parent, "rewrite-parent-99")
+    parent.refresh_from_db()
+    child.refresh_from_db()
+    http_link.refresh_from_db()
+    assert parent.slug == "rewrite-parent-99"
+    assert child.slug == "rewrite-parent-99/kid"
+    assert http_link.slug == "https://example.com/rewrite"
 
 
 # ---------------------------------------------------------------------------
