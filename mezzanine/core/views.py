@@ -9,6 +9,7 @@ from django.contrib.admin.views.decorators import staff_member_required
 from django.contrib.staticfiles import finders
 from django.core.exceptions import PermissionDenied
 from django.http import (
+    Http404,
     HttpResponse,
     HttpResponseNotFound,
     HttpResponseServerError,
@@ -18,9 +19,12 @@ from django.shortcuts import redirect
 from django.template.loader import get_template
 from django.template.response import TemplateResponse
 from django.urls import reverse
-from django.utils.translation import gettext_lazy as _
+from django.utils.html import escape
+from django.utils.http import urlencode
+from django.utils.safestring import mark_safe
+from django.utils.translation import gettext as _
 from django.views.decorators.csrf import requires_csrf_token
-from django.views.decorators.http import require_POST
+from django.views.decorators.http import require_http_methods, require_POST
 
 from mezzanine.conf import settings
 from mezzanine.core.forms import get_edit_form
@@ -71,27 +75,124 @@ def direct_to_template(request, template, extra_context=None, **kwargs):
     return TemplateResponse(request, template, context)
 
 
-@staff_member_required
+def _edit_source(request):
+    return request.GET if request.method == "GET" else request.POST
+
+
+def _edit_object(request):
+    src = _edit_source(request)
+    try:
+        app = src["app"]
+        model_name = src["model"]
+        object_id = src["id"]
+        field_names = src["fields"]
+    except KeyError:
+        raise Http404
+    try:
+        model = apps.get_model(app, model_name)
+    except (LookupError, ValueError, TypeError):
+        raise Http404
+    try:
+        obj = model.objects.get(pk=object_id)
+    except (model.DoesNotExist, ValueError, TypeError):
+        raise Http404
+    return model, obj, field_names
+
+
+def _edit_query(obj, field_names, extra=None):
+    params = {
+        "app": obj._meta.app_label,
+        "model": obj._meta.object_name.lower(),
+        "id": obj.pk,
+        "fields": field_names,
+    }
+    if extra:
+        params.update(extra)
+    return reverse("edit") + "?" + urlencode(params)
+
+
+def format_editable_value(obj, field_name):
+    value = getattr(obj, field_name, "")
+    if value is None:
+        value = ""
+    try:
+        field = obj._meta.get_field(field_name)
+    except Exception:
+        return escape(str(value))
+    from mezzanine.core.fields import RichTextField
+
+    if isinstance(field, RichTextField):
+        from mezzanine.core.templatetags.mezzanine_tags import richtext_filters
+
+        return richtext_filters(value)
+    return escape(str(value))
+
+
+def editable_inner_html(obj, field_names):
+    parts = [format_editable_value(obj, name) for name in field_names.split(",")]
+    return mark_safe("".join(parts))
+
+
+def render_editable_island(request, obj, field_names, original=None):
+    if original is None:
+        original = editable_inner_html(obj, field_names)
+    context = {
+        "request": request,
+        "editable_obj": obj,
+        "field_names": field_names,
+        "original": original,
+        "edit_url": _edit_query(obj, field_names),
+        "display_url": _edit_query(obj, field_names, {"display": "1"}),
+    }
+    return get_template("includes/editable_island.html").render(context)
+
+
+def render_editable_form(request, form, obj, field_names, status=200):
+    context = {
+        "request": request,
+        "editable_form": form,
+        "editable_obj": obj,
+        "field_names": field_names,
+        "edit_url": _edit_query(obj, field_names),
+        "display_url": _edit_query(obj, field_names, {"display": "1"}),
+    }
+    html = get_template("includes/editable_form.html").render(context)
+    return HttpResponse(html, status=status)
+
+
+@require_http_methods(["GET", "POST"])
 def edit(request):
     """
-    Process the inline editing form.
+    HTMX inline editing (design §7.2).
+
+    GET  /edit/?app=&model=&id=&fields=  → form fragment (textarea)
+    GET  ...&display=1                   → island (cancel)
+    POST /edit/ + HX-Request             → island or 400 form-with-errors
     """
-    model = apps.get_model(request.POST["app"], request.POST["model"])
-    obj = model.objects.get(id=request.POST["id"])
-    form = get_edit_form(
-        obj, request.POST["fields"], data=request.POST, files=request.FILES
-    )
+    model, obj, field_names = _edit_object(request)
     if not user_can_edit(request.user, obj):
-        response = _("Permission denied")
-    elif form.is_valid():
+        raise PermissionDenied
+
+    if request.method == "GET":
+        if request.GET.get("display") == "1":
+            return HttpResponse(render_editable_island(request, obj, field_names))
+        form = get_edit_form(obj, field_names, textarea=True)
+        return render_editable_form(request, form, obj, field_names)
+
+    form = get_edit_form(
+        obj,
+        field_names,
+        data=request.POST,
+        files=request.FILES,
+        textarea=True,
+    )
+    if form.is_valid():
         form.save()
         model_admin = ModelAdmin(model, admin.site)
         message = model_admin.construct_change_message(request, form, None)
         model_admin.log_change(request, obj, message)
-        response = ""
-    else:
-        response = list(form.errors.values())[0][0]
-    return HttpResponse(response)
+        return HttpResponse(render_editable_island(request, obj, field_names))
+    return render_editable_form(request, form, obj, field_names, status=400)
 
 
 def search(request, template="search_results.html", extra_context=None):
