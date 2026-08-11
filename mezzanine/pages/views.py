@@ -86,7 +86,9 @@ def page(request, slug, template="pages/page.html", extra_context=None):
         templates.insert(0, method_template)
     if request.page.content_model is not None:
         templates.append(f"pages/{template_name}/{request.page.content_model}.html")
-    for parent in request.page.get_ascendants(for_user=request.user):
+    for parent in request.page.get_ascendants(
+        for_user=request.user, preview=getattr(request, "preview", None)
+    ):
         parent_template_name = str(parent.slug)
         # Check for a template matching the page's content model.
         if request.page.content_model is not None:

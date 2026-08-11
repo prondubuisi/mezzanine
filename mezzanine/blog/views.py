@@ -32,7 +32,8 @@ def blog_post_list(
     category slug or author's username if given.
     """
     templates = []
-    blog_posts = BlogPost.objects.published(for_user=request.user)
+    preview = getattr(request, "preview", None)
+    blog_posts = BlogPost.objects.published(for_user=request.user, preview=preview)
     if tag is not None:
         tag = get_object_or_404(Keyword, slug=tag)
         blog_posts = blog_posts.filter(keywords__keyword=tag)
@@ -88,9 +89,14 @@ def blog_post_detail(
     ``blog/blog_post_detail_XXX.html`` where ``XXX`` is the blog
     posts's slug.
     """
-    blog_posts = BlogPost.objects.published(for_user=request.user).select_related()
+    preview = getattr(request, "preview", None)
+    blog_posts = BlogPost.objects.published(
+        for_user=request.user, preview=preview
+    ).select_related()
     blog_post = get_object_or_404(blog_posts, slug=slug)
-    related_posts = blog_post.related_posts.published(for_user=request.user)
+    related_posts = blog_post.related_posts.published(
+        for_user=request.user, preview=preview
+    )
     context = {
         "blog_post": blog_post,
         "editable_obj": blog_post,

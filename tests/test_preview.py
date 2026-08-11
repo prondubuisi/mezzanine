@@ -1,6 +1,6 @@
-"""PR-022b: opaque PreviewToken, middleware, cache-safe preview.
+"""Preview tokens and the 022c staff-bypass cutover.
 
-Staff bypass still exists — 022c removes it.
+A draft is 404 without a token, including for staff.
 """
 
 from datetime import timedelta
@@ -9,7 +9,7 @@ import pytest
 from django.contrib.auth.models import AnonymousUser
 from django.contrib.sites.models import Site
 from django.core.cache import cache
-from django.http import HttpResponse
+from django.http import Http404, HttpResponse
 from django.test import RequestFactory, override_settings
 from django.urls import re_path, reverse
 from django.utils.timezone import now
@@ -18,18 +18,19 @@ from mezzanine.conf import settings
 from mezzanine.core.middleware import PreviewTokenMiddleware
 from mezzanine.core.models import (
     CONTENT_STATUS_DRAFT,
+    CONTENT_STATUS_PUBLISHED,
     PREVIEW_ROLE_STAFF,
     PreviewToken,
 )
-from mezzanine.pages.middleware import PageMiddleware
 from mezzanine.pages.models import Page
+from mezzanine.pages.middleware import PageMiddleware
 from mezzanine.pages.views import page as page_view
 from mezzanine.utils.cache import cache_get, cache_installed, cache_key_prefix
 from mezzanine.utils.deprecation import (
     get_middleware_setting,
     get_middleware_setting_name,
 )
-from tests.factories import RichTextPageFactory, SuperUserFactory
+from tests.factories import BlogPostFactory, RichTextPageFactory, SuperUserFactory
 
 pytestmark = pytest.mark.django_db
 
@@ -143,10 +144,10 @@ def test_preview_response_is_private_no_store(author_user, rf):
     assert "no-store" in cc
 
 
-def test_staff_bypass_still_works_without_token(author_user, rf):
-    """Staff published() bypass still exists; 022c removes it."""
+def test_staff_draft_without_token_does_not_attach_page(author_user, rf):
+    """022c: staff no longer sees drafts by URL. Middleware leaves page unset."""
     draft = RichTextPageFactory(
-        title="Staff Visible Without Token", status=CONTENT_STATUS_DRAFT
+        title="Staff Hidden Without Token", status=CONTENT_STATUS_DRAFT
     )
     request = rf.get(draft.get_absolute_url())
     request.user = author_user
@@ -154,8 +155,113 @@ def test_staff_bypass_still_works_without_token(author_user, rf):
         request, page_view, [], {}
     )
     assert getattr(request, "preview", None) is None
+    assert getattr(request, "page", None) is None
+    assert response is None
+
+
+def test_draft_with_token_attaches_page(author_user, rf):
+    draft = RichTextPageFactory(
+        title="Previewed Draft", status=CONTENT_STATUS_DRAFT
+    )
+    raw = PreviewToken.issue(draft, created_by=author_user)
+    request = rf.get(draft.get_absolute_url() + "?preview=" + raw)
+    request.user = AnonymousUser()
+    assert _middleware().process_request(request) is None
+    response = PageMiddleware(lambda req: None).process_view(
+        request, page_view, [], {}
+    )
+    assert request.preview is not None
     assert request.page.pk == draft.pk
     assert response is not None
+    assert response.status_code == 200
+
+
+def test_draft_parent_still_resolves_previewed_child(author_user, rf):
+    """Previewing /about/team/ works when /about/ is also a draft."""
+    parent = RichTextPageFactory(
+        title="About Draft", slug="about-preview-chain", status=CONTENT_STATUS_DRAFT
+    )
+    child = RichTextPageFactory(
+        title="Team Draft",
+        slug="about-preview-chain/team",
+        parent=parent,
+        status=CONTENT_STATUS_DRAFT,
+    )
+    raw = PreviewToken.issue(child, created_by=author_user)
+    request = rf.get(child.get_absolute_url() + "?preview=" + raw)
+    request.user = AnonymousUser()
+    assert _middleware().process_request(request) is None
+    response = PageMiddleware(lambda req: None).process_view(
+        request, page_view, [], {}
+    )
+    assert request.page.pk == child.pk
+    assert response is not None
+    assert response.status_code == 200
+    ascendants = request.page.get_ascendants()
+    assert [p.pk for p in ascendants] == [parent.pk]
+
+
+def test_parent_token_does_not_reveal_draft_child(author_user, rf):
+    parent = RichTextPageFactory(
+        title="About Only", slug="about-token-parent", status=CONTENT_STATUS_DRAFT
+    )
+    child = RichTextPageFactory(
+        title="Hidden Team",
+        slug="about-token-parent/team",
+        parent=parent,
+        status=CONTENT_STATUS_DRAFT,
+    )
+    raw = PreviewToken.issue(parent, created_by=author_user)
+    request = rf.get(child.get_absolute_url() + "?preview=" + raw)
+    request.user = AnonymousUser()
+    assert _middleware().process_request(request) is None
+    with pytest.raises(Http404):
+        PageMiddleware(lambda req: None).process_view(request, page_view, [], {})
+    assert getattr(request, "page", None) is None or request.page.pk != child.pk
+
+
+def test_page_menu_excludes_drafts_for_staff(author_user, rf):
+    from django.template import Context, Template
+
+    published = RichTextPageFactory(
+        title="Published Menu Page", status=CONTENT_STATUS_PUBLISHED
+    )
+    draft = RichTextPageFactory(
+        title="Draft Menu Page", status=CONTENT_STATUS_DRAFT
+    )
+    request = rf.get("/")
+    request.user = author_user
+    rendered = Template(
+        "{% load pages_tags %}{% page_menu 'pages/menus/tree.html' %}"
+    ).render(Context({"request": request}))
+    assert published.title in rendered
+    assert draft.title not in rendered
+
+
+def test_blog_draft_requires_token(author_user, rf):
+    """Blog drafts stay out of published(); a covering token unions the pk."""
+    from mezzanine.blog.models import BlogPost
+    from mezzanine.blog.views import blog_post_detail
+
+    post = BlogPostFactory(title="Draft Post", status=CONTENT_STATUS_DRAFT)
+    assert post.pk not in BlogPost.objects.published(
+        for_user=author_user
+    ).values_list("pk", flat=True)
+
+    request = rf.get(post.get_absolute_url())
+    request.user = author_user
+    with pytest.raises(Http404):
+        blog_post_detail(request, slug=post.slug)
+
+    raw = PreviewToken.issue(post, created_by=author_user)
+    token = PreviewToken.lookup(raw)
+    assert post.pk in BlogPost.objects.published(preview=token).values_list(
+        "pk", flat=True
+    )
+    request = rf.get(post.get_absolute_url() + "?preview=" + raw)
+    request.user = AnonymousUser()
+    assert _middleware().process_request(request) is None
+    response = blog_post_detail(request, slug=post.slug)
     assert response.status_code == 200
 
 

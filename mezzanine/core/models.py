@@ -250,7 +250,8 @@ class Displayable(Slugged, MetaData, TimeStamped):
         choices=CONTENT_STATUS_CHOICES,
         default=CONTENT_STATUS_PUBLISHED,
         help_text=_(
-            "With Draft chosen, will only be shown for admin users " "on the site."
+            "With Draft chosen, the public URL returns 404 unless a "
+            "preview token is used."
         ),
     )
     publish_date = models.DateTimeField(
@@ -302,11 +303,9 @@ class Displayable(Slugged, MetaData, TimeStamped):
         dates (when set) contain now.
 
         This instance method does not inspect the requesting user.
-        Staff visibility of drafts is a *manager* concern:
-        ``PublishedManager.published(for_user=)`` short-circuits to
-        ``self.all()`` for any ``is_staff`` user. PR-022c removes that
-        bypass; preview then requires an opaque token. This method
-        stays date/status-only.
+        Drafts on the public slug 404 unless a ``preview`` token
+        unions that object in ``PublishedManager.published``. This
+        method stays date/status-only.
         """
         return (
             self.status == CONTENT_STATUS_PUBLISHED
@@ -665,8 +664,21 @@ class PreviewToken(models.Model):
         return "%s:%s" % (self.content_type, self.object_pk)
 
     def covers(self, model):
-        """True when this token's content type is exactly ``model``."""
-        return self.content_type.model_class() is model
+        """True when this token's content type matches ``model``.
+
+        Tokens are issued against the base concrete ``Displayable``
+        (``Page`` for every page type). A ``RichTextPage`` queryset
+        is therefore covered by a ``Page`` token.
+        """
+        token_model = self.content_type.model_class()
+        if token_model is None or model is None:
+            return False
+        if token_model is model:
+            return True
+        try:
+            return issubclass(model, token_model) or issubclass(token_model, model)
+        except TypeError:
+            return False
 
     @staticmethod
     def hash_token(raw):
