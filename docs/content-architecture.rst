@@ -553,3 +553,73 @@ tests in ``tests/test_kernel_contracts.py``. Those tests record *current*
 behaviour, including staff-sees-drafts and a non-nestable
 ``override_current_site_id``. Wave 3 PRs flip assertions in that file
 rather than rewriting the contract surface.
+
+``published()`` — instance vs manager
+-------------------------------------
+
+:meth:`.Displayable.published` is an **instance** method. It checks
+status and the publish/expiry window only. It does **not** look at
+``is_staff``.
+
+``PublishedManager.published(for_user=)`` is the method that
+short-circuits to ``self.all()`` for any staff user. That is how
+staff see drafts today. PR-022c removes the short-circuit and
+threads ``preview=`` through the call sites below. ``for_user``
+stays on the signature because :meth:`PageManager.published` uses
+it for ``login_required``; after 022c it no longer means "staff
+see drafts."
+
+``published(for_user=)`` call sites (PR-022c)
+--------------------------------------------
+
+Inventory of every ``published(for_user=)`` / ``for_user=`` site
+022c must touch (design §4.5, line numbers verified against this
+tree). Sites that call ``published()`` with no user stay
+published-only and must not union a preview.
+
+Production:
+
+* ``mezzanine/core/managers.py:56`` —
+  ``PublishedManager.published``: remove staff short-circuit;
+  add ``preview=``.
+* ``mezzanine/core/managers.py:384`` —
+  ``SearchableManager.search`` union: pass ``preview=None``
+  (search never shows drafts).
+* ``mezzanine/core/managers.py:422, 439`` —
+  ``DisplayableManager.url_map``: no drafts.
+* ``mezzanine/core/views.py:114`` —
+  search view (``search(..., for_user=request.user)``).
+* ``mezzanine/core/views.py:184`` —
+  ``displayable_links_js`` / ``url_map``.
+* ``mezzanine/pages/managers.py:8-29, 68`` —
+  ``PageManager.published``, ``with_ascendants_for_slug``.
+* ``mezzanine/pages/middleware.py:65-66`` —
+  ``PageMiddleware``: pass
+  ``preview=getattr(request, "preview", None)``.
+* ``mezzanine/pages/models.py:103`` —
+  ``get_ascendants`` → ``with_ascendants_for_slug``.
+* ``mezzanine/pages/views.py:89`` —
+  ``get_ascendants(for_user=request.user)``.
+* ``mezzanine/pages/templatetags/pages_tags.py:52`` —
+  menus: **no** preview union.
+* ``mezzanine/blog/views.py:35, 91, 93`` —
+  list / detail / related.
+* ``mezzanine/blog/feeds.py:47, 81`` —
+  feeds stay published-only.
+* ``mezzanine/blog/templatetags/blog_tags.py:22, 40, 50, 70`` —
+  published-only.
+
+Tests:
+
+* ``tests/test_core.py:133-143`` —
+  ``test_draft``: staff GET without token → **404**; with token
+  → 200.
+* ``tests/test_core.py:155-224`` —
+  ``test_search``: search still excludes drafts (``for_user=``
+  at line 217).
+* ``tests/test_pages.py:179-183`` —
+  ``login_required`` vs ``published``.
+* ``tests/test_kernel_contracts.py`` —
+  characterization suite added in PR-019 (manager staff
+  short-circuit, staff GET draft, ``url_map``). 022c flips
+  those assertions.

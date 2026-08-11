@@ -133,6 +133,9 @@ class CoreTests(TestCase):
     def test_draft(self):
         """
         Test a draft object as only being viewable by a staff member.
+
+        PR-022c will flip the staff GET (no preview token) from 200
+        to 404; drafts then require an opaque preview token.
         """
         self.client.logout()
         draft = RichTextPage.objects.create(title="Draft", status=CONTENT_STATUS_DRAFT)
@@ -140,6 +143,7 @@ class CoreTests(TestCase):
         self.assertEqual(response.status_code, 404)
         self.client.login(username=self._username, password=self._password)
         response = self.client.get(draft.get_absolute_url(), follow=True)
+        # 022c: staff GET without token → 404 (token required).
         self.assertEqual(response.status_code, 200)
 
     def test_searchable_manager_search_fields(self):
