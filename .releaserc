@@ -11,9 +11,9 @@
     "@semantic-release/release-notes-generator",
     "@semantic-release/github",
     ["@semantic-release/exec", {
-      "verifyConditionsCmd": "python -m pip install -U pip setuptools wheel twine",
+      "verifyConditionsCmd": "python -m pip install -U pip build twine",
       "prepareCmd": "sed -i 's/9999dev0/${nextRelease.version}/' mezzanine/__init__.py",
-      "publishCmd": "python setup.py sdist bdist_wheel && twine upload dist/*"
+      "publishCmd": "python -m build && twine upload dist/*"
     }]
   ]
 }
