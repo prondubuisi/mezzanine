@@ -47,23 +47,19 @@ class CurrentRequestMiddleware(MiddlewareMixin):
     """
     Stores the request in a ContextVar for global access.
 
-    ``process_response`` and ``process_exception`` both reset so the
-    value does not leak across requests.
+    Reset only in ``process_response``. ``MiddlewareMixin`` always runs
+    that hook after ``convert_exception_to_response``, so inner
+    middleware (UpdateCache, RedirectFallback) still see the request.
+    This class should be first in ``MIDDLEWARE`` so its
+    ``process_response`` is last.
     """
 
     def process_request(self, request):
         request._mezzanine_request_token = _current_request.set(request)
 
     def process_response(self, request, response):
-        self._reset_request(request)
-        return response
-
-    def process_exception(self, request, exception):
-        self._reset_request(request)
-
-    @staticmethod
-    def _reset_request(request):
         token = getattr(request, "_mezzanine_request_token", None)
         if token is not None:
             _current_request.reset(token)
             del request._mezzanine_request_token
+        return response

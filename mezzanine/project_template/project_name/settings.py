@@ -286,6 +286,9 @@ INSTALLED_APPS = [
 # these middleware classes will be applied in the order given, and in the
 # response phase the middleware will be applied in reverse order.
 MIDDLEWARE = (
+    # First so process_response runs last: UpdateCache / RedirectFallback
+    # still see current_request() when they write cache keys or look up 404s.
+    "mezzanine.core.request.CurrentRequestMiddleware",
     "django.middleware.security.SecurityMiddleware",
     "mezzanine.core.middleware.ContentSecurityPolicyMiddleware",
     "mezzanine.core.middleware.UpdateCacheMiddleware",
@@ -297,7 +300,6 @@ MIDDLEWARE = (
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
-    "mezzanine.core.request.CurrentRequestMiddleware",
     "mezzanine.core.middleware.RedirectFallbackMiddleware",
     "mezzanine.core.middleware.AdminLoginInterfaceSelectorMiddleware",
     "mezzanine.core.middleware.SitePermissionMiddleware",

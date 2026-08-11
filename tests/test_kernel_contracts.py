@@ -12,11 +12,13 @@ import pytest
 from django.apps import apps
 from django.contrib import admin
 from django.contrib.auth.models import AnonymousUser
+from django.contrib.redirects.models import Redirect
 from django.contrib.sites.models import Site
 from django.db.models import UniqueConstraint
 from django.http import Http404, HttpResponse
 from django.template import Context, Template
 from django.test import RequestFactory, override_settings
+from django.utils.deprecation import MiddlewareMixin
 from django.utils.timezone import now
 
 from mezzanine.conf import settings
@@ -621,6 +623,64 @@ def test_nested_override_current_site_id_raises_recursion_error():
             assert current_site_id() == 3
         assert current_site_id() == 2
     assert current_site_id() == settings.SITE_ID
+
+
+def test_current_request_survives_inner_process_response(rf):
+    """Reset only after CurrentRequestMiddleware.process_response (last)."""
+    from mezzanine.core.request import CurrentRequestMiddleware, current_request
+
+    seen = {}
+
+    class InnerMiddleware(MiddlewareMixin):
+        def process_response(self, request, response):
+            seen["inner_request"] = current_request()
+            seen["inner_site"] = current_site_id()
+            return response
+
+    def view(request):
+        seen["view_request"] = current_request()
+        seen["view_site"] = current_site_id()
+        return HttpResponse("ok")
+
+    site2 = Site.objects.create(domain="inner.example.com", name="Inner")
+    request = rf.get("/")
+    request.site_id = site2.pk
+    request.session = {}
+
+    inner = InnerMiddleware(view)
+    outer = CurrentRequestMiddleware(inner)
+    response = outer(request)
+
+    assert response.status_code == 200
+    assert seen["view_request"] is request
+    assert seen["view_site"] == site2.pk
+    assert seen["inner_request"] is request
+    assert seen["inner_site"] == site2.pk
+    assert current_request() is None
+
+
+def test_redirect_fallback_on_404_uses_request_site(rf):
+    """404 process_response still resolves Redirect against the request site."""
+    from mezzanine.core.middleware import RedirectFallbackMiddleware
+    from mezzanine.core.request import CurrentRequestMiddleware, current_request
+
+    site2 = Site.objects.create(domain="redir.example.com", name="Redir")
+    Redirect.objects.create(site_id=site2.pk, old_path="/gone/", new_path="/here/")
+
+    def view(request):
+        return HttpResponse("missing", status=404)
+
+    request = rf.get("/gone/")
+    request.site_id = site2.pk
+    request.session = {}
+
+    inner = RedirectFallbackMiddleware(view)
+    outer = CurrentRequestMiddleware(inner)
+    response = outer(request)
+
+    assert response.status_code == 301
+    assert response["Location"] == "/here/"
+    assert current_request() is None
 
 
 # ---------------------------------------------------------------------------
