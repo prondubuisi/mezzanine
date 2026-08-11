@@ -37,7 +37,7 @@ register_setting(
     name="ACCOUNTS_MIN_PASSWORD_LENGTH",
     description=_("Minimum length for passwords"),
     editable=False,
-    default=6,
+    default=12,
 )
 
 register_setting(
