@@ -1,3 +1,4 @@
+import secrets
 import warnings
 from functools import lru_cache
 
@@ -14,7 +15,7 @@ from django.http import (
 )
 from django.middleware.csrf import CsrfViewMiddleware, get_token
 from django.template import RequestContext, Template
-from django.urls import resolve, reverse
+from django.urls import reverse
 from django.utils.cache import get_max_age
 from django.utils.deprecation import MiddlewareMixin
 from django.utils.safestring import mark_safe
@@ -231,60 +232,40 @@ class FetchFromCacheMiddleware(MiddlewareMixin):
                 return HttpResponse(response)
 
 
-class SSLRedirectMiddleware(MiddlewareMixin):
+class ContentSecurityPolicyMiddleware(MiddlewareMixin):
     """
-    Handles redirections required for SSL when ``SSL_ENABLED`` is ``True``.
+    Attach a per-request CSP nonce and emit a Content-Security-Policy header.
 
-    If ``SSL_FORCE_HOST`` is ``True``, and is not the current host,
-    redirect to it.
-
-    Also ensure URLs defined by ``SSL_FORCE_URL_PREFIXES`` are redirect
-    to HTTPS, and redirect all other URLs to HTTP if on HTTPS.
+    The nonce is on ``request.csp_nonce`` for templates
+    (``{{ request.csp_nonce }}``). Default policy is permissive enough for
+    the Y1 admin / TinyMCE surface (``'unsafe-inline'`` on script and style).
+    Operators can replace the policy via ``CONTENT_SECURITY_POLICY``; use
+    ``{nonce}`` as a placeholder for this request's nonce.
     """
 
-    def __init__(self, *args):
-        warnings.warn(
-            "SSLRedirectMiddleware is deprecated. See "
-            "https://docs.djangoproject.com/en/stable/ref/middleware/"
-            "#module-django.middleware.security for alternative solutions.",
-            DeprecationWarning,
-        )
-        super().__init__(*args)
-
-    def languages(self):
-        if not hasattr(self, "_languages"):
-            self._languages = dict(settings.LANGUAGES).keys()
-        return self._languages
+    DEFAULT_POLICY = (
+        "default-src 'self'; "
+        "script-src 'self' 'unsafe-inline'; "
+        "style-src 'self' 'unsafe-inline'; "
+        "img-src 'self' data: https:; "
+        "font-src 'self' data:; "
+        "connect-src 'self'; "
+        "object-src 'none'; "
+        "base-uri 'self'; "
+        "frame-ancestors 'self'"
+    )
 
     def process_request(self, request):
-        force_host = settings.SSL_FORCE_HOST
-        response = None
-        if force_host and request.get_host().split(":")[0] != force_host:
-            url = f"http://{force_host}{request.get_full_path()}"
-            response = HttpResponsePermanentRedirect(url)
-        elif settings.SSL_ENABLED and not settings.DEV_SERVER:
-            url = f"{request.get_host()}{request.get_full_path()}"
-            path = request.path
-            if settings.USE_I18N and path[1:3] in self.languages():
-                path = path[3:]
-            if path.startswith(settings.SSL_FORCE_URL_PREFIXES):
-                if not request.is_secure():
-                    response = HttpResponseRedirect("https://%s" % url)
-            elif request.is_secure() and settings.SSL_FORCED_PREFIXES_ONLY:
-                response = HttpResponseRedirect("http://%s" % url)
-        if response and request.method == "POST":
-            if resolve(request.get_full_path()).url_name == "fb_do_upload":
-                # The handler for the flash file uploader in filebrowser
-                # doesn't have access to the http headers Django will use
-                # to determine whether the request is secure or not, so
-                # in this case we don't attempt a redirect - note that
-                # when /admin is restricted to SSL using Mezzanine's SSL
-                # setup, the flash uploader will post over SSL, so
-                # someone would need to explicitly go out of their way to
-                # trigger this.
-                return
-            # Tell the client they need to re-POST.
-            response.status_code = 307
+        request.csp_nonce = secrets.token_urlsafe(16)
+
+    def process_response(self, request, response):
+        if response.get("Content-Security-Policy"):
+            return response
+        nonce = getattr(request, "csp_nonce", None) or secrets.token_urlsafe(16)
+        policy = getattr(settings, "CONTENT_SECURITY_POLICY", None)
+        if not policy:
+            policy = self.DEFAULT_POLICY
+        response["Content-Security-Policy"] = policy.replace("{nonce}", nonce)
         return response
 
 

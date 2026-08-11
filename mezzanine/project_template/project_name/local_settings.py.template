@@ -1,11 +1,18 @@
-# This file is exec'd from settings.py, so it has access to and can
-# modify all the variables in settings.py.
+# Imported by settings.py (``from .local_settings import *``).
+# Override any production default defined there.
 
 DEBUG = True
 
 # Make these unique, and don't share it with anybody.
 SECRET_KEY = "{{ secret_key }}"
 NEVERCACHE_KEY = "{{ nevercache_key }}"
+
+# HTTP development: relax the production cookie / TLS flags.
+SESSION_COOKIE_SECURE = False
+CSRF_COOKIE_SECURE = False
+SECURE_SSL_REDIRECT = False
+SECURE_HSTS_SECONDS = 0
+SECURE_HSTS_INCLUDE_SUBDOMAINS = False
 
 DATABASES = {
     "default": {

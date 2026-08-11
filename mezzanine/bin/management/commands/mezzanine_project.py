@@ -1,7 +1,6 @@
 import os
-from distutils.dir_util import copy_tree
 from importlib import import_module
-from shutil import move, rmtree
+from shutil import copytree, move, rmtree
 from tempfile import mkdtemp
 
 from django.core.management import CommandError
@@ -63,7 +62,7 @@ class Command(BaseCommand):
             )
             options["directory"] = mkdtemp()
             self.handle(*args, **options)
-            copy_tree(options["directory"], project_dir)
+            copytree(options["directory"], project_dir, dirs_exist_ok=True)
             rmtree(options["directory"])
 
         # The project template dir in Mezzanine requires __init__.py so that

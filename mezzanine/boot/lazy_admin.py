@@ -97,8 +97,7 @@ class LazyAdminSite(AdminSite):
                 ]
                 break
 
-        # Misc Mezzanine urlpatterns that should reside under /admin/ url,
-        # specifically for compatibility with SSLRedirectMiddleware.
+        # Misc Mezzanine urlpatterns that should reside under /admin/.
         from mezzanine.core.views import displayable_links_js, static_proxy
         from mezzanine.generic.views import admin_keywords_submit
 
