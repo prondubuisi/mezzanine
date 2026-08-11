@@ -7,7 +7,7 @@ jQuery(function($) {
     var cookieValue = '1';
     var toolbar = $('#editable-toolbar');
     var toolbarToggleButton = $('#editable-toolbar-toggle');
-    var toolbarElements = toolbar.find('*[id!=editable-toolbar-toggle]');
+    var toolbarElements = toolbar.children().not('#editable-toolbar-toggle');
     var links = $('.editable-link');
 
     // Add AJAX submit handler for each editable form.
