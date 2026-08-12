@@ -48,8 +48,7 @@ BROCHURE_APPS = [
     "mezzanine.pages",
     "mezzanine.forms",
     "mezzanine.migrate",
-    "filebrowser_safe",
-    "grappelli_safe",
+    # PR-030: grappelli/filebrowser are extras — not required for brochure.
     "tests",
 ]
 

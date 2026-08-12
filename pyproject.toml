@@ -47,8 +47,6 @@ dependencies = [
     "pillow>=7",
     "chardet>=4",
     "pytz>=2021.1",
-    "filebrowser_safe>=1.1.1",
-    "grappelli_safe>=1.1.1",
 ]
 
 [project.optional-dependencies]
@@ -67,11 +65,25 @@ migrate = [
 # RICHTEXT_WIDGET_CLASS). This extra is a packaging marker for operators
 # who opt into the admin rich editor (PR-028).
 tinymce = []
+# PR-030: admin skin / media browser are opt-in extras, not kernel deps.
+grappelli = [
+    "grappelli_safe>=1.1.1",
+]
+filebrowser = [
+    "filebrowser_safe>=1.1.1",
+]
+admin = [
+    "grappelli_safe>=1.1.1",
+    "filebrowser_safe>=1.1.1",
+]
 testing = [
     "pytest-django>=4,<5",
     "pytest-cov>=2",
     "requirements-parser>=0.11",
     "feedparser>=6",
+    # Present so OPTIONAL_APPS / FileField fallback paths still load in CI.
+    "grappelli_safe>=1.1.1",
+    "filebrowser_safe>=1.1.1",
 ]
 codestyle = [
     "ruff>=0.16,<0.17",

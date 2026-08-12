@@ -107,6 +107,7 @@ class SearchableQuerySet(QuerySet):
         self._search_ordered = False
         self._search_terms = set()
         self._search_fields = kwargs.pop("search_fields", {})
+        self._fts_ranked = False
         super().__init__(*args, **kwargs)
 
     def search(self, query, search_fields=None):
@@ -192,6 +193,14 @@ class SearchableQuerySet(QuerySet):
             for t in terms
             if t[0:1] not in "+-"
         ]
+
+        # Postgres FTS for plain positive terms (no +/− modifiers).
+        # Quoted-phrase and modifier queries stay on icontains.
+        if not required and not excluded and optional:
+            fts = self._apply_postgres_fts(positive_terms)
+            if fts is not None:
+                return fts
+
         queryset = self
         if excluded:
             queryset = queryset.filter(reduce(iand, excluded))
@@ -203,6 +212,51 @@ class SearchableQuerySet(QuerySet):
             queryset = queryset.filter(reduce(ior, optional))
         return queryset.distinct()
 
+    def _apply_postgres_fts(self, positive_terms):
+        """
+        Annotate with SearchVector/SearchRank when on PostgreSQL.
+
+        Only fields without ``__`` relations participate (design: title +
+        content + keywords_string).
+        """
+        if not getattr(settings, "SEARCH_USE_POSTGRES_FTS", True):
+            return None
+        from django.db import connection
+
+        if connection.vendor != "postgresql":
+            return None
+        try:
+            from django.contrib.postgres.search import (
+                SearchQuery,
+                SearchRank,
+                SearchVector,
+            )
+        except ImportError:
+            return None
+
+        simple_fields = [f for f in self._search_fields.keys() if "__" not in f]
+        if not simple_fields:
+            return None
+
+        vector = SearchVector(*simple_fields, config="english")
+        search_query = SearchQuery(positive_terms[0], config="english")
+        for term in positive_terms[1:]:
+            search_query = search_query | SearchQuery(term, config="english")
+
+        ranked = (
+            self.annotate(
+                search=vector,
+                result_count=SearchRank(vector, search_query),
+            )
+            .filter(search=search_query)
+            .order_by("-result_count")
+        )
+        ranked._search_terms = self._search_terms
+        ranked._search_fields = self._search_fields
+        ranked._search_ordered = True
+        ranked._fts_ranked = True
+        return ranked
+
     def _clone(self, *args, **kwargs):
         """
         Ensure attributes are copied to subsequent queries.
@@ -211,6 +265,7 @@ class SearchableQuerySet(QuerySet):
         clone._search_terms = self._search_terms
         clone._search_fields = self._search_fields
         clone._search_ordered = self._search_ordered
+        clone._fts_ranked = getattr(self, "_fts_ranked", False)
         return clone
 
     def order_by(self, *field_names):
@@ -239,6 +294,13 @@ class SearchableQuerySet(QuerySet):
         so a broad query cannot load every matching row into memory.
         """
         results = super().iterator()
+        # Postgres FTS already ranked and ordered; still cap materialization.
+        if getattr(self, "_fts_ranked", False):
+            capped = list(islice(results, settings.SEARCH_MAX_RESULTS))
+            for result in capped:
+                if not hasattr(result, "result_count") or result.result_count is None:
+                    result.result_count = 0
+            return iter(capped)
         if self._search_terms and not self._search_ordered:
             results = list(islice(results, settings.SEARCH_MAX_RESULTS))
             for i, result in enumerate(results):

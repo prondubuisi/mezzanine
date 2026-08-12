@@ -311,6 +311,8 @@ MIDDLEWARE = (
 
 # Store these package names here as they may change in the future since
 # at the moment we are using custom forks of them.
+# PR-030: install via ``nova-cms[grappelli]`` / ``nova-cms[filebrowser]``
+# (or ``nova-cms[admin]``) — not required for the kernel / Friday path.
 PACKAGE_NAME_FILEBROWSER = "filebrowser_safe"
 PACKAGE_NAME_GRAPPELLI = "grappelli_safe"
 
@@ -319,12 +321,11 @@ PACKAGE_NAME_GRAPPELLI = "grappelli_safe"
 #########################
 
 # These will be added to ``INSTALLED_APPS``, only if available.
+# Grappelli / Filebrowser are extras (PR-030), not product identity.
 OPTIONAL_APPS = (
     "debug_toolbar",
     "django_extensions",
     "compressor",
-    PACKAGE_NAME_FILEBROWSER,
-    PACKAGE_NAME_GRAPPELLI,
 )
 
 ##################

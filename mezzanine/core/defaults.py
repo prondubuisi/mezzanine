@@ -567,6 +567,17 @@ register_setting(
 )
 
 register_setting(
+    name="SEARCH_USE_POSTGRES_FTS",
+    description=_(
+        "When True and the database is PostgreSQL, searchable querysets "
+        "use SearchVector/SearchRank on simple (non-relation) fields. "
+        "Other databases keep the icontains + annotate_scores path."
+    ),
+    editable=False,
+    default=True,
+)
+
+register_setting(
     name="SITE_PREFIX",
     description=_(
         "A URL prefix for mounting all of Mezzanine's urlpatterns "

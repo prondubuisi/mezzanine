@@ -11,7 +11,7 @@
 </style>
 <script src="{% static "mezzanine/js/"|add:settings.JQUERY_UI_FILENAME %}"></script>
 <script>window.__page_ordering_url = '{% url "admin_page_ordering" %}';</script>
-<script src="{% static "mezzanine/js/admin/jquery.mjs.nestedSortable.js" %}"></script>
+{# PR-029: nestedSortable removed; page_tree.js uses jQuery UI Sortable. #}
 <script src="{% static "mezzanine/js/admin/page_tree.js" %}"></script>
 {% endblock extrahead %}
 
