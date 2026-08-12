@@ -1,9 +1,11 @@
 name: Test and release
 
-# Fires on all incoming commits
+# Fires on all incoming commits. workflow_dispatch lets us re-run from a
+# branch when Actions has never executed on a fork (zero-run cold start).
 on:
   pull_request:
   push:
+  workflow_dispatch:
 
 jobs:
 

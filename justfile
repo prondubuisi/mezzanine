@@ -80,17 +80,17 @@ _django *args:
 	dst="$tmpl/project_name/local_settings.py"
 	src="$tmpl/project_name/local_settings.py.template"
 	if [ ! -f "$dst" ]; then
-		python -c "
-import pathlib, re, secrets, string
-src = pathlib.Path('$src')
-dst = pathlib.Path('$dst')
-alphabet = string.ascii_letters + string.digits + '!@#\$%^&*(-_=+)'
-def key():
-    return ''.join(secrets.choice(alphabet) for _ in range(50))
-text = src.read_text()
-text = re.sub(r'\\{\\{\\s*secret_key\\s*\\}\\}', key(), text)
-text = re.sub(r'\\{\\{\\s*nevercache_key\\s*\\}\\}', key(), text)
-dst.write_text(text)
-"
+		# Heredoc lines must stay recipe-indented or just 1.x misparses them.
+		python3 - "$src" "$dst" <<'PY'
+		import pathlib, re, secrets, string, sys
+		src, dst = pathlib.Path(sys.argv[1]), pathlib.Path(sys.argv[2])
+		alphabet = string.ascii_letters + string.digits + "!@#$%^&*(-_=+)"
+		def key():
+		    return "".join(secrets.choice(alphabet) for _ in range(50))
+		text = src.read_text()
+		text = re.sub(r"\{\{\s*secret_key\s*\}\}", key(), text)
+		text = re.sub(r"\{\{\s*nevercache_key\s*\}\}", key(), text)
+		dst.write_text(text)
+		PY
 	fi
 	run python "$tmpl/manage.py" "$@"
