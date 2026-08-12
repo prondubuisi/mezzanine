@@ -396,6 +396,66 @@ def _require_staff_site(request):
 
 
 @require_GET
+def demo_sites_index(request):
+    """
+    Staff-only list of IA site clones for local UI testing.
+
+    Switch content via POST to ``demo_sites_switch`` or CLI
+    ``seed_site_clone --site=… --flush``.
+    """
+    from mezzanine.demos.site_profiles import PROFILES
+
+    _require_staff_site(request)
+    current = request.session.get("nova_demo_site", "")
+    sites = [
+        {
+            "slug": slug,
+            "name": meta.get("display_name", slug),
+            "inspired_by": meta.get("inspired_by", ""),
+            "tagline": meta.get("tagline", ""),
+            "pages": [p[0] for p in meta.get("pages", [])],
+            "post_count": len(meta.get("posts", [])),
+            "active": slug == current,
+        }
+        for slug, meta in sorted(PROFILES.items())
+    ]
+    return TemplateResponse(
+        request,
+        "admin/demo_sites.html",
+        {
+            "title": "Site clone lab",
+            "sites": sites,
+            "current": current,
+            "switch_hint": "just demo-clone <slug> --flush",
+        },
+    )
+
+
+@require_POST
+def demo_sites_switch(request):
+    """Staff-only: flush + seed a named IA clone, then redirect home."""
+    from django.contrib import messages
+    from django.core.management import call_command
+    from django.http import HttpResponseRedirect
+
+    from mezzanine.demos.site_profiles import get_profile
+
+    _require_staff_site(request)
+    slug = (request.POST.get("site") or "").strip()
+    try:
+        get_profile(slug)
+    except KeyError:
+        raise Http404 from None
+    call_command("seed_site_clone", site=slug, flush=True, verbosity=0)
+    request.session["nova_demo_site"] = slug
+    messages.success(
+        request,
+        "Switched demo content to %s. Hard-refresh if needed." % slug,
+    )
+    return HttpResponseRedirect("/")
+
+
+@require_GET
 def api_openapi(request):
     """Minimal OpenAPI 3 skeleton for private Nova API (PR-036)."""
     _require_staff_site(request)

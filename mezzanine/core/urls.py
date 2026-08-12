@@ -54,4 +54,10 @@ urlpatterns += [
     ),
     path("_nova/api/openapi.json", core_views.api_openapi, name="nova_api_openapi"),
     path("_nova/api/resolve", core_views.api_resolve, name="nova_api_resolve"),
+    path("_nova/demo-sites/", core_views.demo_sites_index, name="nova_demo_sites"),
+    path(
+        "_nova/demo-sites/switch/",
+        core_views.demo_sites_switch,
+        name="nova_demo_sites_switch",
+    ),
 ]
