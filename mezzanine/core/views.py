@@ -395,38 +395,16 @@ def _require_staff_site(request):
         raise PermissionDenied
 
 
-def _require_staff_or_login(request):
-    """
-    Like ``_require_staff_site``, but send anonymous users to admin login
-    instead of a misleading 404 (demo lab UX).
-    """
-    from django.contrib.auth.views import redirect_to_login
-    from django.urls import reverse
-
-    if not request.user.is_authenticated:
-        # Prefer admin login so createdb superusers can sign in.
-        login_url = reverse("admin:login")
-        return redirect_to_login(request.get_full_path(), login_url=login_url)
-    if not (request.user.is_staff or request.user.is_superuser):
-        raise PermissionDenied
-    if not request.user.is_superuser and not has_site_permission(request.user):
-        raise PermissionDenied
-    return None
-
-
 @require_GET
 def demo_sites_index(request):
     """
-    Staff-only list of IA site clones for local UI testing.
+    Local IA site-clone lab (no auth while pre-public).
 
     Switch content via POST to ``demo_sites_switch`` or CLI
-    ``seed_site_clone --site=… --flush``.
+    ``seed_site_clone --site=… --flush``. Gate this before any public deploy.
     """
     from mezzanine.demos.site_profiles import PROFILES
 
-    redir = _require_staff_or_login(request)
-    if redir is not None:
-        return redir
     current = request.session.get("nova_demo_site", "")
     sites = [
         {
@@ -454,16 +432,13 @@ def demo_sites_index(request):
 
 @require_POST
 def demo_sites_switch(request):
-    """Staff-only: flush + seed a named IA clone, then redirect home."""
+    """Load a named IA clone (no auth while pre-public). Gate before deploy."""
     from django.contrib import messages
     from django.core.management import call_command
     from django.http import HttpResponseRedirect
 
     from mezzanine.demos.site_profiles import get_profile
 
-    redir = _require_staff_or_login(request)
-    if redir is not None:
-        return redir
     slug = (request.POST.get("site") or "").strip()
     try:
         get_profile(slug)
