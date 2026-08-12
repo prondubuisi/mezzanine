@@ -217,11 +217,16 @@ def test_brochure_demo_fixture_types():
             assert page_pks[row["pk"]] == "form"
 
 
+# Avoid "mysite" — Django startproject rejects names that import as modules
+# when a leftover smoke tree sits on PYTHONPATH (repo-root mysite/).
+_PROJECT = "novademo"
+
+
 def _run_nova_project(tmp_path, *extra_argv):
     env = os.environ.copy()
     env.pop("DJANGO_SETTINGS_MODULE", None)
     env["PYTHONPATH"] = str(REPO_ROOT) + os.pathsep + env.get("PYTHONPATH", "")
-    argv = ["nova-project", "mysite", *extra_argv]
+    argv = ["nova-project", _PROJECT, *extra_argv]
     result = subprocess.run(
         [
             sys.executable,
@@ -246,8 +251,8 @@ def _run_nova_project(tmp_path, *extra_argv):
 def test_nova_project_kit_brochure(tmp_path):
     result = _run_nova_project(tmp_path, "--kit", "brochure")
     assert result.returncode == 0, result.stderr or result.stdout
-    project = tmp_path / "mysite"
-    settings_text = (project / "mysite" / "settings.py").read_text()
+    project = tmp_path / _PROJECT
+    settings_text = (project / _PROJECT / "settings.py").read_text()
     assert '"mezzanine.kits.brochure"' in settings_text
     assert '"mezzanine.forms"' in settings_text
     assert '"mezzanine.migrate"' in settings_text
@@ -270,10 +275,10 @@ def test_nova_project_kit_brochure(tmp_path):
 def test_nova_project_without_kit_keeps_blog(tmp_path):
     result = _run_nova_project(tmp_path)
     assert result.returncode == 0, result.stderr or result.stdout
-    settings_text = (tmp_path / "mysite" / "mysite" / "settings.py").read_text()
+    settings_text = (tmp_path / _PROJECT / _PROJECT / "settings.py").read_text()
     assert '"mezzanine.blog"' in settings_text
     assert '"mezzanine.kits.brochure"' not in settings_text
-    assert not (tmp_path / "mysite" / ".nova-kit").exists()
+    assert not (tmp_path / _PROJECT / ".nova-kit").exists()
 
 
 def test_nova_project_unknown_kit_fails(tmp_path):
@@ -284,8 +289,8 @@ def test_nova_project_unknown_kit_fails(tmp_path):
 
 
 def test_apply_kit_overwrites_templates(tmp_path):
-    project = tmp_path / "mysite"
-    app = project / "mysite"
+    project = tmp_path / _PROJECT
+    app = project / _PROJECT
     app.mkdir(parents=True)
     (app / "settings.py").write_text(
         (REPO_ROOT / "mezzanine/project_template/project_name/settings.py").read_text(),
@@ -293,7 +298,7 @@ def test_apply_kit_overwrites_templates(tmp_path):
     )
     (project / "templates").mkdir()
     (project / "templates" / "base.html").write_text("OLD", encoding="utf-8")
-    apply_kit("brochure", project, "mysite")
+    apply_kit("brochure", project, _PROJECT)
     assert "brochure/tokens.css" in (
         project / "templates" / "base.html"
     ).read_text(encoding="utf-8")
@@ -348,4 +353,4 @@ def test_form_template_has_no_jquery_api():
 def test_unknown_kit_fails_before_project_dir(tmp_path):
     result = _run_nova_project(tmp_path, "--kit", "not-a-kit")
     assert result.returncode != 0
-    assert not (tmp_path / "mysite").exists()
+    assert not (tmp_path / _PROJECT).exists()

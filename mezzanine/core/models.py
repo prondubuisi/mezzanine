@@ -464,10 +464,12 @@ class Orderable(models.Model, metaclass=OrderableBase):
         except AttributeError:
             # No ``order_with_respect_to`` specified on the model.
             return {}
-        # Support for generic relations.
+        # Support for generic relations. Django 6 binds GFKs as
+        # GenericForeignKeyDescriptor on the class; the field lives on .field.
         field = getattr(self.__class__, name)
-        if isinstance(field, GenericForeignKey):
-            names = (field.ct_field, field.fk_field)
+        gfk = field if isinstance(field, GenericForeignKey) else getattr(field, "field", None)
+        if isinstance(gfk, GenericForeignKey):
+            names = (gfk.ct_field, gfk.fk_field)
             return {n: getattr(self, n) for n in names}
         return {name: value}
 

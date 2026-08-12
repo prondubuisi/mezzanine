@@ -131,6 +131,8 @@ def test_ssl_settings_unregistered():
 
 
 def test_nova_project_writes_hardened_project(tmp_path):
+    # Prefer a name that cannot collide with a leftover smoke tree on PYTHONPATH.
+    project_name = "novademo"
     env = os.environ.copy()
     env.pop("DJANGO_SETTINGS_MODULE", None)
     env["PYTHONPATH"] = str(REPO_ROOT) + os.pathsep + env.get("PYTHONPATH", "")
@@ -140,10 +142,11 @@ def test_nova_project_writes_hardened_project(tmp_path):
             "-c",
             (
                 "import sys; "
-                "sys.argv = ['nova-project', 'mysite']; "
+                "sys.argv = ['nova-project', %r]; "
                 "from mezzanine.bin.mezzanine_project import create_project; "
                 "create_project()"
-            ),
+            )
+            % project_name,
         ],
         cwd=tmp_path,
         env=env,
@@ -152,7 +155,7 @@ def test_nova_project_writes_hardened_project(tmp_path):
         check=False,
     )
     assert result.returncode == 0, result.stderr or result.stdout
-    project_app = tmp_path / "mysite" / "mysite"
+    project_app = tmp_path / project_name / project_name
     assert (project_app / "asgi.py").is_file()
     assert (project_app / "wsgi.py").is_file()
     assert (project_app / "local_settings.py").is_file()
@@ -173,14 +176,14 @@ def test_nova_project_writes_hardened_project(tmp_path):
 
     probe = (
         "import sys; sys.path.insert(0, '.'); "
-        "from mysite import settings; "
+        "from %s import settings; "
         "print(settings.DEBUG, "
         "settings.SESSION_COOKIE_SECURE, "
         "settings.SECURE_SSL_REDIRECT)"
-    )
+    ) % project_name
     debug_true = subprocess.run(
         [sys.executable, "-c", probe],
-        cwd=tmp_path / "mysite",
+        cwd=tmp_path / project_name,
         env=env,
         capture_output=True,
         text=True,
@@ -194,7 +197,7 @@ def test_nova_project_writes_hardened_project(tmp_path):
     )
     debug_false = subprocess.run(
         [sys.executable, "-c", probe],
-        cwd=tmp_path / "mysite",
+        cwd=tmp_path / project_name,
         env=env,
         capture_output=True,
         text=True,
@@ -203,10 +206,10 @@ def test_nova_project_writes_hardened_project(tmp_path):
     assert debug_false.returncode == 0, debug_false.stderr
     assert debug_false.stdout.strip() == "False True True"
 
-    assert (tmp_path / "mysite" / "compose.yaml").is_file()
-    assert (tmp_path / "mysite" / "justfile").is_file()
-    assert (tmp_path / "mysite" / ".env.example").is_file()
-    generated_just = (tmp_path / "mysite" / "justfile").read_text()
+    assert (tmp_path / project_name / "compose.yaml").is_file()
+    assert (tmp_path / project_name / "justfile").is_file()
+    assert (tmp_path / project_name / ".env.example").is_file()
+    generated_just = (tmp_path / project_name / "justfile").read_text()
     assert re.search(r"^bootstrap:", generated_just, re.M)
     assert not re.search(r"^bootstrap[^\n]*\bkit\b", generated_just, re.M)
 

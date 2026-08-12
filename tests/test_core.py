@@ -661,9 +661,10 @@ class SiteRelatedTestCase(TestCase):
         site1 = Site.objects.create(domain="site1.com")
         site2 = Site.objects.create(domain="site2.com")
 
+        # Unique (site, slug) requires distinct titles (PR-021).
         # default behaviour, page gets assigned current site
         with override_current_site_id(site2.pk):
-            page = RichTextPage()
+            page = RichTextPage(title="site-related-a")
             page.save()
             self.assertEqual(page.site_id, site2.pk)
 
@@ -685,21 +686,21 @@ class SiteRelatedTestCase(TestCase):
 
         # When update_site=True, new page gets assigned current site
         with override_current_site_id(site2.pk):
-            page = RichTextPage()
+            page = RichTextPage(title="site-related-b")
             page.site = site1
             page.save(update_site=True)
             self.assertEqual(page.site_id, site2.pk)
 
         # When update_site=False, new page keeps current site
         with override_current_site_id(site2.pk):
-            page = RichTextPage()
+            page = RichTextPage(title="site-related-c")
             page.site = site1
             page.save(update_site=False)
             self.assertEqual(page.site_id, site1.pk)
 
         # When site explicitly assigned, new page keeps assigned site
         with override_current_site_id(site2.pk):
-            page = RichTextPage()
+            page = RichTextPage(title="site-related-d")
             page.site = site1
             page.save()
             self.assertEqual(page.site_id, site1.pk)

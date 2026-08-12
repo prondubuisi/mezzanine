@@ -25,3 +25,7 @@ htmlcov/
 mezzanine/project_template/static/
 /mezzanine/.project
 /mezzanine/.pydevproject
+# Local Friday-path smoke trees (name collides with startproject)
+/mysite/
+/novademo/
+uv.lock
