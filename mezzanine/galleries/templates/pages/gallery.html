@@ -28,16 +28,18 @@
 
 {% block extra_js %}
 {{ block.super }}
+{# Magnific needs jQuery; public pages do not load it (KD12). Staff get lightbox. #}
+{% if user.is_authenticated and user.is_staff %}
 <script src="{% static "mezzanine/js/magnific-popup.js" %}"></script>
 <script>
-$(document).ready(function() {
-    $('.gallery').magnificPopup({
-        delegate: 'a',
-        type: 'image',
-        gallery: {
-            enabled: true,
-        }
+document.addEventListener("DOMContentLoaded", function () {
+    if (!window.jQuery) { return; }
+    jQuery(".gallery").magnificPopup({
+        delegate: "a",
+        type: "image",
+        gallery: { enabled: true }
     });
 });
 </script>
+{% endif %}
 {% endblock %}

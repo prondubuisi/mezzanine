@@ -1,33 +1,43 @@
-import mimetypes
-import os
-from json import dumps
-from urllib.parse import urljoin, urlparse
+import logging
 
 from django.apps import apps
 from django.contrib import admin
 from django.contrib.admin.options import ModelAdmin
 from django.contrib.admin.views.decorators import staff_member_required
-from django.contrib.staticfiles import finders
 from django.core.exceptions import PermissionDenied
-from django.http import HttpResponse, HttpResponseNotFound, HttpResponseServerError
+from django.db import connection
+from django.http import (
+    Http404,
+    HttpResponse,
+    HttpResponseNotFound,
+    HttpResponseServerError,
+    JsonResponse,
+)
 from django.shortcuts import redirect
 from django.template.loader import get_template
 from django.template.response import TemplateResponse
 from django.urls import reverse
-from django.utils.translation import gettext_lazy as _
+from django.utils.html import escape
+from django.utils.http import urlencode
+from django.utils.safestring import mark_safe
+from django.utils.translation import gettext as _
 from django.views.decorators.csrf import requires_csrf_token
+from django.views.decorators.http import require_GET, require_http_methods, require_POST
 
 from mezzanine.conf import settings
+from mezzanine.core.capabilities import user_can_edit
 from mezzanine.core.forms import get_edit_form
-from mezzanine.core.models import Displayable, SitePermission
+from mezzanine.core.logging import structured_log
+from mezzanine.core.models import Displayable, SiteRole
 from mezzanine.utils.sites import has_site_permission
 from mezzanine.utils.urls import next_url
-from mezzanine.utils.views import is_editable, paginate
+from mezzanine.utils.views import paginate
 
-mimetypes.init()
+_health_logger = logging.getLogger("nova.health")
 
 
 @staff_member_required
+@require_POST
 def set_site(request):
     """
     Put the selected site ID into the session - posted to from
@@ -35,11 +45,9 @@ def set_site(request):
     site ID is then used in favour of the current request's
     domain in ``mezzanine.core.managers.CurrentSiteManager``.
     """
-    site_id = int(request.GET["site_id"])
+    site_id = int(request.POST["site_id"])
     if not request.user.is_superuser:
-        try:
-            SitePermission.objects.get(user=request.user, sites=site_id)
-        except SitePermission.DoesNotExist:
+        if not SiteRole.objects.filter(user=request.user, site_id=site_id).exists():
             raise PermissionDenied
     request.session["site_id"] = site_id
     admin_url = reverse("admin:index")
@@ -66,27 +74,124 @@ def direct_to_template(request, template, extra_context=None, **kwargs):
     return TemplateResponse(request, template, context)
 
 
-@staff_member_required
+def _edit_source(request):
+    return request.GET if request.method == "GET" else request.POST
+
+
+def _edit_object(request):
+    src = _edit_source(request)
+    try:
+        app = src["app"]
+        model_name = src["model"]
+        object_id = src["id"]
+        field_names = src["fields"]
+    except KeyError:
+        raise Http404
+    try:
+        model = apps.get_model(app, model_name)
+    except (LookupError, ValueError, TypeError):
+        raise Http404
+    try:
+        obj = model.objects.get(pk=object_id)
+    except (model.DoesNotExist, ValueError, TypeError):
+        raise Http404
+    return model, obj, field_names
+
+
+def _edit_query(obj, field_names, extra=None):
+    params = {
+        "app": obj._meta.app_label,
+        "model": obj._meta.object_name.lower(),
+        "id": obj.pk,
+        "fields": field_names,
+    }
+    if extra:
+        params.update(extra)
+    return reverse("edit") + "?" + urlencode(params)
+
+
+def format_editable_value(obj, field_name):
+    value = getattr(obj, field_name, "")
+    if value is None:
+        value = ""
+    try:
+        field = obj._meta.get_field(field_name)
+    except Exception:
+        return escape(str(value))
+    from mezzanine.core.fields import RichTextField
+
+    if isinstance(field, RichTextField):
+        from mezzanine.core.templatetags.mezzanine_tags import richtext_filters
+
+        return richtext_filters(value)
+    return escape(str(value))
+
+
+def editable_inner_html(obj, field_names):
+    parts = [format_editable_value(obj, name) for name in field_names.split(",")]
+    return mark_safe("".join(parts))
+
+
+def render_editable_island(request, obj, field_names, original=None):
+    if original is None:
+        original = editable_inner_html(obj, field_names)
+    context = {
+        "request": request,
+        "editable_obj": obj,
+        "field_names": field_names,
+        "original": original,
+        "edit_url": _edit_query(obj, field_names),
+        "display_url": _edit_query(obj, field_names, {"display": "1"}),
+    }
+    return get_template("includes/editable_island.html").render(context)
+
+
+def render_editable_form(request, form, obj, field_names, status=200):
+    context = {
+        "request": request,
+        "editable_form": form,
+        "editable_obj": obj,
+        "field_names": field_names,
+        "edit_url": _edit_query(obj, field_names),
+        "display_url": _edit_query(obj, field_names, {"display": "1"}),
+    }
+    html = get_template("includes/editable_form.html").render(context)
+    return HttpResponse(html, status=status)
+
+
+@require_http_methods(["GET", "POST"])
 def edit(request):
     """
-    Process the inline editing form.
+    HTMX inline editing (design §7.2).
+
+    GET  /edit/?app=&model=&id=&fields=  → form fragment (textarea)
+    GET  ...&display=1                   → island (cancel)
+    POST /edit/ + HX-Request             → island or 400 form-with-errors
     """
-    model = apps.get_model(request.POST["app"], request.POST["model"])
-    obj = model.objects.get(id=request.POST["id"])
+    model, obj, field_names = _edit_object(request)
+    if not user_can_edit(request.user, obj):
+        raise PermissionDenied
+
+    if request.method == "GET":
+        if request.GET.get("display") == "1":
+            return HttpResponse(render_editable_island(request, obj, field_names))
+        form = get_edit_form(obj, field_names, textarea=True)
+        return render_editable_form(request, form, obj, field_names)
+
     form = get_edit_form(
-        obj, request.POST["fields"], data=request.POST, files=request.FILES
+        obj,
+        field_names,
+        data=request.POST,
+        files=request.FILES,
+        textarea=True,
     )
-    if not (is_editable(obj, request) and has_site_permission(request.user)):
-        response = _("Permission denied")
-    elif form.is_valid():
+    if form.is_valid():
         form.save()
         model_admin = ModelAdmin(model, admin.site)
         message = model_admin.construct_change_message(request, form, None)
         model_admin.log_change(request, obj, message)
-        response = ""
-    else:
-        response = list(form.errors.values())[0][0]
-    return HttpResponse(response)
+        return HttpResponse(render_editable_island(request, obj, field_names))
+    return render_editable_form(request, form, obj, field_names, status=400)
 
 
 def search(request, template="search_results.html", extra_context=None):
@@ -115,55 +220,14 @@ def search(request, template="search_results.html", extra_context=None):
 
 
 @staff_member_required
-def static_proxy(request):
-    """
-    Serves TinyMCE plugins inside the inline popups and the uploadify
-    SWF, as these are normally static files, and will break with
-    cross-domain JavaScript errors if ``STATIC_URL`` is an external
-    host. URL for the file is passed in via querystring in the inline
-    popup plugin template, and we then attempt to pull out the relative
-    path to the file, so that we can serve it locally via Django.
-    """
-    normalize = lambda u: ("//" + u.split("://")[-1]) if "://" in u else u
-    url = normalize(request.GET["u"])
-    host = "//" + request.get_host()
-    static_url = normalize(settings.STATIC_URL)
-    for prefix in (host, static_url, "/"):
-        if url.startswith(prefix):
-            url = url.replace(prefix, "", 1)
-    response = ""
-    (content_type, encoding) = mimetypes.guess_type(url)
-    if content_type is None:
-        content_type = "application/octet-stream"
-    path = finders.find(url)
-    if path:
-        if isinstance(path, (list, tuple)):
-            path = path[0]
-        if url.endswith(".htm"):
-            # Inject <base href="{{ STATIC_URL }}"> into TinyMCE
-            # plugins, since the path static files in these won't be
-            # on the same domain.
-            static_url = settings.STATIC_URL + os.path.split(url)[0] + "/"
-            if not urlparse(static_url).scheme:
-                static_url = urljoin(host, static_url)
-            base_tag = "<base href='%s'>" % static_url
-            with open(path) as f:
-                response = f.read().replace("<head>", "<head>" + base_tag)
-        else:
-            try:
-                with open(path, "rb") as f:
-                    response = f.read()
-            except OSError:
-                return HttpResponseNotFound()
-    return HttpResponse(response, content_type=content_type)
-
-
 def displayable_links_js(request):
     """
     Renders a list of url/title pairs for all ``Displayable`` subclass
     instances into JSON that's used to populate a list of links in
     TinyMCE.
     """
+    if not has_site_permission(request.user):
+        raise PermissionDenied
     links = []
     if "mezzanine.pages" in settings.INSTALLED_APPS:
         from mezzanine.pages.models import Page
@@ -183,7 +247,7 @@ def displayable_links_js(request):
             title = f"{verbose_name}: {title}"
         links.append((not page and real, {"title": str(title), "value": url}))
     sorted_links = sorted(links, key=lambda link: (link[0], link[1]["value"]))
-    return HttpResponse(dumps([link[1] for link in sorted_links]))
+    return JsonResponse([link[1] for link in sorted_links], safe=False)
 
 
 @requires_csrf_token
@@ -208,3 +272,165 @@ def server_error(request, template_name="errors/500.html"):
     context = {"STATIC_URL": settings.STATIC_URL}
     t = get_template(template_name)
     return HttpResponseServerError(t.render(context, request))
+
+
+@require_GET
+def healthz(request):
+    """Liveness/readiness JSON for ops (PR-036b). No auth."""
+    db_ok = False
+    try:
+        connection.ensure_connection()
+        db_ok = True
+    except Exception as exc:  # noqa: BLE001 — surface as degraded
+        structured_log(
+            _health_logger,
+            logging.ERROR,
+            "healthz.db_error",
+            error=str(exc),
+        )
+    payload = {
+        "status": "ok" if db_ok else "degraded",
+        "db": db_ok,
+        "service": "nova-cms",
+    }
+    structured_log(
+        _health_logger,
+        logging.INFO if db_ok else logging.WARNING,
+        "healthz.check",
+        **payload,
+    )
+    return JsonResponse(payload, status=200 if db_ok else 503)
+
+
+@require_GET
+def media_detail(request, pk):
+    """
+    Staff-only media metadata endpoint (PR-026).
+
+    Returns JSON for the site-scoped Media row — not a public CDN path.
+    """
+    from mezzanine.core.models import Media
+    from mezzanine.utils.sites import current_site_id
+
+    if not request.user.is_authenticated or not (
+        request.user.is_staff or request.user.is_superuser
+    ):
+        raise Http404
+    try:
+        asset = Media.objects.get(pk=pk, site_id=current_site_id())
+    except Media.DoesNotExist:
+        raise Http404 from None
+    return JsonResponse(
+        {
+            "id": asset.pk,
+            "title": asset.title,
+            "alt": asset.alt,
+            "file": asset.file.url if asset.file else "",
+        }
+    )
+
+
+def _require_staff_site(request):
+    if not request.user.is_authenticated or not (
+        request.user.is_staff or request.user.is_superuser
+    ):
+        raise Http404
+    if not request.user.is_superuser and not has_site_permission(request.user):
+        raise PermissionDenied
+
+
+@require_GET
+def api_openapi(request):
+    """Minimal OpenAPI 3 skeleton for private Nova API (PR-036)."""
+    _require_staff_site(request)
+    spec = {
+        "openapi": "3.0.3",
+        "info": {
+            "title": "Nova private API",
+            "version": "0.1.0",
+            "description": "Staff-only endpoints under /_nova/.",
+        },
+        "paths": {
+            "/_nova/healthz": {
+                "get": {
+                    "summary": "Health check",
+                    "responses": {"200": {"description": "OK"}},
+                }
+            },
+            "/_nova/api/resolve": {
+                "get": {
+                    "summary": "Resolve a path or URL to a Displayable",
+                    "parameters": [
+                        {
+                            "name": "path",
+                            "in": "query",
+                            "schema": {"type": "string"},
+                        }
+                    ],
+                    "responses": {
+                        "200": {"description": "Resolved object"},
+                        "404": {"description": "Not found"},
+                    },
+                }
+            },
+            "/_nova/media/{pk}/": {
+                "get": {
+                    "summary": "Media metadata",
+                    "parameters": [
+                        {
+                            "name": "pk",
+                            "in": "path",
+                            "required": True,
+                            "schema": {"type": "integer"},
+                        }
+                    ],
+                    "responses": {"200": {"description": "Media row"}},
+                }
+            },
+        },
+    }
+    return JsonResponse(spec)
+
+
+@require_GET
+def api_resolve(request):
+    """
+    Resolve a site path to a published Displayable (PR-036).
+
+    Staff-only. Query ``?path=/about/`` (absolute path on current site).
+    """
+    _require_staff_site(request)
+    raw = (request.GET.get("path") or request.GET.get("url") or "").strip()
+    if not raw:
+        return JsonResponse(
+            {"ok": False, "error": "path required"}, status=400
+        )
+    # Accept absolute URLs; use path component only.
+    if "://" in raw:
+        from urllib.parse import urlparse
+
+        raw = urlparse(raw).path or "/"
+    if not raw.startswith("/"):
+        raw = "/" + raw
+    url_map = Displayable.objects.url_map(for_user=request.user)
+    # url_map keys are typically absolute paths or full paths.
+    obj = url_map.get(raw)
+    if obj is None:
+        # Try with/without trailing slash.
+        alt = raw.rstrip("/") or "/"
+        if alt != raw:
+            obj = url_map.get(alt)
+        if obj is None and not raw.endswith("/"):
+            obj = url_map.get(raw + "/")
+    if obj is None or not hasattr(obj, "id"):
+        raise Http404
+    return JsonResponse(
+        {
+            "ok": True,
+            "id": obj.pk,
+            "title": str(getattr(obj, "titles", None) or obj.title),
+            "model": f"{obj._meta.app_label}.{obj._meta.model_name}",
+            "path": raw,
+            "status": getattr(obj, "status", None),
+        }
+    )

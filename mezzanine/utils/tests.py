@@ -1,7 +1,6 @@
 import os
 from shutil import copyfile, copytree
 
-from django.contrib.auth import get_user_model
 from django.db import connection
 from django.template import Context, Template
 from django.test import TestCase as BaseTestCase
@@ -23,11 +22,17 @@ class TestCase(BaseTestCase):
         track the number of queries used in various places, and creates
         a request factory for views testing.
         """
+        # Imported here so collection can finish before django.setup().
+        from tests.factories import SuperUserFactory
+
         self._username = "test"
         self._password = "test"
         self._emailaddress = "example@example.com"
-        args = (self._username, self._emailaddress, self._password)
-        self._user = get_user_model().objects.create_superuser(*args)
+        self._user = SuperUserFactory(
+            username=self._username,
+            email=self._emailaddress,
+            password=self._password,
+        )
         self._request_factory = RequestFactory()
         self._debug_cursor = connection.force_debug_cursor
         connection.force_debug_cursor = True

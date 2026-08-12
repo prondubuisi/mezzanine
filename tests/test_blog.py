@@ -43,7 +43,12 @@ class BlogTests(TestCase):
         set to True.
         """
         slug = settings.BLOG_SLUG or "/"
-        RichTextPage.objects.create(title="blog", slug=slug, login_required=True)
+        RichTextPage.objects.create(
+            title="blog",
+            slug=slug,
+            login_required=True,
+            status=CONTENT_STATUS_PUBLISHED,
+        )
         response = self.client.get(reverse("blog_post_list"), follow=True)
         self.assertEqual(response.status_code, 200)
         self.assertTrue(len(response.redirect_chain) > 0)

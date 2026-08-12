@@ -48,10 +48,14 @@ def ip_for_request(request):
 
 def is_spam_akismet(request, form, url):
     """
-    Identifies form data as being spam, using the http://akismet.com
+    Identifies form data as being spam, using the https://akismet.com
     service. The Akismet API key should be specified in the
     ``AKISMET_API_KEY`` setting. This function is the default spam
     handler defined in the ``SPAM_FILTERS`` setting.
+
+    When a key is configured, errors talking to Akismet fail closed
+    (treated as spam) so a down or MITM'd service cannot let spam
+    through.
 
     The name, email, url and comment fields are all guessed from the
     form fields:
@@ -92,21 +96,21 @@ def is_spam_akismet(request, form, url):
             data_field = "comment_content"
         if data_field and not data.get(data_field):
             cleaned_data = form.cleaned_data.get(name)
-            try:
-                data[data_field] = cleaned_data.encode("utf-8")
-            except UnicodeEncodeError:
+            if cleaned_data is not None:
                 data[data_field] = cleaned_data
     if not data.get("comment_content"):
         return False
-    api_url = "http://%s.rest.akismet.com/1.1/comment-check" % settings.AKISMET_API_KEY
+    api_url = "https://%s.rest.akismet.com/1.1/comment-check" % settings.AKISMET_API_KEY
     versions = (django.get_version(), mezzanine.__version__)
     headers = {"User-Agent": "Django/%s | Mezzanine/%s" % versions}
     try:
         response = urlopen(
-            Request(api_url, urlencode(data).encode("utf-8"), headers)
+            Request(api_url, urlencode(data).encode("utf-8"), headers),
+            timeout=5,
         ).read()
     except Exception:
-        return False
+        # Key is set (we returned earlier if not). Fail closed.
+        return True
 
     # Python 3 returns response as a bytestring, Python 2 as a regular str
     return response in (b"true", "true")
@@ -153,8 +157,7 @@ def paginate(objects, page_num, per_page, max_paging_links):
 
 def render(request, templates, dictionary=None, context_instance=None, **kwargs):
     """
-    Mimics ``django.shortcuts.render`` but uses a TemplateResponse for
-    ``mezzanine.core.middleware.TemplateForDeviceMiddleware``
+    Mimics ``django.shortcuts.render`` but uses a TemplateResponse.
     """
 
     warnings.warn(

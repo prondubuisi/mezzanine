@@ -50,15 +50,9 @@ class Command(BaseCommand):
             [self.create_site, ["django.contrib.sites"]],
             [self.create_user, ["django.contrib.auth"]],
             [self.translation_fields, ["modeltranslation"]],
-            [
-                self.create_pages,
-                [
-                    "mezzanine.pages",
-                    "mezzanine.forms",
-                    "mezzanine.blog",
-                    "mezzanine.galleries",
-                ],
-            ],
+            # pages alone is enough — brochure installs pages+forms without
+            # blog/galleries (PR-032). create_pages branches on kit apps.
+            [self.create_pages, ["mezzanine.pages"]],
             [self.create_shop, ["cartridge.shop"]],
         ]
 
@@ -98,40 +92,68 @@ class Command(BaseCommand):
 
     def create_user(self):
         User = get_user_model()
-        if not settings.DEBUG or User.objects.count() > 0:
+        if User.objects.count() > 0:
             return
         if self.interactive:
             if self.verbosity >= 1:
                 print("\nCreating default account ...\n")
             call_command("createsuperuser")
-        else:
-            if self.verbosity >= 1:
-                print(
-                    "\nCreating default account "
-                    "(username: %s / password: %s) ...\n"
-                    % (DEFAULT_USERNAME, DEFAULT_PASSWORD)
-                )
-            args = (DEFAULT_USERNAME, DEFAULT_EMAIL, DEFAULT_PASSWORD)
-            User.objects.create_superuser(*args)
+            return
+        if not settings.DEBUG:
+            raise CommandError(
+                "Refusing to create the default account "
+                "(%s / %s) when DEBUG=False. "
+                "Re-run createdb interactively or use createsuperuser."
+                % (DEFAULT_USERNAME, DEFAULT_PASSWORD)
+            )
+        if self.verbosity >= 1:
+            print(
+                "\nCreating default account "
+                "(username: %s / password: %s) ...\n"
+                % (DEFAULT_USERNAME, DEFAULT_PASSWORD)
+            )
+        args = (DEFAULT_USERNAME, DEFAULT_EMAIL, DEFAULT_PASSWORD)
+        User.objects.create_superuser(*args)
 
     def create_pages(self):
+        # Brochure Friday path: kit fixture only (no blog page, no gallery).
+        if "mezzanine.kits.brochure" in settings.INSTALLED_APPS:
+            if self.no_data:
+                return
+            install = self.confirm(
+                "\nWould you like to install Brochure demo pages?\n"
+                "About, Services, Contact form. (yes/no): "
+            )
+            if install:
+                if self.verbosity >= 1:
+                    print("\nLoading Brochure demo pages ...\n")
+                call_command("loaddata", "demo")
+            return
+
+        # Required fixture is pages-only. Optional dump spans pages + forms +
+        # galleries fixtures of the same name; only load when all three apps
+        # are installed so gallery/form MTI rows resolve.
         call_command("loaddata", "mezzanine_required.json")
+        optional_apps = ("mezzanine.forms", "mezzanine.galleries")
+        if not set(optional_apps).issubset(settings.INSTALLED_APPS):
+            return
         install_optional = not self.no_data and self.confirm(
             "\nWould you like to install some initial "
             "demo pages?\nEg: About us, Contact form, "
             "Gallery. (yes/no): "
         )
-        if install_optional:
-            if self.verbosity >= 1:
-                print("\nCreating demo pages: About us, Contact form, " "Gallery ...\n")
-            from mezzanine.galleries.models import Gallery
+        if not install_optional:
+            return
+        if self.verbosity >= 1:
+            print("\nCreating demo pages: About us, Contact form, " "Gallery ...\n")
+        call_command("loaddata", "mezzanine_optional.json")
+        from mezzanine.galleries.models import Gallery
 
-            call_command("loaddata", "mezzanine_optional.json")
-            zip_name = "gallery.zip"
-            copy_test_to_media("mezzanine.core", zip_name)
-            gallery = Gallery.objects.get()
-            gallery.zip_import = zip_name
-            gallery.save()
+        zip_name = "gallery.zip"
+        copy_test_to_media("mezzanine.core", zip_name)
+        gallery = Gallery.objects.get()
+        gallery.zip_import = zip_name
+        gallery.save()
 
     def create_shop(self):
         call_command("loaddata", "cartridge_required.json")

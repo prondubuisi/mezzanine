@@ -1,5 +1,7 @@
-# This file is exec'd from settings.py, so it has access to and can
-# modify all the variables in settings.py.
+# Imported by settings.py (``from .local_settings import *``).
+# Cookie / TLS flags are derived from DEBUG after this import: leave
+# DEBUG = True for HTTP runserver; set DEBUG = False in production.
+import os
 
 DEBUG = True
 
@@ -7,22 +9,44 @@ DEBUG = True
 SECRET_KEY = "{{ secret_key }}"
 NEVERCACHE_KEY = "{{ nevercache_key }}"
 
-DATABASES = {
-    "default": {
-        # Ends with "postgresql_psycopg2", "mysql", "sqlite3" or "oracle".
-        "ENGINE": "django.db.backends.sqlite3",
-        # DB name or path to database file if using sqlite3.
-        "NAME": "dev.db",
-        # Not used with sqlite3.
-        "USER": "",
-        # Not used with sqlite3.
-        "PASSWORD": "",
-        # Set to empty string for localhost. Not used with sqlite3.
-        "HOST": "",
-        # Set to empty string for default. Not used with sqlite3.
-        "PORT": "",
+# just bootstrap / compose set POSTGRES_HOST. Unset keeps sqlite.
+if os.environ.get("POSTGRES_HOST"):
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.postgresql",
+            "NAME": os.environ.get("POSTGRES_DB", "nova"),
+            "USER": os.environ.get("POSTGRES_USER", "nova"),
+            "PASSWORD": os.environ.get("POSTGRES_PASSWORD", "nova"),
+            "HOST": os.environ["POSTGRES_HOST"],
+            "PORT": os.environ.get("POSTGRES_PORT", "5432"),
+        }
     }
-}
+else:
+    DATABASES = {
+        "default": {
+            # Ends with "postgresql_psycopg2", "mysql", "sqlite3" or "oracle".
+            "ENGINE": "django.db.backends.sqlite3",
+            # DB name or path to database file if using sqlite3.
+            "NAME": "dev.db",
+            # Not used with sqlite3.
+            "USER": "",
+            # Not used with sqlite3.
+            "PASSWORD": "",
+            # Set to empty string for localhost. Not used with sqlite3.
+            "HOST": "",
+            # Set to empty string for default. Not used with sqlite3.
+            "PORT": "",
+        }
+    }
+
+# Redis cache when REDIS_URL is set (just bootstrap writes this in .env).
+if os.environ.get("REDIS_URL"):
+    CACHES = {
+        "default": {
+            "BACKEND": "django.core.cache.backends.redis.RedisCache",
+            "LOCATION": os.environ["REDIS_URL"],
+        }
+    }
 
 # Allowed development hosts
-ALLOWED_HOSTS = ["localhost", "127.0.0.1", "::1"]
+ALLOWED_HOSTS = ["localhost", "127.0.0.1", "::1", "web"]

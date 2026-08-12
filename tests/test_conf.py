@@ -1,12 +1,30 @@
+import os
 import warnings
-from unittest import skipUnless
+from unittest import mock, skipUnless
 
 from django.conf import settings as django_settings
+from django.core.checks import Error, Warning
+from django.test.utils import override_settings
 from django.utils.encoding import force_str
 
 from mezzanine.conf import register_setting, registry, settings
 from mezzanine.conf.context_processors import TemplateSettings
+from mezzanine.conf.forms import SettingsForm
 from mezzanine.conf.models import Setting
+from mezzanine.core.checks import (
+    EXTRA_MODEL_FIELDS_WARNING,
+    NEVERCACHE_KEY_EMPTY_ERROR,
+    NEVERCACHE_KEY_EMPTY_WARNING,
+    RICHTEXT_FILTER_LEVEL_NONE_WARNING,
+    check_extra_model_fields,
+    check_nevercache_key,
+    check_richtext_filter_level_none,
+)
+from mezzanine.core.defaults import (
+    RICHTEXT_FILTER_LEVEL_HIGH,
+    RICHTEXT_FILTER_LEVEL_LOW,
+    RICHTEXT_FILTER_LEVEL_NONE,
+)
 from mezzanine.utils.tests import TestCase
 
 
@@ -218,6 +236,129 @@ class ConfTests(TestCase):
         new_site_title = settings.SITE_TITLE
         setting.delete()
         self.assertNotEqual(original_site_title, new_site_title)
+
+    def test_richtext_filter_level_none_warns(self):
+        """System check warns when RICHTEXT_FILTER_LEVEL_NONE is configured."""
+        settings.clear_cache()
+        expected = [
+            Warning(
+                RICHTEXT_FILTER_LEVEL_NONE_WARNING,
+                id="mezzanine.core.W06",
+            )
+        ]
+        with override_settings(RICHTEXT_FILTER_LEVEL=RICHTEXT_FILTER_LEVEL_NONE):
+            issues = check_richtext_filter_level_none(None)
+            self.assertEqual(issues, expected)
+
+    def test_nova_force_raw_html_warns(self):
+        """System check warns when the env escape hatch is set."""
+        settings.clear_cache()
+        expected = [
+            Warning(
+                RICHTEXT_FILTER_LEVEL_NONE_WARNING,
+                id="mezzanine.core.W06",
+            )
+        ]
+        with mock.patch.dict(os.environ, {"NOVA_FORCE_RAW_HTML": "1"}):
+            self.assertEqual(check_richtext_filter_level_none(None), expected)
+
+    def test_richtext_filter_level_default_no_warning(self):
+        """Default HIGH and explicit LOW do not warn."""
+        settings.clear_cache()
+        self.assertEqual(check_richtext_filter_level_none(None), [])
+        with override_settings(RICHTEXT_FILTER_LEVEL=RICHTEXT_FILTER_LEVEL_LOW):
+            self.assertEqual(check_richtext_filter_level_none(None), [])
+
+    def test_richtext_filter_level_db_none_ignored(self):
+        """Stale Setting rows cannot re-enable NONE once the setting is not editable."""
+        settings.clear_cache()
+        Setting.objects.create(
+            name="RICHTEXT_FILTER_LEVEL",
+            value=str(RICHTEXT_FILTER_LEVEL_NONE),
+        )
+        try:
+            self.assertEqual(
+                settings.RICHTEXT_FILTER_LEVEL, RICHTEXT_FILTER_LEVEL_HIGH
+            )
+            self.assertEqual(check_richtext_filter_level_none(None), [])
+            form = SettingsForm()
+            self.assertNotIn("RICHTEXT_FILTER_LEVEL", form.fields)
+        finally:
+            Setting.objects.filter(name="RICHTEXT_FILTER_LEVEL").delete()
+            settings.clear_cache()
+
+    def test_richtext_filter_level_not_admin_editable(self):
+        """Wave 1: the setting is not admin-editable and NONE is not a choice."""
+        setting = registry["RICHTEXT_FILTER_LEVEL"]
+        self.assertFalse(setting["editable"])
+        choice_values = [value for value, label in setting["choices"]]
+        self.assertNotIn(RICHTEXT_FILTER_LEVEL_NONE, choice_values)
+
+    def test_richtext_filter_level_none_not_in_settings_form(self):
+        """NONE is not offered on the Setting admin form."""
+        form = SettingsForm()
+        self.assertNotIn("RICHTEXT_FILTER_LEVEL", form.fields)
+        for field in form:
+            choices = getattr(field.field, "choices", None)
+            if not choices:
+                continue
+            values = [value for value, label in choices]
+            self.assertNotIn(
+                RICHTEXT_FILTER_LEVEL_NONE,
+                values,
+                "%s still offers NONE" % field.name,
+            )
+
+    def test_extra_model_fields_empty_no_warning(self):
+        settings.clear_cache()
+        with override_settings(EXTRA_MODEL_FIELDS=()):
+            self.assertEqual(check_extra_model_fields(None), [])
+
+    def test_extra_model_fields_set_warns(self):
+        settings.clear_cache()
+        extra = (
+            (
+                "mezzanine.blog.models.BlogPost.image",
+                "FileField",
+                ("Image",),
+                {"blank": True},
+            ),
+        )
+        with override_settings(EXTRA_MODEL_FIELDS=extra):
+            issues = check_extra_model_fields(None)
+        self.assertEqual(
+            issues,
+            [Warning(EXTRA_MODEL_FIELDS_WARNING, id="mezzanine.core.W07")],
+        )
+
+    def test_nevercache_key_set_no_issue(self):
+        settings.clear_cache()
+        with override_settings(NEVERCACHE_KEY="x" * 50):
+            self.assertEqual(check_nevercache_key(None), [])
+
+    def test_nevercache_key_empty_warns_without_cache_middleware(self):
+        settings.clear_cache()
+        with override_settings(NEVERCACHE_KEY="", MIDDLEWARE=()):
+            issues = check_nevercache_key(None)
+        self.assertEqual(
+            issues,
+            [Warning(NEVERCACHE_KEY_EMPTY_WARNING, id="mezzanine.core.W08")],
+        )
+
+    def test_nevercache_key_empty_errors_with_cache_middleware(self):
+        settings.clear_cache()
+        with override_settings(
+            NEVERCACHE_KEY="",
+            MIDDLEWARE=(
+                "mezzanine.core.middleware.UpdateCacheMiddleware",
+                "mezzanine.core.middleware.FetchFromCacheMiddleware",
+            ),
+        ):
+            issues = check_nevercache_key(None)
+        self.assertEqual(
+            issues,
+            [Error(NEVERCACHE_KEY_EMPTY_ERROR, id="mezzanine.core.E01")],
+        )
 
 
 class TemplateSettingsTests(TestCase):

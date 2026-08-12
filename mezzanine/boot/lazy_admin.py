@@ -97,9 +97,9 @@ class LazyAdminSite(AdminSite):
                 ]
                 break
 
-        # Misc Mezzanine urlpatterns that should reside under /admin/ url,
-        # specifically for compatibility with SSLRedirectMiddleware.
-        from mezzanine.core.views import displayable_links_js, static_proxy
+        # Misc Mezzanine urlpatterns that should reside under /admin/.
+        # static_proxy (TinyMCE 4 cross-domain shim) removed in PR-028.
+        from mezzanine.core.views import displayable_links_js
         from mezzanine.generic.views import admin_keywords_submit
 
         urls += [
@@ -108,10 +108,9 @@ class LazyAdminSite(AdminSite):
                 admin_keywords_submit,
                 name="admin_keywords_submit",
             ),
-            re_path(r"^asset_proxy/$", static_proxy, name="static_proxy"),
             re_path(
                 r"^displayable_links.js$",
-                displayable_links_js,
+                self.admin_view(displayable_links_js),
                 name="displayable_links_js",
             ),
         ]

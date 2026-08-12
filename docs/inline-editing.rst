@@ -39,18 +39,11 @@ base template::
     </body>
     </html>
 
-If your site does not use jQuery, you'll need to include it conditionally in
-your template's `<head>` if the user is a staff member. If you're using a
-different JS library, you can use `jQuery.noConflict()` to avoid it overwriting
-the `$` symbol.
-
-::
-
-    {% if user.is_staff %}
-        <script src="{{ STATIC_URL }}mezzanine/js/jquery-1.8.3.min.js">
-            jQuery.noConflict();
-        </script>
-    {% endif %}
+In-line editing is an HTMX island. Staff with a site role get HTMX and
+the edit toolbar from :func:`.editable_loader`; the public page does not
+load jQuery, jQuery Tools, or TinyMCE for this feature. The island widget
+is a sanitized ``<textarea>``. Long-form HTML editing stays in Django
+admin.
 
 The second step is to wrap each instance of a model field with the
 :func:`.editable` and ``endeditable`` template tags, with the field specified

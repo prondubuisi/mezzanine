@@ -9,6 +9,7 @@ from mezzanine.conf import settings
 from mezzanine.core.models import (
     ContentTyped,
     Displayable,
+    DocumentBody,
     Orderable,
     RichText,
     wrapped_manager,
@@ -54,6 +55,12 @@ class Page(BasePage, ContentTyped):
         verbose_name_plural = _("Pages")
         ordering = ("titles",)
         order_with_respect_to = "parent"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["site", "slug"],
+                name="%(class)s_site_slug",
+            ),
+        ]
 
     def __str__(self):
         return self.titles
@@ -100,7 +107,7 @@ class Page(BasePage, ContentTyped):
                 return self.get_content_model().description_from_content()
         return super().description_from_content()
 
-    def get_ascendants(self, for_user=None):
+    def get_ascendants(self, for_user=None, preview=None):
         """
         Returns the ascendants for the page. Ascendants are cached in
         the ``_ascendants`` attribute, which is populated when the page
@@ -117,9 +124,16 @@ class Page(BasePage, ContentTyped):
             # have not been customised.
             if self.slug:
                 kwargs = {"for_user": for_user}
+                if preview is not None:
+                    kwargs["preview"] = preview
                 with override_current_site_id(self.site_id):
                     pages = Page.objects.with_ascendants_for_slug(self.slug, **kwargs)
-                self._ascendants = pages[0]._ascendants
+                if pages:
+                    self._ascendants = pages[0]._ascendants
+                else:
+                    # Draft / unpublished chain: fall through to the
+                    # parent-walk below instead of crashing.
+                    self._ascendants = []
             else:
                 self._ascendants = []
         if not self._ascendants:
@@ -274,10 +288,10 @@ class Page(BasePage, ContentTyped):
         return None
 
 
-class RichTextPage(Page, RichText):
+class RichTextPage(Page, DocumentBody, RichText):
     """
     Implements the default type of page with a single Rich Text
-    content field.
+    content field plus Y1.5 JSON ``body``.
     """
 
     class Meta:

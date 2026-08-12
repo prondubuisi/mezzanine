@@ -31,22 +31,24 @@
 {% block extra_css %}{% endblock %}
 {% endcompress %}
 
-{% compress js %}
-<script src="{% static "mezzanine/js/"|add:settings.JQUERY_FILENAME %}"></script>
-<script src="{% static "js/bootstrap.js" %}"></script>
-<script src="{% static "js/bootstrap-extras.js" %}"></script>
+{# Public pages load no jQuery (KD12 / PR-031). Staff sessions only.
+   Inside nevercache (when cache is on) the fragment is re-parsed without
+   the parent ``{% load static %}``, so use STATIC_URL, not the static tag. #}
+{% nevercache %}
+{% if user.is_authenticated and user.is_staff %}
+<script src="{{ STATIC_URL }}mezzanine/js/{{ settings.JQUERY_FILENAME }}"></script>
+<script src="{{ STATIC_URL }}js/bootstrap.js"></script>
+<script src="{{ STATIC_URL }}js/bootstrap-extras.js"></script>
+{% endif %}
+{% endnevercache %}
 {% block extra_js %}{% endblock %}
-{% endcompress %}
-
-<!--[if lt IE 9]>
-<script src="{% static "js/html5shiv.js" %}"></script>
-<script src="{% static "js/respond.min.js" %}"></script>
-<![endif]-->
 
 {% block extra_head %}{% endblock %}
 </head>
 
 <body id="{% block body_id %}body{% endblock %}">
+
+{% include "includes/preview_bar.html" %}
 
 <div class="navbar navbar-default navbar-fixed-top" role="navigation">
 <div class="container">
@@ -115,9 +117,6 @@
     <div class="panel panel-default">
     <div class="panel-body">
     {% block right_panel %}
-    {% ifinstalled "mezzanine.twitter" %}
-    {% include "twitter/tweets.html" %}
-    {% endifinstalled %}
     {% endblock %}
     </div>
     </div>

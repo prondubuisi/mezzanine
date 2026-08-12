@@ -9,10 +9,35 @@ making it editable, as it may be inappropriate - for example settings
 that are only read during startup shouldn't be editable, since changing
 them would require an application reload.
 """
+import os
+
 from django.conf import settings
 from django.utils.translation import gettext_lazy as _
 
 from mezzanine.conf import register_setting
+
+# Only NONE path after Wave 1 / PR-005b. Must be the string "1".
+NOVA_FORCE_RAW_HTML_ENV = "NOVA_FORCE_RAW_HTML"
+
+
+def nova_force_raw_html():
+    """True only when the operator opts into unsanitized HTML via env."""
+    return os.environ.get(NOVA_FORCE_RAW_HTML_ENV) == "1"
+
+
+def resolve_richtext_filter_level(configured):
+    """Return the effective filter level.
+
+    ``NOVA_FORCE_RAW_HTML=1`` is the only NONE path. A configured NONE
+    without that env is treated as HIGH so a stale settings.py or
+    leftover ``Setting`` row cannot disable sanitization.
+    """
+    if nova_force_raw_html():
+        return RICHTEXT_FILTER_LEVEL_NONE
+    if configured == RICHTEXT_FILTER_LEVEL_NONE:
+        return RICHTEXT_FILTER_LEVEL_HIGH
+    return configured
+
 
 register_setting(
     name="ADMIN_MENU_ORDER",
@@ -76,14 +101,6 @@ register_setting(
         "Key for http://akismet.com spam filtering service. Used "
         "for filtering comments and forms."
     ),
-    editable=True,
-    default="",
-)
-
-register_setting(
-    name="BITLY_ACCESS_TOKEN",
-    label=_("bit.ly access token"),
-    description=_("Access token for http://bit.ly URL shortening service."),
     editable=True,
     default="",
 )
@@ -161,14 +178,6 @@ register_setting(
     ),
     editable=False,
     default=(),
-)
-
-register_setting(
-    name="GOOGLE_ANALYTICS_ID",
-    label=_("Google Analytics ID"),
-    description=_("Google Analytics ID (http://www.google.com/analytics/)"),
-    editable=True,
-    default="",
 )
 
 register_setting(
@@ -251,10 +260,22 @@ register_setting(
     name="RICHTEXT_WIDGET_CLASS",
     description=_(
         "Dotted package path and class name of the widget to use "
-        "for the ``RichTextField``."
+        "for the ``RichTextField``. Y1.5 default is a plain admin "
+        "textarea; set to ``mezzanine.core.forms.TinyMceWidget`` and "
+        "enable ``TINYMCE_CDN`` for optional TinyMCE 7."
     ),
     editable=False,
-    default="mezzanine.core.forms.TinyMceWidget",
+    default="django.contrib.admin.widgets.AdminTextareaWidget",
+)
+
+register_setting(
+    name="TINYMCE_CDN",
+    description=_(
+        "When using ``mezzanine.core.forms.TinyMceWidget``, load TinyMCE 7 "
+        "from this CDN URL (PR-028). Empty disables the editor scripts."
+    ),
+    editable=False,
+    default="https://cdn.jsdelivr.net/npm/tinymce@7/tinymce.min.js",
 )
 
 register_setting(
@@ -459,43 +480,42 @@ register_setting(
     name="RICHTEXT_FILTERS",
     description=_(
         "List of dotted paths to functions, called in order, on a "
-        "``RichTextField`` value before it is rendered to the template."
+        "``RichTextField`` value before it is rendered to the template. "
+        "The default pipeline thumbnails images, then sanitizes with "
+        "bleach (``mezzanine.utils.html.escape``) so unsafe HTML is "
+        "stripped on read after any BeautifulSoup rewrite."
     ),
     editable=False,
-    default=("mezzanine.utils.html.thumbnails",),
+    default=(
+        "mezzanine.utils.html.thumbnails",
+        "mezzanine.utils.html.escape",
+    ),
 )
 
 RICHTEXT_FILTER_LEVEL_HIGH = 1
 RICHTEXT_FILTER_LEVEL_LOW = 2
 RICHTEXT_FILTER_LEVEL_NONE = 3
+# Admin / registry choices. NONE is not listed — it is only available
+# via NOVA_FORCE_RAW_HTML=1 (see resolve_richtext_filter_level).
 RICHTEXT_FILTER_LEVELS = (
     (RICHTEXT_FILTER_LEVEL_HIGH, _("High")),
     (RICHTEXT_FILTER_LEVEL_LOW, _("Low (allows video, iframe, Flash, etc)")),
-    (RICHTEXT_FILTER_LEVEL_NONE, _("No filtering")),
 )
 
 register_setting(
     name="RICHTEXT_FILTER_LEVEL",
     label=_("Rich Text filter level"),
     description=_(
-        "*Do not change this setting unless you know what you're "
-        "doing.*\n\nWhen content is saved in a Rich Text (WYSIWYG) field, "
-        "unsafe HTML tags and attributes are stripped from the content to "
-        "protect against staff members intentionally adding code that could "
-        "be used to cause problems, such as changing their account to "
-        "a super-user with full access to the system.\n\n"
-        "This setting allows you to change the level of filtering that "
-        "occurs. Setting it to low will allow certain extra tags to be "
-        "permitted, such as those required for embedding video. While these "
-        "tags are not the main candidates for users adding malicious code, "
-        "they are still considered dangerous and could potentially be "
-        "mis-used by a particularly technical user, and so are filtered out "
-        "when the filtering level is set to high.\n\n"
-        "Setting the filtering level to no filtering, will disable all "
-        "filtering, and allow any code to be entered by staff members, "
-        "including script tags."
+        "Level of HTML filtering applied to Rich Text fields on save and "
+        "render. This setting is not editable in the admin.\n\n"
+        "HIGH (default) strips unsafe tags and attributes. LOW allows extra "
+        "tags used for embedded video (iframe, embed, etc).\n\n"
+        "No filtering (NONE) is only available by setting the environment "
+        "variable NOVA_FORCE_RAW_HTML=1 and restarting. That disables all "
+        "sanitization and allows script tags. A configured NONE without "
+        "that variable is ignored and treated as HIGH."
     ),
-    editable=True,
+    editable=False,
     choices=RICHTEXT_FILTER_LEVELS,
     default=RICHTEXT_FILTER_LEVEL_HIGH,
 )
@@ -532,6 +552,29 @@ register_setting(
     ),
     editable=False,
     default=1.5,
+)
+
+register_setting(
+    name="SEARCH_MAX_RESULTS",
+    label=_("Maximum search results to materialize"),
+    description=_(
+        "Upper bound on rows materialized when scoring search results "
+        "and when unioning matches across models. Prevents unbounded "
+        "Python materialization of the matching queryset."
+    ),
+    editable=False,
+    default=200,
+)
+
+register_setting(
+    name="SEARCH_USE_POSTGRES_FTS",
+    description=_(
+        "When True and the database is PostgreSQL, searchable querysets "
+        "use SearchVector/SearchRank on simple (non-relation) fields. "
+        "Other databases keep the icontains + annotate_scores path."
+    ),
+    editable=False,
+    default=True,
 )
 
 register_setting(
@@ -594,51 +637,6 @@ register_setting(
     ),
     editable=False,
     default=("mezzanine.utils.views.is_spam_akismet",),
-)
-
-register_setting(
-    name="SSL_ENABLED",
-    label=_("Enable SSL"),
-    description=_(
-        "If ``True``, users will be automatically redirected to "
-        "HTTPS for the URLs specified by the ``SSL_FORCE_URL_PREFIXES`` "
-        "setting."
-    ),
-    editable=False,
-    default=False,
-)
-
-register_setting(
-    name="SSL_FORCE_HOST",
-    label=_("Force Host"),
-    description=_(
-        "Host name that the site should always be accessed via that "
-        "matches the SSL certificate."
-    ),
-    editable=False,
-    default="",
-)
-
-register_setting(
-    name="SSL_FORCE_URL_PREFIXES",
-    description="Sequence of URL prefixes that will be forced to run over "
-    "SSL when ``SSL_ENABLED`` is ``True``. i.e. "
-    "('/admin', '/example') would force all URLs beginning with "
-    "/admin or /example to run over SSL.",
-    editable=False,
-    default=("/admin", "/account"),
-)
-
-register_setting(
-    name="SSL_FORCED_PREFIXES_ONLY",
-    description=_(
-        "If ``True``, only URLs specified by the "
-        "``SSL_FORCE_URL_PREFIXES`` setting will be accessible over SSL, "
-        "and all other URLs will be redirected back to HTTP if accessed "
-        "over HTTPS."
-    ),
-    editable=False,
-    default=True,
 )
 
 register_setting(
@@ -985,17 +983,12 @@ register_setting(
         "ACCOUNTS_APPROVAL_REQUIRED",
         "ACCOUNTS_VERIFICATION_REQUIRED",
         "ADMIN_MENU_COLLAPSED",
-        "BITLY_ACCESS_TOKEN",
         "BLOG_USE_FEATURED_IMAGE",
-        "COMMENTS_DISQUS_SHORTNAME",
         "COMMENTS_NUM_LATEST",
-        "COMMENTS_DISQUS_API_PUBLIC_KEY",
-        "COMMENTS_DISQUS_API_SECRET_KEY",
         "COMMENTS_USE_RATINGS",
         "DEV_SERVER",
         "FORMS_USE_HTML5",
         "GRAPPELLI_INSTALLED",
-        "GOOGLE_ANALYTICS_ID",
         "JQUERY_FILENAME",
         "JQUERY_UI_FILENAME",
         "LOGIN_URL",
@@ -1061,7 +1054,8 @@ register_setting(
     description=_(
         "Unique random string like ``SECRET_KEY``, but used for "
         "two-phased cache responses. Like ``SECRET_KEY``, should be "
-        "automatically generated by the ``mezzanine-project`` command."
+        "automatically generated by the ``nova-project`` / "
+        "``mezzanine-project`` command."
     ),
     editable=False,
     default="",

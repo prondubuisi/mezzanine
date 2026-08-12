@@ -1,77 +1,106 @@
-.. image:: https://img.shields.io/pypi/v/mezzanine.svg
-   :target: https://pypi.org/project/mezzanine/
-.. image:: https://img.shields.io/pypi/pyversions/mezzanine.svg
-   :target: https://pypi.org/project/mezzanine/
-.. image:: https://img.shields.io/pypi/djversions/mezzanine.svg
-   :target: https://pypi.org/project/mezzanine/
-.. image:: https://github.com/stephenmcd/mezzanine/workflows/Test%20and%20release/badge.svg
-   :target: https://github.com/stephenmcd/mezzanine/actions?query=workflow%3A%22Test+and+release%22
-.. image:: https://img.shields.io/badge/code%20style-black-000000.svg
-   :target: https://github.com/psf/black
+.. image:: https://img.shields.io/pypi/v/nova-cms.svg
+   :target: https://pypi.org/project/nova-cms/
+   :alt: PyPI
+.. image:: https://img.shields.io/pypi/pyversions/nova-cms.svg
+   :target: https://pypi.org/project/nova-cms/
+   :alt: Python versions
+.. image:: https://img.shields.io/pypi/djversions/nova-cms.svg
+   :target: https://pypi.org/project/nova-cms/
+   :alt: Django versions
+.. image:: https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json
+   :target: https://github.com/astral-sh/ruff
+   :alt: Ruff
 
-Created by `Stephen McDonald <http://twitter.com/stephen_mcd>`_
+====
+Nova
+====
 
-========
-Overview
-========
+Nova is a publishing kernel descended from Mezzanine.
 
-Mezzanine is a powerful, consistent, and flexible content management
-platform. Built using the `Django`_ framework, Mezzanine provides a
-simple yet highly extensible architecture that encourages diving in
-and hacking on the code. Mezzanine is `BSD licensed`_ and supported by
-a diverse and active community.
+Install the ``nova-cms`` package. Import ``mezzanine``. The public
+name is a working title; the import path does not change.
 
-In some ways, Mezzanine resembles tools such as `Wordpress`_,
-providing an intuitive interface for managing pages, blog posts, form
-data, store products, and other types of content. But Mezzanine is
-also different. Unlike many other platforms that make extensive use of
-modules or reusable applications, Mezzanine provides most of its
-functionality by default. This approach yields a more integrated and
-efficient platform.
+Nova is a Django content-management kernel: hierarchical pages, a
+``Displayable`` publishing model, page processors, and hostname
+multi-site. It is `BSD licensed`_. It is not Mezzanine 7, not a
+Grappelli restyle, and not a commerce engine.
 
-Visit the `Mezzanine project page`_ to see some of the `great sites
-people have built using Mezzanine`_.
+Originally created by `Stephen McDonald`_ as `Mezzanine`_.
+
+
+Installation
+============
+
+Friday path (Brochure kit — the Year‑1 install)::
+
+    $ uvx nova-project mysite --kit brochure
+    $ cd mysite
+    $ just bootstrap    # Postgres + Redis via compose, migrate, superuser
+    $ just up           # http://127.0.0.1:8001/  (host ports 5433/6380/8001)
+
+Before the first PyPI release of ``nova-cms``, start web with the monorepo
+mounted so the container can ``pip install -e`` it::
+
+    $ NOVA_CMS_SRC=/path/to/mezzanine just up
+
+``just bootstrap`` does not take a kit argument; the kit is chosen when
+``nova-project`` writes the project. Optionally::
+
+    $ just import-wp ./export.xml   # requires nova-cms[migrate] (feedparser)
+    $ just test
+
+Without compose/just::
+
+    $ pip install 'nova-cms[migrate]'
+    $ nova-project mysite --kit brochure
+    $ cd mysite
+    $ python manage.py createdb --noinput
+    $ python manage.py runserver
+
+Omit ``--kit brochure`` for the full template (blog + galleries still
+on). ``mezzanine-project`` remains a deprecated alias of ``nova-project``
+for one minor.
+
+With ``DEBUG=True`` and ``createdb --noinput``, the default account is
+``admin`` / ``default``. With ``DEBUG=False``, ``createdb`` refuses that
+account — use interactive createsuperuser.
+
+Requires **Python 3.12+** and **Django 5.2, 6.0, or 6.1**. See the
+documentation overview for dependencies and adding Nova to an existing
+Django project.
+
 
 Features
 ========
 
-In addition to the usual features provided by Django such as MVC
-architecture, ORM, templating, caching and an automatic admin
-interface, Mezzanine provides the following:
+In addition to Django itself (ORM, templates, cache, admin), the tree
+still ships:
 
 * Hierarchical page navigation
-* Save as draft and preview on site
+* Draft by default, opaque preview tokens (staff URL-guessing drafts is gone)
+* Per-(user, site) roles for on-site edit and preview issue
 * Scheduled publishing
 * Drag-and-drop page ordering
-* WYSIWYG editing
-* `In-line page editing`_
+* WYSIWYG editing in admin (TinyMCE 4 until Y1.5)
+* `In-line page editing`_ via HTMX textarea islands (no public jQuery)
+* Brochure site kit for Friday install of a marketing site
+* Adult WordPress WXR import (permalinks, Yoast meta, redirect report)
 * Drag-and-drop HTML5 forms builder with CSV export
 * SEO friendly URLs and meta data
-* Ecommerce / Shopping cart module (`Cartridge`_)
 * Configurable `dashboard`_ widgets
-* Blog engine
+* Optional blog / galleries / accounts extras
 * Tagging
-* `Free Themes`_ Marketplace
 * User accounts and profiles with email verification
 * Translated to over 35 languages
-* Sharing via Facebook or Twitter
 * `Multi-lingual sites`_
 * `Custom templates`_ per page or blog post
-* `Twitter Bootstrap`_ integration
+* Bootstrap-based default templates + Brochure design tokens
 * API for `custom content types`_
-* `Search engine and API`_
+* `Search engine and API`_ (materialization capped in Y1)
 * Seamless integration with third-party Django apps
-* One step migration from other blogging engines
-* `Disqus`_ integration, or built-in threaded comments
-* `Gravatar`_ integration
-* `Google Analytics`_ integration
-* `bit.ly`_ integration
+* WordPress and RSS importers
+* Built-in threaded comments
 * `Akismet`_ spam filtering
-* `JVM`_ compatible (via `Jython`_)
-
-The Mezzanine admin dashboard:
-
-.. image:: http://mezzanine.jupo.org/docs/_images/dashboard.png
 
 
 Support
@@ -81,117 +110,35 @@ To **report a security issue**, please send an email privately to
 `core-team@mezzaninecms.com`_. This gives us a chance to fix the issue
 and create an official release prior to the issue being made public.
 
-For **all other Mezzanine support**, the primary channel is the
-`mezzanine-users`_ mailing list. Questions, comments, issues, feature
-requests, and all other related discussions should take place here.
+For other questions, use the `GitHub issue tracker`_ when you have a
+reproducible bug (include enough to fork, run, and see it: traceback,
+Python, Django, database). Broader discussion still happens on the
+historical `mezzanine-users`_ list.
 
-If you're **certain** you've come across a bug, then please use the
-`GitHub issue tracker`_, however it's crucial that enough information
-is provided to reproduce the bug, ideally with a small code sample repo
-we can simply fork, run, and see the issue with. Other useful
-information includes things such as the Python stack trace generated by
-error pages, as well as other aspects of the development environment
-used, such as operating system, database, and Python version. If
-**you're not sure you've found a reproducible bug**, then please try
-the mailing list first.
-
-Finally, feel free to drop by the `#mezzanine IRC channel`_ on
-`Freenode`_, for a chat! Lastly, communications in all Mezzanine spaces
-are expected to conform to the `Django Code of Conduct`_.
+Communications in all project spaces are expected to conform to the
+`Django Code of Conduct`_.
 
 
 Contributing
 ============
 
-Mezzanine is an open source project managed using both the Git and
-Mercurial version control systems. These repositories are hosted on
-both `GitHub`_ and `Bitbucket`_ respectively, so contributing is as
-easy as forking the project on either of these sites and committing
-back your enhancements.
+Nova is an open source project managed using Git. The repository is
+hosted on `GitHub`_. Fork it and open a pull request. See
+``CONTRIBUTING.rst``.
 
 
-Donating
-========
-
-If you would like to make a donation to continue development of
-Mezzanine, you can do so via the `Mezzanine Project`_ website.
-
-
-Quotes
-======
-
-* "I'm enjoying working with Mezzanine, it's good work"
-  - `Van Lindberg`_, `Python Software Foundation`_ chairman
-* "Mezzanine looks like it may be Django's killer app"
-  - `Antonio Rodriguez`_, ex CTO of `Hewlett Packard`_, founder
-  of `Tabblo`_
-* "Mezzanine looks pretty interesting, tempting to get me off
-  Wordpress" - `Jesse Noller`_, Python core contributor,
-  `Python Software Foundation`_ board member
-* "I think I'm your newest fan. Love these frameworks"
-  - `Emile Petrone`_, integrations engineer at `Urban Airship`_
-* "Mezzanine is amazing" - `Audrey Roy`_, founder of `PyLadies`_
-  and `Django Packages`_
-* "Mezzanine convinced me to switch from the Ruby world over
-  to Python" - `Michael Delaney`_, developer
-* "Like Linux and Python, Mezzanine just feels right" - `Phil Hughes`_,
-  Linux For Dummies author, `The Linux Journal`_ columnist
-* "Impressed with Mezzanine so far" - `Brad Montgomery`_, founder
-  of `Work For Pie`_
-* "From the moment I installed Mezzanine, I have been delighted, both
-  with the initial experience and the community involved in its
-  development" - `John Campbell`_, founder of `Head3 Interactive`_
-* "You need to check out the open source project Mezzanine. In one
-  word: Elegant" - `Nick Hagianis`_, developer
-
-
-.. _`Django`: http://djangoproject.com/
+.. _`Stephen McDonald`: https://github.com/stephenmcd
+.. _`Mezzanine`: https://github.com/stephenmcd/mezzanine
 .. _`Django Code of Conduct`: https://www.djangoproject.com/conduct/
-.. _`Wordpress`: http://wordpress.org/
 .. _`BSD licensed`: http://www.linfo.org/bsdlicense.html
-.. _`great sites people have built using Mezzanine`: http://mezzanine.jupo.org/sites/
-.. _`Mezzanine project page`: http://mezzanine.jupo.org
-.. _`In-line page editing`: http://mezzanine.jupo.org/docs/inline-editing.html
-.. _`custom content types`: http://mezzanine.jupo.org/docs/content-architecture.html#creating-custom-content-types
-.. _`Cartridge`: http://cartridge.jupo.org/
-.. _`Search engine and API`: http://mezzanine.jupo.org/docs/search-engine.html
-.. _`dashboard`: http://mezzanine.jupo.org/docs/admin-customization.html#dashboard
-.. _`Free Themes`: https://github.com/thecodinghouse/mezzanine-themes
-.. _`Custom templates`: http://mezzanine.jupo.org/docs/content-architecture.html#page-templates
-.. _`Multi-lingual sites`: http://mezzanine.jupo.org/docs/multi-lingual-sites.html
-.. _`JVM`: http://en.wikipedia.org/wiki/Java_virtual_machine
-.. _`Jython`: http://www.jython.org/
-.. _`Twitter Bootstrap`: http://getbootstrap.com/
-.. _`Disqus`: http://disqus.com/
-.. _`Gravatar`: http://gravatar.com/
-.. _`Google Analytics`: http://www.google.com/analytics/
-.. _`bit.ly`: http://bit.ly/
+.. _`In-line page editing`: https://github.com/prondubuisi/mezzanine/blob/master/docs/inline-editing.rst
+.. _`custom content types`: https://github.com/prondubuisi/mezzanine/blob/master/docs/content-architecture.rst
+.. _`Search engine and API`: https://github.com/prondubuisi/mezzanine/blob/master/docs/search-engine.rst
+.. _`dashboard`: https://github.com/prondubuisi/mezzanine/blob/master/docs/admin-customization.rst
+.. _`Custom templates`: https://github.com/prondubuisi/mezzanine/blob/master/docs/content-architecture.rst
+.. _`Multi-lingual sites`: https://github.com/prondubuisi/mezzanine/blob/master/docs/multi-lingual-sites.rst
 .. _`Akismet`: http://akismet.com/
-.. _`GitHub`: http://github.com/stephenmcd/mezzanine/
-.. _`Bitbucket`: http://bitbucket.org/stephenmcd/mezzanine/
+.. _`GitHub`: https://github.com/prondubuisi/mezzanine/
 .. _`mezzanine-users`: http://groups.google.com/group/mezzanine-users/topics
-.. _`core-team@mezzaninecms.com`: mailto:core-team@mezzaninecms.com?subject=Mezzanine+Security+Issue
-.. _`GitHub issue tracker`: http://github.com/stephenmcd/mezzanine/issues
-.. _`#mezzanine IRC channel`: irc://irc.freenode.net/mezzanine
-.. _`Freenode`: http://freenode.net
-.. _`Mezzanine Project`: http://mezzanine.jupo.org
-
-.. _`Python Software Foundation`: http://www.python.org/psf/
-.. _`Urban Airship`: http://urbanairship.com/
-.. _`Django Packages`: http://djangopackages.com/
-.. _`Hewlett Packard`: http://www.hp.com/
-.. _`Tabblo`: http://www.tabblo.com/
-.. _`The Linux Journal`: http://www.linuxjournal.com
-.. _`Work For Pie`: http://workforpie.com/
-.. _`Van Lindberg`: http://www.lindbergd.info/
-.. _`Antonio Rodriguez`: http://an.ton.io/
-.. _`Jesse Noller`: http://jessenoller.com/
-.. _`Emile Petrone`: https://twitter.com/emilepetrone
-.. _`Audrey Roy`: http://cartwheelweb.com/
-.. _`Michael Delaney`: http://github.com/fusepilot/
-.. _`John Campbell`: http://head3.com/
-.. _`Phil Hughes`: http://www.linuxjournal.com/blogs/phil-hughes
-.. _`Nick Hagianis`: http://hagianis.com
-.. _`Brad Montgomery`: http://blog.bradmontgomery.net
-.. _`Head3 Interactive`: http://head3.com
-.. _`PyLadies`: http://www.pyladies.com
+.. _`core-team@mezzaninecms.com`: mailto:core-team@mezzaninecms.com?subject=Nova+Security+Issue
+.. _`GitHub issue tracker`: https://github.com/prondubuisi/mezzanine/issues

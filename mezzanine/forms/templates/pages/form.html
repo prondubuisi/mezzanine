@@ -36,7 +36,20 @@
 
 {% block extra_js %}
 {{ block.super }}
+{# Vanilla focus helper — public pages omit the staff script stack. #}
 <script>
-$(function() {$('.mezzanine-form :input:visible:enabled:first').focus();});
+document.addEventListener("DOMContentLoaded", function () {
+    var form = document.querySelector(".mezzanine-form");
+    if (!form) { return; }
+    var fields = form.querySelectorAll("input, select, textarea");
+    for (var i = 0; i < fields.length; i++) {
+        var el = fields[i];
+        if (el.type === "hidden" || el.disabled || el.offsetParent === null) {
+            continue;
+        }
+        el.focus();
+        break;
+    }
+});
 </script>
 {% endblock %}

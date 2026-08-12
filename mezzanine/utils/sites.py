@@ -1,7 +1,7 @@
 import os
 import sys
-import threading
 from contextlib import contextmanager
+from contextvars import ContextVar
 
 from django.contrib.sites.models import Site
 
@@ -10,6 +10,8 @@ from mezzanine.core.request import current_request
 from mezzanine.utils.conf import middlewares_or_subclasses_installed
 
 SITE_PERMISSION_MIDDLEWARE = "mezzanine.core.middleware.SitePermissionMiddleware"
+
+_site_id_override_stack = ContextVar("mezzanine_site_id_override_stack", default=())
 
 
 def current_site_id():
@@ -32,8 +34,9 @@ def current_site_id():
     site ID is stored on the request object to speed up subsequent calls.
     """
 
-    if hasattr(override_current_site_id.thread_local, "site_id"):
-        return override_current_site_id.thread_local.site_id
+    stack = _site_id_override_stack.get()
+    if stack:
+        return stack[-1]
 
     from mezzanine.utils.cache import cache_get, cache_installed, cache_set
 
@@ -71,30 +74,22 @@ def override_current_site_id(site_id):
     """
     Context manager that overrides the current site id for code executed
     within it. Used to access SiteRelated objects outside the current site.
+
+    Nestable: each entry pushes onto a contextvar stack and pops on exit.
     """
-    if hasattr(override_current_site_id.thread_local,'site_id'):
-        raise RecursionError(f'''override_current_site_id can't be nested''')
-    override_current_site_id.thread_local.site_id = site_id
+    token = _site_id_override_stack.set(_site_id_override_stack.get() + (site_id,))
     try:
         yield
-    except Exception:
-        raise
     finally:
-        del override_current_site_id.thread_local.site_id
-
-
-override_current_site_id.thread_local = threading.local()
+        _site_id_override_stack.reset(token)
 
 
 def has_site_permission(user):
     """
-    Checks if a staff user has staff-level access for the current site.
-    The actual permission lookup occurs in ``SitePermissionMiddleware``
-    which then marks the request with the ``has_site_permission`` flag,
-    so that we only query the db once per request, so this function
-    serves as the entry point for everything else to check access. We
-    also fall back to an ``is_staff`` check if the middleware is not
-    installed, to ease migration.
+    Checks if a staff user has a ``SiteRole`` for the current site
+    (or is a superuser). ``SitePermissionMiddleware`` caches the result
+    on ``user.has_site_permission`` so we only query once per request.
+    Falls back to ``is_staff`` if the middleware is not installed.
     """
     if not middlewares_or_subclasses_installed([SITE_PERMISSION_MIDDLEWARE]):
         return user.is_staff and user.is_active

@@ -1,7 +1,6 @@
 import os
-from distutils.dir_util import copy_tree
 from importlib import import_module
-from shutil import move, rmtree
+from shutil import copytree, move, rmtree
 from tempfile import mkdtemp
 
 from django.core.management import CommandError
@@ -9,6 +8,7 @@ from django.core.management.commands.startproject import Command as BaseCommand
 from django.utils.crypto import get_random_string
 
 import mezzanine
+from mezzanine.kits.loader import KitError, apply_kit
 
 
 class Command(BaseCommand):
@@ -24,6 +24,13 @@ class Command(BaseCommand):
             metavar="PACKAGE",
             help="Alternate package to use, containing a project_template",
         )
+        parser.add_argument(
+            "--kit",
+            dest="kit",
+            metavar="NAME",
+            default=None,
+            help="Site kit to install after the project is written (e.g. brochure).",
+        )
 
     def handle(self, *args, **options):
 
@@ -34,6 +41,17 @@ class Command(BaseCommand):
 
         # Indicate that local_settings.py.template should be rendered
         options["files"].append("local_settings.py.template")
+
+        kit = options.pop("kit", None)
+        # Fail closed on unknown kits before startproject writes a tree.
+        if kit:
+            try:
+                from mezzanine.kits.loader import load_kit_meta, validate_kit
+
+                _, meta = load_kit_meta(kit)
+                validate_kit(meta)
+            except KitError as exc:
+                raise CommandError(str(exc)) from exc
 
         super().handle(*args, **options)
 
@@ -63,13 +81,21 @@ class Command(BaseCommand):
             )
             options["directory"] = mkdtemp()
             self.handle(*args, **options)
-            copy_tree(options["directory"], project_dir)
+            copytree(options["directory"], project_dir, dirs_exist_ok=True)
             rmtree(options["directory"])
 
         # The project template dir in Mezzanine requires __init__.py so that
         # the documentation can be generated, but including it in new projects
         # causes issues with running tests under Python >= 3.7, so remove it.
         os.remove(os.path.join(project_dir, "__init__.py"))
+
+        if kit:
+            try:
+                apply_kit(kit, project_dir, name)
+            except KitError as exc:
+                raise CommandError(
+                    "%s (project directory may be incomplete: %s)" % (exc, project_dir)
+                ) from exc
 
     def get_project_directory(self, name, target):
         """

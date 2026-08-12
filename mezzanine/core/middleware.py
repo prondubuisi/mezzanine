@@ -1,3 +1,4 @@
+import secrets
 import warnings
 from functools import lru_cache
 
@@ -14,10 +15,11 @@ from django.http import (
 )
 from django.middleware.csrf import CsrfViewMiddleware, get_token
 from django.template import RequestContext, Template
-from django.urls import resolve, reverse
-from django.utils.cache import get_max_age
+from django.urls import reverse
+from django.utils.cache import get_max_age, patch_cache_control
 from django.utils.deprecation import MiddlewareMixin
 from django.utils.safestring import mark_safe
+from django.utils.timezone import now
 from django.utils.translation import gettext as _
 
 from mezzanine.conf import settings
@@ -25,7 +27,11 @@ from mezzanine.core.management.commands.createdb import (
     DEFAULT_PASSWORD,
     DEFAULT_USERNAME,
 )
-from mezzanine.core.models import SitePermission
+from mezzanine.core.models import (
+    PREVIEW_ROLE_STAFF,
+    PreviewToken,
+    SiteRole,
+)
 from mezzanine.utils.cache import (
     cache_get,
     cache_installed,
@@ -88,35 +94,18 @@ class SitePermissionMiddleware(MiddlewareMixin):
         if request.user.is_superuser:
             has_site_permission = True
         elif request.user.is_staff:
-            lookup = {"user": request.user, "sites": current_site_id()}
-            try:
-                SitePermission.objects.get(**lookup)
-            except SitePermission.DoesNotExist:
+            if SiteRole.objects.filter(
+                user=request.user, site_id=current_site_id()
+            ).exists():
+                has_site_permission = True
+            else:
                 admin_index = reverse("admin:index")
                 if request.path.startswith(admin_index):
                     logout(request)
                     view_func = admin.site.login
                     extra_context = {"no_site_permission": True}
                     return view_func(request, extra_context=extra_context)
-            else:
-                has_site_permission = True
         request.user.has_site_permission = has_site_permission
-
-
-class TemplateForDeviceMiddleware(MiddlewareMixin):
-    """
-    DEPRECATED: Device detection has been removed from Mezzanine.
-    Inserts device-specific templates to the template list.
-    """
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        warnings.warn(
-            "`TemplateForDeviceMiddleware` is deprecated. "
-            "Please remove it from your middleware settings.",
-            FutureWarning,
-            stacklevel=2,
-        )
 
 
 class TemplateForHostMiddleware(MiddlewareMixin):
@@ -132,6 +121,55 @@ class TemplateForHostMiddleware(MiddlewareMixin):
             FutureWarning,
             stacklevel=2,
         )
+
+
+class PreviewTokenMiddleware(MiddlewareMixin):
+    """
+    Resolve ``?preview=`` into ``request.preview``.
+
+    Must run after ``AuthenticationMiddleware`` (needs ``request.user``)
+    and before ``PageMiddleware``. Expired, unknown, site-mismatched, or
+    staff-role-without-staff tokens leave ``request.preview`` unset —
+    this middleware does not 404.
+
+    Preview responses are ``Cache-Control: private, no-store`` and are
+    not written by ``UpdateCacheMiddleware``.
+    """
+
+    def process_request(self, request):
+        raw = request.GET.get("preview")
+        if not raw:
+            return None
+        token = PreviewToken.lookup(raw)
+        if token is None:
+            return None
+        if token.expires_at <= now():
+            return None
+        if token.site_id != current_site_id():
+            return None
+        if token.as_role == PREVIEW_ROLE_STAFF:
+            user = getattr(request, "user", None)
+            if (
+                user is None
+                or not is_authenticated(user)
+                or not user.is_staff
+            ):
+                return None
+        seen = now()
+        PreviewToken.objects.filter(pk=token.pk).update(last_seen_at=seen)
+        token.last_seen_at = seen
+        request.preview = token
+        # FetchFromCacheMiddleware runs later and would otherwise mark
+        # a cache miss for storage. Force the nevercache-style skip.
+        request._update_cache = False
+        return None
+
+    def process_response(self, request, response):
+        if not getattr(request, "preview", None):
+            return response
+        request._update_cache = False
+        patch_cache_control(response, private=True, no_store=True)
+        return response
 
 
 class UpdateCacheMiddleware(MiddlewareMixin):
@@ -163,6 +201,9 @@ class UpdateCacheMiddleware(MiddlewareMixin):
         timeout = get_max_age(response)
         if timeout is None:
             timeout = settings.CACHE_MIDDLEWARE_SECONDS
+        # Preview responses must never enter the public page cache.
+        if getattr(request, "preview", None):
+            marked_for_update = False
         if anon and valid_status and marked_for_update and timeout:
             cache_key = cache_key_prefix(request) + request.get_full_path()
             _cache_set = lambda r: cache_set(cache_key, r.content, timeout)
@@ -227,6 +268,8 @@ class FetchFromCacheMiddleware(MiddlewareMixin):
     """
 
     def process_request(self, request):
+        if getattr(request, "preview", None):
+            return None
         if (
             cache_installed()
             and request.method == "GET"
@@ -247,60 +290,40 @@ class FetchFromCacheMiddleware(MiddlewareMixin):
                 return HttpResponse(response)
 
 
-class SSLRedirectMiddleware(MiddlewareMixin):
+class ContentSecurityPolicyMiddleware(MiddlewareMixin):
     """
-    Handles redirections required for SSL when ``SSL_ENABLED`` is ``True``.
+    Attach a per-request CSP nonce and emit a Content-Security-Policy header.
 
-    If ``SSL_FORCE_HOST`` is ``True``, and is not the current host,
-    redirect to it.
-
-    Also ensure URLs defined by ``SSL_FORCE_URL_PREFIXES`` are redirect
-    to HTTPS, and redirect all other URLs to HTTP if on HTTPS.
+    The nonce is on ``request.csp_nonce`` for templates
+    (``{{ request.csp_nonce }}``). Default policy is permissive enough for
+    the Y1 admin / TinyMCE surface (``'unsafe-inline'`` on script and style).
+    Operators can replace the policy via ``CONTENT_SECURITY_POLICY``; use
+    ``{nonce}`` as a placeholder for this request's nonce.
     """
 
-    def __init__(self, *args):
-        warnings.warn(
-            "SSLRedirectMiddleware is deprecated. See "
-            "https://docs.djangoproject.com/en/stable/ref/middleware/"
-            "#module-django.middleware.security for alternative solutions.",
-            DeprecationWarning,
-        )
-        super().__init__(*args)
-
-    def languages(self):
-        if not hasattr(self, "_languages"):
-            self._languages = dict(settings.LANGUAGES).keys()
-        return self._languages
+    DEFAULT_POLICY = (
+        "default-src 'self'; "
+        "script-src 'self' 'unsafe-inline'; "
+        "style-src 'self' 'unsafe-inline'; "
+        "img-src 'self' data: https:; "
+        "font-src 'self' data:; "
+        "connect-src 'self'; "
+        "object-src 'none'; "
+        "base-uri 'self'; "
+        "frame-ancestors 'self'"
+    )
 
     def process_request(self, request):
-        force_host = settings.SSL_FORCE_HOST
-        response = None
-        if force_host and request.get_host().split(":")[0] != force_host:
-            url = f"http://{force_host}{request.get_full_path()}"
-            response = HttpResponsePermanentRedirect(url)
-        elif settings.SSL_ENABLED and not settings.DEV_SERVER:
-            url = f"{request.get_host()}{request.get_full_path()}"
-            path = request.path
-            if settings.USE_I18N and path[1:3] in self.languages():
-                path = path[3:]
-            if path.startswith(settings.SSL_FORCE_URL_PREFIXES):
-                if not request.is_secure():
-                    response = HttpResponseRedirect("https://%s" % url)
-            elif request.is_secure() and settings.SSL_FORCED_PREFIXES_ONLY:
-                response = HttpResponseRedirect("http://%s" % url)
-        if response and request.method == "POST":
-            if resolve(request.get_full_path()).url_name == "fb_do_upload":
-                # The handler for the flash file uploader in filebrowser
-                # doesn't have access to the http headers Django will use
-                # to determine whether the request is secure or not, so
-                # in this case we don't attempt a redirect - note that
-                # when /admin is restricted to SSL using Mezzanine's SSL
-                # setup, the flash uploader will post over SSL, so
-                # someone would need to explicitly go out of their way to
-                # trigger this.
-                return
-            # Tell the client they need to re-POST.
-            response.status_code = 307
+        request.csp_nonce = secrets.token_urlsafe(16)
+
+    def process_response(self, request, response):
+        if response.get("Content-Security-Policy"):
+            return response
+        nonce = getattr(request, "csp_nonce", None) or secrets.token_urlsafe(16)
+        policy = getattr(settings, "CONTENT_SECURITY_POLICY", None)
+        if not policy:
+            policy = self.DEFAULT_POLICY
+        response["Content-Security-Policy"] = policy.replace("{nonce}", nonce)
         return response
 
 

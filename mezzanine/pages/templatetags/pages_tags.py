@@ -49,6 +49,7 @@ def page_menu(context, token):
         rel = [
             m.__name__.lower() for m in Page.get_content_models() if not m._meta.proxy
         ]
+        # Menus never union a preview token — draft siblings stay hidden.
         published = Page.objects.published(for_user=user).select_related(*rel)
         # Store the current page being viewed in the context. Used
         # for comparisons in page.set_menu_helpers.

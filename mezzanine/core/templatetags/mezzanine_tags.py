@@ -1,4 +1,5 @@
 import os
+import warnings
 from hashlib import md5
 
 try:
@@ -22,19 +23,17 @@ from django.template.loader import get_template
 from django.urls import NoReverseMatch, resolve, reverse
 from django.utils import translation
 from django.utils.html import strip_tags
-from django.utils.safestring import SafeText, mark_safe
+from django.utils.safestring import SafeText
 from django.utils.text import capfirst
 
 from mezzanine import template
 from mezzanine.conf import settings
-from mezzanine.core.fields import RichTextField
-from mezzanine.core.forms import get_edit_form
+from mezzanine.core.capabilities import user_can_edit
 from mezzanine.utils.cache import cache_installed, nevercache_token
 from mezzanine.utils.html import decode_entities
 from mezzanine.utils.importing import import_dotted_path
 from mezzanine.utils.sites import current_site_id, has_site_permission
 from mezzanine.utils.urls import admin_url, home_slug
-from mezzanine.utils.views import is_editable
 
 register = template.Library()
 
@@ -192,9 +191,15 @@ def ifinstalled(parser, token):
 @register.render_tag
 def set_short_url_for(context, token):
     """
-    Sets the ``short_url`` attribute of the given model for share
-    links in the template.
+    Deprecated. Sets the ``short_url`` attribute of the given model.
+
+    No shortening service is called. Prefer the object's own URL.
     """
+    warnings.warn(
+        "{% set_short_url_for %} is deprecated and will be removed.",
+        DeprecationWarning,
+        stacklevel=2,
+    )
     obj = context[token.split_contents()[1]]
     obj.set_short_url()
     return ""
@@ -203,8 +208,15 @@ def set_short_url_for(context, token):
 @register.simple_tag
 def gravatar_url(email, size=32):
     """
-    Return the full URL for a Gravatar given an email hash.
+    Deprecated. Return a Gravatar URL for an email address.
+
+    Not used by default templates. Prefer a local avatar or omit images.
     """
+    warnings.warn(
+        "{% gravatar_url %} is deprecated and is no longer used by default.",
+        DeprecationWarning,
+        stacklevel=2,
+    )
     bits = (md5(email.lower().encode("utf-8")).hexdigest(), size)
     return "//www.gravatar.com/avatar/%s?s=%s&d=identicon&r=PG" % bits
 
@@ -471,7 +483,6 @@ def editable_loader(context):
         )
         template_vars["accounts_logout_url"] = context.get("accounts_logout_url", None)
         template_vars["toolbar"] = t.render(template_vars)
-        template_vars["richtext_media"] = RichTextField().formfield().widget.media
     return template_vars
 
 
@@ -480,26 +491,25 @@ def richtext_filters(content):
     """
     Takes a value edited via the WYSIWYG editor, and passes it through
     each of the functions specified by the RICHTEXT_FILTERS setting.
+
+    The default pipeline applies ``thumbnails`` then ``escape`` (bleach)
+    so unsafe HTML is stripped on read, after any BeautifulSoup rewrite.
+
+    A custom filter that returns a value that is not ``SafeText`` raises
+    ``TypeError``. Filters must escape untrusted input and mark the
+    returned HTML as safe.
     """
     for filter_name in settings.RICHTEXT_FILTERS:
         filter_func = import_dotted_path(filter_name)
         content = filter_func(content)
         if not isinstance(content, SafeText):
-            # raise TypeError(
-            # filter_name + " must mark it's return value as safe. See "
-            # "https://docs.djangoproject.com/en/stable/topics/security/"
-            # "#cross-site-scripting-xss-protection")
-            import warnings
-
-            warnings.warn(
-                filter_name + " needs to ensure that any untrusted inputs are "
-                "properly escaped and mark the html it returns as safe. In a "
-                "future release this will cause an exception. See "
+            raise TypeError(
+                filter_name + " must return django.utils.safestring.SafeText. "
+                "Ensure untrusted inputs are properly escaped and mark the "
+                "html as safe. See "
                 "https://docs.djangoproject.com/en/stable/topics/security/"
-                "cross-site-scripting-xss-protection",
-                FutureWarning,
+                "cross-site-scripting-xss-protection"
             )
-            content = mark_safe(content)
     return content
 
 
@@ -535,12 +545,13 @@ def editable(parsed, context, token):
 
     if settings.INLINE_EDITING_ENABLED and fields and "request" in context:
         obj = fields[0][0]
-        if isinstance(obj, Model) and is_editable(obj, context["request"]):
+        if isinstance(obj, Model) and user_can_edit(context["request"].user, obj):
+            from mezzanine.core.views import render_editable_island
+
             field_names = ",".join(f[1] for f in fields)
-            context["editable_form"] = get_edit_form(obj, field_names)
-            context["original"] = parsed
-            t = get_template("includes/editable_form.html")
-            return t.render(context.flatten())
+            return render_editable_island(
+                context["request"], obj, field_names, original=parsed
+            )
     return parsed
 
 

@@ -1,0 +1,94 @@
+# Local stack for Nova: Postgres + Redis + web.
+# Same file is shipped in the project template so `nova-project`
+# writes a compose project. Works in this repo (package tests /
+# in-tree sample) and in a generated project (manage.py at root).
+
+services:
+  db:
+    image: postgres:17
+    environment:
+      POSTGRES_USER: nova
+      POSTGRES_PASSWORD: nova
+      POSTGRES_DB: nova
+    ports:
+      # Host 5433 avoids colliding with a local Homebrew/system Postgres on 5432.
+      - "5433:5432"
+    volumes:
+      - nova_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U nova -d nova"]
+      interval: 2s
+      timeout: 5s
+      retries: 20
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      # Host 6380 avoids colliding with a local Redis on 6379.
+      - "6380:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 2s
+      timeout: 3s
+      retries: 20
+
+  web:
+    image: python:3.12-slim-bookworm
+    working_dir: /app
+    volumes:
+      - .:/app
+      # Optional monorepo mount for pre-PyPI Friday smoke:
+      #   NOVA_CMS_SRC=/path/to/mezzanine just up
+      - ${NOVA_CMS_SRC:-/dev/null}:/nova-cms-src:ro
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      POSTGRES_HOST: db
+      POSTGRES_PORT: "5432"
+      POSTGRES_DB: nova
+      POSTGRES_USER: nova
+      POSTGRES_PASSWORD: nova
+      REDIS_URL: redis://redis:6379/0
+      PYTHONUNBUFFERED: "1"
+      PYTHONDONTWRITEBYTECODE: "1"
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    ports:
+      # Host 8001 avoids colliding with other local services on 8000.
+      - "8001:8000"
+    entrypoint: ["/bin/bash", "-c"]
+    command:
+      - |
+        set -euo pipefail
+        install_pkg() {
+          pip install --no-cache-dir -q 'psycopg[binary]' redis
+          if [ -f /nova-cms-src/pyproject.toml ] && grep -q 'name = "nova-cms"' /nova-cms-src/pyproject.toml; then
+            pip install --no-cache-dir -q -e /nova-cms-src
+          elif [ -f pyproject.toml ] && grep -q 'name = "nova-cms"' pyproject.toml; then
+            pip install --no-cache-dir -q -e '.[testing]'
+          elif [ -f manage.py ]; then
+            # Published wheel (after first PyPI release).
+            pip install --no-cache-dir -q 'nova-cms[migrate]' \
+              || { echo "nova-cms not on PyPI; re-run with NOVA_CMS_SRC=/path/to/monorepo" >&2; exit 1; }
+          fi
+        }
+        python -c "import mezzanine, psycopg, redis" 2>/dev/null || install_pkg
+        if [ -f manage.py ]; then
+          python manage.py migrate --noinput
+          exec python manage.py runserver 0.0.0.0:8000
+        fi
+        # Package repo: serve the in-tree project template.
+        export PYTHONPATH=/app
+        cd /app/mezzanine/project_template
+        if [ ! -f project_name/local_settings.py ]; then
+          cp project_name/local_settings.py.template project_name/local_settings.py
+        fi
+        python manage.py migrate --noinput
+        exec python manage.py runserver 0.0.0.0:8000
+
+volumes:
+  nova_pgdata:

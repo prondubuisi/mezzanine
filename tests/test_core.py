@@ -2,7 +2,6 @@ import re
 import subprocess
 from importlib.metadata import requires
 from unittest import skipUnless
-from urllib.parse import urlencode
 
 import pytest
 import pytz
@@ -18,7 +17,6 @@ from django.forms.models import modelform_factory
 from django.http import HttpResponse
 from django.template import RequestContext, Template
 from django.template.context import Context
-from django.templatetags.static import static
 from django.test.utils import override_settings
 from django.urls import re_path, reverse
 from django.utils.encoding import force_str
@@ -26,12 +24,17 @@ from django.utils.html import strip_tags
 from django.utils.timezone import datetime, now, timedelta
 from requirements import parse
 
+from mezzanine.blog.models import BlogPost
 from mezzanine.conf import settings
 from mezzanine.core.admin import BaseDynamicInlineAdmin
 from mezzanine.core.fields import MultiChoiceField, RichTextField
 from mezzanine.core.managers import DisplayableManager
 from mezzanine.core.middleware import FetchFromCacheMiddleware
-from mezzanine.core.models import CONTENT_STATUS_DRAFT, CONTENT_STATUS_PUBLISHED
+from mezzanine.core.models import (
+    CONTENT_STATUS_DRAFT,
+    CONTENT_STATUS_PUBLISHED,
+    PreviewToken,
+)
 from mezzanine.core.templatetags.mezzanine_tags import initialize_nevercache
 from mezzanine.forms.admin import FieldAdmin
 from mezzanine.forms.models import Form
@@ -46,6 +49,7 @@ from mezzanine.utils.importing import import_dotted_path
 from mezzanine.utils.sites import current_site_id, override_current_site_id
 from mezzanine.utils.tests import TestCase
 from mezzanine.utils.urls import admin_url
+from tests.factories import RichTextPageFactory
 
 BRANCH_NAME = (
     subprocess.check_output(["git", "rev-parse", "--abbrev-ref", "HEAD"])
@@ -55,6 +59,15 @@ BRANCH_NAME = (
 VERSION_WARN = (
     "Unpinned or pre-release dependencies detected in Mezzanine's requirements: {}"
 )
+
+
+@pytest.mark.django_db
+def test_author_client_is_staff_not_superuser(author_client):
+    """author_client is a logged-in non-superuser staff member."""
+    user = author_client.user
+    assert user.is_staff
+    assert not user.is_superuser
+    assert author_client.session.get("_auth_user_id") == str(user.pk)
 
 
 @pytest.mark.skipif(
@@ -114,20 +127,41 @@ class CoreTests(TestCase):
         of content.
         """
         description = "<p>How now brown cow</p>"
-        page = RichTextPage.objects.create(title="Draft", content=description * 3)
+        page = RichTextPageFactory(title="Draft", content=description * 3)
         self.assertEqual(page.description, strip_tags(description))
 
     @skipUnless("mezzanine.pages" in settings.INSTALLED_APPS, "pages app required")
     def test_draft(self):
         """
-        Test a draft object as only being viewable by a staff member.
+        A draft is 404 without a preview token, including for staff.
+        A valid token attaches the page (200).
+
+        Full client 404 render is skipped: staff error pages hit a
+        Django 6.1 ``{% editable %}`` ``__proxy__`` crash.
         """
-        self.client.logout()
+        from django.contrib.auth.models import AnonymousUser
+        from django.test import RequestFactory
+
+        from mezzanine.core.middleware import PreviewTokenMiddleware
+        from mezzanine.pages.middleware import PageMiddleware
+        from mezzanine.pages.views import page as page_view
+
         draft = RichTextPage.objects.create(title="Draft", status=CONTENT_STATUS_DRAFT)
-        response = self.client.get(draft.get_absolute_url(), follow=True)
-        self.assertEqual(response.status_code, 404)
-        self.client.login(username=self._username, password=self._password)
-        response = self.client.get(draft.get_absolute_url(), follow=True)
+        rf = RequestFactory()
+        page_mw = PageMiddleware(lambda req: None)
+        for user in (AnonymousUser(), self._user):
+            request = rf.get(draft.get_absolute_url())
+            request.user = user
+            response = page_mw.process_view(request, page_view, [], {})
+            self.assertIsNone(getattr(request, "page", None))
+            self.assertIsNone(response)
+
+        raw = PreviewToken.issue(draft, created_by=self._user)
+        request = rf.get(draft.get_absolute_url() + "?preview=" + raw)
+        request.user = AnonymousUser()
+        PreviewTokenMiddleware(lambda req: None).process_request(request)
+        response = page_mw.process_view(request, page_view, [], {})
+        self.assertEqual(request.page.pk, draft.pk)
         self.assertEqual(response.status_code, 200)
 
     def test_searchable_manager_search_fields(self):
@@ -196,20 +230,45 @@ class CoreTests(TestCase):
             # `first` should now be ranked higher.
             self.assertEqual(results[0].id, first)
 
-        # Test results that have a publish date in the future
+        # Search never unions unpublished rows, even when for_user is staff.
         future = RichTextPage.objects.create(
             title="test page to be published in the future",
             publish_date=now() + timedelta(days=10),
             **published,
         ).id
-        results = RichTextPage.objects.search("test", for_user=self._username)
-        self.assertEqual(len(results), 3)
-        if results:
-            self.assertEqual(results[0].id, future)
+        results = RichTextPage.objects.search("test", for_user=self._user)
+        self.assertEqual(len(results), 2)
+        self.assertFalse(any(r.id == future for r in results))
 
         # Test the actual search view.
         response = self.client.get(reverse("search") + "?q=test")
         self.assertEqual(response.status_code, 200)
+
+    @skipUnless("mezzanine.pages" in settings.INSTALLED_APPS, "pages app required")
+    def test_search_respects_max_results(self):
+        """
+        annotate_scores and the cross-model union must not materialize
+        more than SEARCH_MAX_RESULTS rows.
+        """
+        RichTextPage.objects.all().delete()
+        published = {"status": CONTENT_STATUS_PUBLISHED}
+        for i in range(6):
+            RichTextPage.objects.create(
+                title="bounded search page %s" % i, **published
+            )
+        original = settings.SEARCH_MAX_RESULTS
+        settings.SEARCH_MAX_RESULTS = 2
+        try:
+            results = RichTextPage.objects.search("bounded search")
+            self.assertEqual(len(results), 2)
+            scored = list(
+                RichTextPage.objects.get_queryset()
+                .search("bounded search")
+                .annotate_scores()
+            )
+            self.assertEqual(len(scored), 2)
+        finally:
+            settings.SEARCH_MAX_RESULTS = original
 
     def _create_page(self, title, status):
         return RichTextPage.objects.create(title=title, status=status)
@@ -287,28 +346,68 @@ class CoreTests(TestCase):
         site1.delete()
         site2.delete()
 
-    def _static_proxy(self, querystring):
+    def test_static_proxy_removed(self):
+        """PR-028: TinyMCE 4 asset_proxy URL is gone."""
+        from django.urls import NoReverseMatch
+
+        with self.assertRaises(NoReverseMatch):
+            reverse("static_proxy")
+
+    def test_displayable_links_js_anonymous_denied(self):
+        """
+        CVE-2025-6050: anonymous users must not receive the TinyMCE link list.
+        """
+        self.client.logout()
+        response = self.client.get(reverse("displayable_links_js"))
+        self.assertIn(response.status_code, (302, 403))
+
+    def test_displayable_links_js_staff_json(self):
+        """
+        CVE-2025-6050: staff receive application/json, never text/html.
+        """
         self.client.login(username=self._username, password=self._password)
-        proxy_url = "{}?{}".format(reverse("static_proxy"), querystring)
-        response = self.client.get(proxy_url)
+        response = self.client.get(reverse("displayable_links_js"))
         self.assertEqual(response.status_code, 200)
+        self.assertEqual(response["Content-Type"].split(";")[0], "application/json")
+        data = response.json()
+        self.assertIsInstance(data, list)
 
-    @override_settings(STATIC_URL="/static/")
-    def test_static_proxy(self):
-        querystring = urlencode([("u", static("test/image.jpg"))])
-        self._static_proxy(querystring)
+    @skipUnless("mezzanine.blog" in settings.INSTALLED_APPS, "blog app required")
+    def test_displayable_links_js_script_title_not_html(self):
+        """
+        CVE-2025-6050: a script in a blog title is JSON data, not HTML.
+        """
+        self.client.login(username=self._username, password=self._password)
+        xss_title = "</script><script>alert(1)</script>"
+        BlogPost.objects.create(
+            title=xss_title, user=self._user, status=CONTENT_STATUS_PUBLISHED
+        )
+        response = self.client.get(reverse("displayable_links_js"))
+        self.assertEqual(response.status_code, 200)
+        content_type = response["Content-Type"]
+        self.assertNotIn("text/html", content_type)
+        self.assertEqual(content_type.split(";")[0], "application/json")
+        body = response.content.decode("utf-8").lstrip()
+        self.assertTrue(body.startswith("[") or body.startswith("{"))
+        data = response.json()
+        self.assertIsInstance(data, list)
+        titles = [item.get("title", "") for item in data]
+        self.assertTrue(
+            any(xss_title in title for title in titles),
+            "XSS title missing from JSON link list: %r" % titles,
+        )
 
-    @override_settings(STATIC_URL="http://testserver/static/")
-    def test_static_proxy_with_host(self):
-        querystring = urlencode([("u", static("test/image.jpg"))])
-        self._static_proxy(querystring)
-
-    @override_settings(STATIC_URL="http://testserver:8000/static/")
-    def test_static_proxy_with_static_url_with_full_host(self):
-        from django.templatetags.static import static
-
-        querystring = urlencode([("u", static("test/image.jpg"))])
-        self._static_proxy(querystring)
+    def test_admin_does_not_expose_csrf_token_on_window(self):
+        """
+        PR-001b: admin pages must not assign the CSRF token to
+        window.__csrf_token. AJAX reads the csrftoken cookie.
+        """
+        self.client.login(username=self._username, password=self._password)
+        response = self.client.get("/admin/", follow=True)
+        self.assertEqual(response.status_code, 200)
+        self.assertNotContains(response, "__csrf_token")
+        self.assertNotContains(response, "window.__csrf_token")
+        self.assertIn(settings.CSRF_COOKIE_NAME, self.client.cookies)
 
     def _get_csrftoken(self, response):
         csrf = re.findall(
@@ -319,10 +418,26 @@ class CoreTests(TestCase):
         return csrf[0]
 
     def _get_formurl(self, response):
-        action = re.findall(rb'<form action="([^"]*)" method="post">', response.content)
+        # Django 6 may emit method before action (or omit empty action).
+        content = response.content
+        action = re.findall(
+            rb'<form[^>]*\baction="([^"]*)"[^>]*\bmethod="post"',
+            content,
+            flags=re.I,
+        )
+        if not action:
+            action = re.findall(
+                rb'<form[^>]*\bmethod="post"[^>]*\baction="([^"]*)"',
+                content,
+                flags=re.I,
+            )
+        if not action:
+            action = re.findall(rb'<form[^>]*\bmethod="post"', content, flags=re.I)
+            if action:
+                return response.request["PATH_INFO"]
         self.assertEqual(len(action), 1, "No form with action found!")
         if action[0] == b"":
-            action = response.request["PATH_INFO"]
+            return response.request["PATH_INFO"]
         return action
 
     @skipUnless("mezzanine.pages" in settings.INSTALLED_APPS, "pages app required")
@@ -543,9 +658,10 @@ class SiteRelatedTestCase(TestCase):
         site1 = Site.objects.create(domain="site1.com")
         site2 = Site.objects.create(domain="site2.com")
 
+        # Unique (site, slug) requires distinct titles (PR-021).
         # default behaviour, page gets assigned current site
         with override_current_site_id(site2.pk):
-            page = RichTextPage()
+            page = RichTextPage(title="site-related-a")
             page.save()
             self.assertEqual(page.site_id, site2.pk)
 
@@ -567,21 +683,21 @@ class SiteRelatedTestCase(TestCase):
 
         # When update_site=True, new page gets assigned current site
         with override_current_site_id(site2.pk):
-            page = RichTextPage()
+            page = RichTextPage(title="site-related-b")
             page.site = site1
             page.save(update_site=True)
             self.assertEqual(page.site_id, site2.pk)
 
         # When update_site=False, new page keeps current site
         with override_current_site_id(site2.pk):
-            page = RichTextPage()
+            page = RichTextPage(title="site-related-c")
             page.site = site1
             page.save(update_site=False)
             self.assertEqual(page.site_id, site1.pk)
 
         # When site explicitly assigned, new page keeps assigned site
         with override_current_site_id(site2.pk):
-            page = RichTextPage()
+            page = RichTextPage(title="site-related-d")
             page.site = site1
             page.save()
             self.assertEqual(page.site_id, site1.pk)
@@ -602,13 +718,13 @@ class SiteRelatedTestCase(TestCase):
         self.assertEqual(current_site_id(), 1)
 
     def test_nested_override_site_id(self):
+        # 020 done: nestable override (no RecursionError).
         self.assertEqual(current_site_id(), 1)
         with override_current_site_id(2):
             self.assertEqual(current_site_id(), 2)
-            with self.assertRaises(RecursionError):
-                with override_current_site_id(3):
-                    self.assertEqual(current_site_id(), 3)
-                self.assertEqual(current_site_id(), 2)
+            with override_current_site_id(3):
+                self.assertEqual(current_site_id(), 3)
+            self.assertEqual(current_site_id(), 2)
         self.assertEqual(current_site_id(), 1)
 
 

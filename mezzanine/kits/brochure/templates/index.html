@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% load i18n %}
+
+{% block meta_title %}{% trans "Home" %}{% endblock %}
+{% block title %}{% if settings.SITE_TITLE %}{{ settings.SITE_TITLE }}{% else %}{% trans "Home" %}{% endif %}{% endblock %}
+
+{% block breadcrumb_menu %}
+<li class="active">{% trans "Home" %}</li>
+{% endblock %}
+
+{% block main %}
+{% blocktrans %}
+<p>Welcome. This is a Brochure site — pages, a contact form, and
+inline edit when you are signed in. No blog, no comments product.</p>
+{% endblocktrans %}
+{% endblock %}

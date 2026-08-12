@@ -542,3 +542,85 @@ as active in the navigation, and to generate breadcrumbs for the
 
 An example of this setup is Mezzanine's blog application, which does not
 use :class:`.Page` content types, and is just a regular Django app.
+
+Kernel contracts
+================
+
+The mixin kernel — :class:`.SiteRelated` → :class:`.Slugged` →
+:class:`.Displayable`, the :class:`.Page` tree, page processors,
+``current_site_id``, and ``published()`` — is locked by characterization
+tests in ``tests/test_kernel_contracts.py``. Those tests record *current*
+behaviour, including staff-sees-drafts and a non-nestable
+``override_current_site_id``. Wave 3 PRs flip assertions in that file
+rather than rewriting the contract surface.
+
+``published()`` — instance vs manager
+-------------------------------------
+
+:meth:`.Displayable.published` is an **instance** method. It checks
+status and the publish/expiry window only. It does **not** look at
+``is_staff``.
+
+``PublishedManager.published(for_user=, preview=)`` does **not**
+short-circuit on ``is_staff``. A draft is absent from the
+queryset unless ``preview`` covers that object. ``for_user``
+stays on the signature because :meth:`PageManager.published` uses
+it for ``login_required``; it no longer means "staff see drafts."
+
+New ``Displayable`` rows default to **Draft**. Existing published
+rows are not rewritten. The public URL 404s until an editor
+publishes, or a preview token is issued.
+
+``published(for_user=)`` call sites (PR-022c)
+--------------------------------------------
+
+Inventory of every ``published(for_user=)`` / ``for_user=`` site
+022c must touch (design §4.5, line numbers verified against this
+tree). Sites that call ``published()`` with no user stay
+published-only and must not union a preview.
+
+Production:
+
+* ``mezzanine/core/managers.py`` —
+  ``PublishedManager.published``: no staff short-circuit;
+  ``preview=`` unions one object.
+* ``mezzanine/core/managers.py:384`` —
+  ``SearchableManager.search`` union: pass ``preview=None``
+  (search never shows drafts).
+* ``mezzanine/core/managers.py:422, 439`` —
+  ``DisplayableManager.url_map``: no drafts.
+* ``mezzanine/core/views.py:114`` —
+  search view (``search(..., for_user=request.user)``).
+* ``mezzanine/core/views.py:184`` —
+  ``displayable_links_js`` / ``url_map``.
+* ``mezzanine/pages/managers.py:8-29, 68`` —
+  ``PageManager.published``, ``with_ascendants_for_slug``.
+* ``mezzanine/pages/middleware.py:65-66`` —
+  ``PageMiddleware``: pass
+  ``preview=getattr(request, "preview", None)``.
+* ``mezzanine/pages/models.py:103`` —
+  ``get_ascendants`` → ``with_ascendants_for_slug``.
+* ``mezzanine/pages/views.py:89`` —
+  ``get_ascendants(for_user=request.user)``.
+* ``mezzanine/pages/templatetags/pages_tags.py:52`` —
+  menus: **no** preview union.
+* ``mezzanine/blog/views.py:35, 91, 93`` —
+  list / detail / related.
+* ``mezzanine/blog/feeds.py:47, 81`` —
+  feeds stay published-only.
+* ``mezzanine/blog/templatetags/blog_tags.py:22, 40, 50, 70`` —
+  published-only.
+
+Tests:
+
+* ``tests/test_core.py:133-143`` —
+  ``test_draft``: staff GET without token → **404**; with token
+  → 200.
+* ``tests/test_core.py:155-224`` —
+  ``test_search``: search still excludes drafts (``for_user=``
+  at line 217).
+* ``tests/test_pages.py:179-183`` —
+  ``login_required`` vs ``published``.
+* ``tests/test_kernel_contracts.py`` —
+  staff GET without token is 404; ``url_map`` excludes drafts;
+  a valid token unions that pk.

@@ -9,6 +9,9 @@ making it editable, as it may be inappropriate - for example settings
 that are only read during startup shouldn't be editable, since changing
 them would require an application reload.
 """
+import os
+
+from django.conf import settings as django_settings
 from django.utils.translation import gettext_lazy as _
 
 from mezzanine.conf import register_setting
@@ -31,9 +34,38 @@ register_setting(
 
 register_setting(
     name="FORMS_UPLOAD_ROOT",
-    description=_("Absolute path for storing file uploads for the forms app."),
+    description=_(
+        "Absolute path for storing file uploads for the forms app. "
+        "Must be non-empty; an empty value is refused. Defaults to "
+        "MEDIA_ROOT/forms."
+    ),
     editable=False,
-    default="",
+    default=os.path.join(getattr(django_settings, "MEDIA_ROOT", "") or "", "forms"),
+)
+
+register_setting(
+    name="FORMS_UPLOAD_EXTENSIONS",
+    description=_(
+        "Allowed file extensions for uploads submitted via the forms "
+        "app. Compared case-insensitively without a leading dot."
+    ),
+    editable=False,
+    default=(
+        "csv",
+        "doc",
+        "docx",
+        "gif",
+        "jpeg",
+        "jpg",
+        "pdf",
+        "png",
+        "ppt",
+        "pptx",
+        "txt",
+        "webp",
+        "xls",
+        "xlsx",
+    ),
 )
 
 register_setting(

@@ -12,8 +12,8 @@ ABSOLUTE_URL_TAGS = {"img": "src", "a": "href", "iframe": "src"}
 # RICHTEXT_FILTER_LEVEL is set to low. General use-case for these is
 # allowing embedded video, but we will add to this fixed list over
 # time as more use-cases come up. We won't ever add script tags or
-# events (onclick etc) to this list. To enable those, filtering can
-# be turned off in the settings admin.
+# events (onclick etc) to this list. Raw HTML is only available via
+# the NOVA_FORCE_RAW_HTML=1 environment variable, not the admin.
 LOW_FILTER_TAGS = ("iframe", "embed", "video", "param", "source", "object")
 LOW_FILTER_ATTRS = (
     "allowfullscreen",
@@ -90,14 +90,15 @@ def escape(html):
     from mezzanine.conf import settings
     from mezzanine.core import defaults
 
-    if settings.RICHTEXT_FILTER_LEVEL == defaults.RICHTEXT_FILTER_LEVEL_NONE:
+    level = defaults.resolve_richtext_filter_level(settings.RICHTEXT_FILTER_LEVEL)
+    if level == defaults.RICHTEXT_FILTER_LEVEL_NONE:
         return html
     tags = settings.RICHTEXT_ALLOWED_TAGS
     attrs = settings.RICHTEXT_ALLOWED_ATTRIBUTES
     css_sanitizer = CSSSanitizer(
         allowed_css_properties=settings.RICHTEXT_ALLOWED_STYLES
     )
-    if settings.RICHTEXT_FILTER_LEVEL == defaults.RICHTEXT_FILTER_LEVEL_LOW:
+    if level == defaults.RICHTEXT_FILTER_LEVEL_LOW:
         tags += LOW_FILTER_TAGS
         attrs += LOW_FILTER_ATTRS
     if isinstance(attrs, tuple):

@@ -1,51 +1,38 @@
-=========
-Mezzanine
-=========
+====
+Nova
+====
 
-Welcome to the Mezzanine project. To learn more about Mezzanine please
-read the :doc:`overview` which contains a feature list, installation
-guide and other general information. To get an idea of the types of
-sites possible with Mezzanine, have a look at the `gallery of sites
-powered by Mezzanine <http://mezzanine.jupo.org/sites/>`_.
+Welcome to Nova, a publishing kernel descended from Mezzanine.
+Install ``nova-cms`` and ``import mezzanine``. To learn what still
+ships and how to install it, read the :doc:`overview`.
 
 .. note::
     A working knowledge of `Django <https://www.djangoproject.com/>`_
-    is required to work with Mezzanine and the documentation assumes as
-    much. If you're new to Django, you'll need to work through the
+    is required. The documentation assumes as much. If you're new to
+    Django, work through the
     :doc:`Django tutorial <django:intro/tutorial01>`
-    before being able to understand the concepts used throughout the
-    Mezzanine documentation. *A mantra for working with Mezzanine:
-    Mezzanine Is Just Django* - `Ken Bolton <http://bscientific.org/>`_,
-    Mezzanine core team member.
+    first. Import paths remain ``mezzanine.*``. *A mantra carried
+    forward from Mezzanine: this is just Django* —
+    `Ken Bolton <http://bscientific.org/>`_.
 
-**Front-end developers** might be interested in Mezzanine's ability for
-content authors to edit content directly within a page while viewing it
-on the website. You can read about this and how to implement this feature
-within templates under :doc:`inline-editing`.
+**Front-end developers** might be interested in in-place editing of
+content while viewing a page. See :doc:`inline-editing`.
 
-**Back-end developers** can get a better technical overview of how
-content is managed and how to customize Mezzanine in general by
-reading about Mezzanine's :doc:`content-architecture` which describes
-the main components and how to extend them with your own custom
-content types, or by reading about :doc:`model-customization` for
-implementing more low-level customizations as required. There is also
-a section on the :doc:`admin-customization` provided by Mezzanine, as
-well as a :doc:`model-graph` depicting the relationships between all
-the models.
+**Back-end developers** can get a technical overview of how content is
+managed, and how to customize it, from :doc:`content-architecture`
+(the main components, and how to add your own types) and
+:doc:`model-customization` for lower-level work. There is also
+:doc:`admin-customization` and a :doc:`model-graph`.
 
-**System administrators** can find out about some of the production
-requirements and operations in the :doc:`deployment` and
-:doc:`caching-strategy` sections.
+**System administrators** can find production notes in
+:doc:`deployment` and :doc:`caching-strategy`.
 
 **Further reading** includes :doc:`frequently-asked-questions`,
-:doc:`utilities`, a section on :doc:`user-accounts`, support for
-:doc:`multi-lingual-sites`, information about Mezzanine's
-:doc:`search-engine`, and a section on Mezzanine's
-:doc:`configuration` which outlines the various settings for
-configuring Mezzanine. Lastly, you can learn about
-:doc:`blog-importing` into Mezzanine, :doc:`twitter-integration`, or
-just browse the auto-generated docs for each of Mezzanine's
-:doc:`packages`.
+:doc:`utilities`, :doc:`user-accounts`, :doc:`multi-lingual-sites`,
+:doc:`search-engine`, and :doc:`configuration`. You can also
+:doc:`blog-importing` (WordPress and RSS), or browse the
+auto-generated docs for each of the :doc:`packages` under
+``mezzanine.*``.
 
 Table Of Contents
 =================

@@ -84,10 +84,8 @@ def cache_key_prefix(request):
     cache_key = "{}.{}.{}".format(
         settings.CACHE_MIDDLEWARE_KEY_PREFIX,
         current_site_id(),
-        # This last part used to indicate the device type for the request,
-        # but device detection was removed in Mezzanine 4.3.
-        # The "default" value was kept to maintain existing cache keys.
-        # See: https://github.com/stephenmcd/mezzanine/pull/1783
+        # Literal "default" kept for cache-key stability after device
+        # detection was removed. See stephenmcd/mezzanine#1783.
         "default",
     )
     return _i18n_cache_key_suffix(request, cache_key)

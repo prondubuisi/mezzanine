@@ -8,11 +8,7 @@ platforms using a `Django management command
 These are the currently supported formats and their commands:
 
   * `WordPress <http://wordpress.org>`_: ``import_wordpress``
-  * `Blogger <http://blogger.com>`_: ``import_blogger``
-  * `Tumblr <http://tumblr.com>`_: ``import_tumblr``
-  * `Posterous <http://posterous.com>`_: ``import_posterous``
   * `RSS <http://en.wikipedia.org/wiki/RSS>`_: ``import_rss``
-  * `BlogML <http://en.wikipedia.org/wiki/BlogML>`_: ``import_blogml``
 
 Each command takes a Mezzanine username to assign the blog posts to
 as well as certain arguments specific to the blog platform. For
@@ -49,7 +45,8 @@ Importing from Wordpress
 Dependencies
 ------------
 
-  * Mark Pilgrim's `feedparser <http://code.google.com/p/feedparser/>`_
+  * Mark Pilgrim's `feedparser <https://pypi.org/project/feedparser/>`_
+    (``pip install 'nova-cms[migrate]'``)
 
 The first step is to export your Wordpress data. Login to Wordpress and
 go to ``Tools -> Export``. Here you can select your filters,
@@ -66,84 +63,19 @@ The next step is to run the ``import_wordpress`` command where the
 
     $ python manage.py import_wordpress --mezzanine-user=.. --url=[path|URL]
 
-Importing from Blogger
-======================
-
-The Blogger import currently has one known limitation which is a
-maximum of 500 blogs or 500 comments per blog that can be imported.
-If you have more than this the import will still work but end up being
-truncated.
-
-Dependencies
-------------
-
- * Google's `gdata <http://code.google.com/p/gdata-python-client/>`_ Library
-
-The first step is to obtain your Blogger ID. Login to Blogger and go to
-``Settings``. You'll see that the address in your browser end with
-``BlogID=XXX`` where ``XXX`` is your Blogger ID. Make a note of this
-and while you're in settings, go to ``Site Feed`` then set ``Allow Blog
-Feeds`` to be ``Full`` - this will give you all your data when you run
-the import.
-
-The next step is to run the ``import_blogger`` command where the
-``blogger-id`` argument contains the Blogger ID you retrieved::
-
-    $ python manage.py import_blogger --mezzanine-user=.. --blogger-id=XXX
-
-Importing from Tumblr
-=====================
-
-Simply run the ``import_tumblr`` command where the ``tumblr-user``
-argument contains your Tumblr username::
-
-    $ python manage.py import_blogger --mezzanine-user=.. --tumblr-user=username
-
 Importing RSS
 =============
 
 Dependencies
 ------------
 
-  * Mark Pilgrim's `feedparser <http://code.google.com/p/feedparser/>`_
+  * Mark Pilgrim's `feedparser <https://pypi.org/project/feedparser/>`_
+    (``pip install 'nova-cms[migrate]'``)
 
 Simply run the ``import_rss`` command where the ``rss-url`` argument
 contains the URL for your RSS feed::
 
     $ python manage.py import_rss --mezzanine-user=.. --rss-url=url
-
-Importing from Posterous
-========================
-
-Dependencies
-------------
-
- * Kenneth Reitz's `requests <http://docs.python-requests.org/en/latest/index.html>`_
-
-Simply run ``import_posterous`` command with the right params. You need
-to get your API key from the `Posterous API Reference
-<https://posterous.com/api>`_::
-
-    $ python manage.py import_posterous --mezzanine-user=.. --api-token=.. --posterous-user=your_posterous_login --posterous-pass=your_posterous_password
-
-If you have more than one blog on your posterous account check out
-the ``-posterous-host`` option. Be aware that like the tumblr
-importer, this leaves your media assets on the Posterous servers.
-If you're worried about posterous being shut down you may want want
-to have a closer look at the API to actually export your media.
-
-Importing BlogML
-================
-
-Dependencies
-------------
-
-  * `Python-dateutil <https://dateutil.readthedocs.org/en/latest/>`_
-
-Simply run the ``import_blogml`` command where the ``blogxmlfname`` argument
-contains local blogml file name::
-
-    $ python manage.py import_blogml --blogxmlfname=filename
 
 Importer API - Adding New Importers
 ===================================

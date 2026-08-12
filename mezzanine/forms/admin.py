@@ -20,6 +20,7 @@ from mezzanine.core.forms import DynamicInlineAdminForm
 from mezzanine.forms.forms import EntriesForm
 from mezzanine.forms.models import Field, FieldEntry, Form, FormEntry
 from mezzanine.pages.admin import PageAdmin
+from mezzanine.utils.sites import current_site_id
 from mezzanine.utils.static import static_lazy as static
 from mezzanine.utils.urls import admin_url, slugify
 
@@ -90,6 +91,8 @@ class FormAdmin(PageAdmin):
     Admin class for the Form model. Includes the urls & views for exporting
     form entries as CSV and downloading files uploaded via the forms app.
     """
+
+    change_form_template = "admin/forms/change_form.html"
 
     class Media:
         css = {"all": (static("mezzanine/css/admin/form.css"),)}
@@ -189,7 +192,11 @@ class FormAdmin(PageAdmin):
         """
         Output the file for the requested field entry.
         """
-        field_entry = get_object_or_404(FieldEntry, id=field_entry_id)
+        field_entry = get_object_or_404(
+            FieldEntry,
+            id=field_entry_id,
+            entry__form__site_id=current_site_id(),
+        )
         path = join(fs.location, field_entry.value)
         response = HttpResponse(content_type=guess_type(path)[0])
         with open(path, "r+b") as f:

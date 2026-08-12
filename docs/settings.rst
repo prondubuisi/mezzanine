@@ -25,7 +25,7 @@ Default: ``False``
 
 Minimum length for passwords
 
-Default: ``6``
+Default: ``12``
 
 .. _ACCOUNTS_NO_USERNAME:
 
@@ -135,15 +135,6 @@ Key for `http://akismet.com <http://akismet.com>`_ spam filtering service. Used 
 
 Default: ``''``
 
-.. _BITLY_ACCESS_TOKEN:
-
-``BITLY_ACCESS_TOKEN``
-----------------------
-
-Access token for `http://bit.ly <http://bit.ly>`_ URL shortening service.
-
-Default: ``''``
-
 .. _BLOG_POST_PER_PAGE:
 
 ``BLOG_POST_PER_PAGE``
@@ -215,33 +206,6 @@ Default: ``False``
 If ``True``, built-in comments are approved by default.
 
 Default: ``True``
-
-.. _COMMENTS_DISQUS_API_PUBLIC_KEY:
-
-``COMMENTS_DISQUS_API_PUBLIC_KEY``
-----------------------------------
-
-Public key for `http://disqus.com <http://disqus.com>`_ developer API
-
-Default: ``''``
-
-.. _COMMENTS_DISQUS_API_SECRET_KEY:
-
-``COMMENTS_DISQUS_API_SECRET_KEY``
-----------------------------------
-
-Secret key for `http://disqus.com <http://disqus.com>`_ developer API
-
-Default: ``''``
-
-.. _COMMENTS_DISQUS_SHORTNAME:
-
-``COMMENTS_DISQUS_SHORTNAME``
------------------------------
-
-Shortname for the `http://disqus.com <http://disqus.com>`_ comments service.
-
-Default: ``''``
 
 .. _COMMENTS_NOTIFICATION_EMAILS:
 
@@ -386,15 +350,6 @@ Default: ``''``
 If ``True``, website forms will use HTML5 features.
 
 Default: ``False``
-
-.. _GOOGLE_ANALYTICS_ID:
-
-``GOOGLE_ANALYTICS_ID``
------------------------
-
-Google Analytics ID (`http://www.google.com/analytics/ <http://www.google.com/analytics/>`_)
-
-Default: ``''``
 
 .. _HOST_THEMES:
 
@@ -650,39 +605,10 @@ Default: ``('mezzanine.utils.views.is_spam_akismet',)``
 
 .. _SSL_ENABLED:
 
-``SSL_ENABLED``
----------------
+``SSL_ENABLED`` / ``SSL_FORCE_HOST`` / ``SSL_FORCE_URL_PREFIXES`` / ``SSL_FORCED_PREFIXES_ONLY``
+-----------------------------------------------------------------------------------------------
 
-If ``True``, users will be automatically redirected to HTTPS for the URLs specified by the ``SSL_FORCE_URL_PREFIXES`` setting.
-
-Default: ``False``
-
-.. _SSL_FORCED_PREFIXES_ONLY:
-
-``SSL_FORCED_PREFIXES_ONLY``
-----------------------------
-
-If ``True``, only URLs specified by the ``SSL_FORCE_URL_PREFIXES`` setting will be accessible over SSL, and all other URLs will be redirected back to HTTP if accessed over HTTPS.
-
-Default: ``True``
-
-.. _SSL_FORCE_HOST:
-
-``SSL_FORCE_HOST``
-------------------
-
-Host name that the site should always be accessed via that matches the SSL certificate.
-
-Default: ``''``
-
-.. _SSL_FORCE_URL_PREFIXES:
-
-``SSL_FORCE_URL_PREFIXES``
---------------------------
-
-Sequence of URL prefixes that will be forced to run over SSL when ``SSL_ENABLED`` is ``True``. i.e. ('/admin', '/example') would force all URLs beginning with /admin or /example to run over SSL.
-
-Default: ``('/admin', '/account')``
+Removed. ``SSLRedirectMiddleware`` no longer exists (it could downgrade HTTPS to HTTP). Use Django's ``SecurityMiddleware`` with ``SECURE_SSL_REDIRECT`` (and HSTS / secure cookies) instead. Existing projects that still list ``mezzanine.core.middleware.SSLRedirectMiddleware`` in ``MIDDLEWARE`` must drop that entry.
 
 .. _STOP_WORDS:
 
@@ -709,7 +635,7 @@ Default: ``4``
 
 Sequence of setting names available within templates.
 
-Default: ``('ACCOUNTS_APPROVAL_REQUIRED', 'ACCOUNTS_VERIFICATION_REQUIRED', 'ADMIN_MENU_COLLAPSED', 'BITLY_ACCESS_TOKEN', 'BLOG_USE_FEATURED_IMAGE', 'COMMENTS_DISQUS_SHORTNAME', 'COMMENTS_NUM_LATEST', 'COMMENTS_DISQUS_API_PUBLIC_KEY', 'COMMENTS_DISQUS_API_SECRET_KEY', 'COMMENTS_USE_RATINGS', 'DEV_SERVER', 'FORMS_USE_HTML5', 'GRAPPELLI_INSTALLED', 'GOOGLE_ANALYTICS_ID', 'JQUERY_FILENAME', 'JQUERY_UI_FILENAME', 'LOGIN_URL', 'LOGOUT_URL', 'SITE_TITLE', 'SITE_TAGLINE', 'USE_L10N', 'USE_MODELTRANSLATION')``
+Default: ``('ACCOUNTS_APPROVAL_REQUIRED', 'ACCOUNTS_VERIFICATION_REQUIRED', 'ADMIN_MENU_COLLAPSED', 'BLOG_USE_FEATURED_IMAGE', 'COMMENTS_NUM_LATEST', 'COMMENTS_USE_RATINGS', 'DEV_SERVER', 'FORMS_USE_HTML5', 'GRAPPELLI_INSTALLED', 'JQUERY_FILENAME', 'JQUERY_UI_FILENAME', 'LOGIN_URL', 'LOGOUT_URL', 'SITE_TITLE', 'SITE_TAGLINE', 'USE_L10N', 'USE_MODELTRANSLATION')``
 
 .. _THUMBNAILS_DIR_NAME:
 
@@ -728,74 +654,6 @@ Default: ``'.thumbnails'``
 URL for the JavaScript file (relative to ``STATIC_URL``) that handles configuring TinyMCE when the default ``RICHTEXT_WIDGET_CLASS`` is used.
 
 Default: ``'mezzanine/js/tinymce_setup.js'``
-
-.. _TWITTER_ACCESS_TOKEN_KEY:
-
-``TWITTER_ACCESS_TOKEN_KEY``
-----------------------------
-
-
-
-Default: ``''``
-
-.. _TWITTER_ACCESS_TOKEN_SECRET:
-
-``TWITTER_ACCESS_TOKEN_SECRET``
--------------------------------
-
-
-
-Default: ``''``
-
-.. _TWITTER_CONSUMER_KEY:
-
-``TWITTER_CONSUMER_KEY``
-------------------------
-
-
-
-Default: ``''``
-
-.. _TWITTER_CONSUMER_SECRET:
-
-``TWITTER_CONSUMER_SECRET``
----------------------------
-
-
-
-Default: ``''``
-
-.. _TWITTER_DEFAULT_NUM_TWEETS:
-
-``TWITTER_DEFAULT_NUM_TWEETS``
-------------------------------
-
-Number of tweets to display in the default Twitter feed.
-
-Default: ``3``
-
-.. _TWITTER_DEFAULT_QUERY:
-
-``TWITTER_DEFAULT_QUERY``
--------------------------
-
-Twitter query to use for the default query type. 
-
-*Note:* Once you change this from the default, you'll need to configure each of the oAuth consumer/access key/secret settings. Please refer to `http://dev.twitter.com <http://dev.twitter.com>`_ for more information on creating an application and acquiring these settings.
-
-Default: ``'from:stephen_mcd mezzanine'``
-
-.. _TWITTER_DEFAULT_QUERY_TYPE:
-
-``TWITTER_DEFAULT_QUERY_TYPE``
-------------------------------
-
-Type of query that will be used to retrieve tweets for the default Twitter feed.
-
-Choices: User: ``user``, List: ``list``, Search: ``search``
-
-
-Default: ``'search'``
 
 .. _UPLOAD_TO_HANDLERS:
 

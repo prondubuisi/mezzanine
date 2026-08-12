@@ -1,9 +1,12 @@
-from json import loads
-from urllib.parse import urlencode
-from urllib.request import urlopen
+import hashlib
+import hmac
+import secrets
+from datetime import timedelta
 
 from django.apps import apps
 from django.contrib.contenttypes.fields import GenericForeignKey
+from django.contrib.contenttypes.models import ContentType
+from django.contrib.sites.models import Site
 from django.db import models
 from django.db.models.base import ModelBase
 from django.template.defaultfilters import truncatewords_html
@@ -245,9 +248,10 @@ class Displayable(Slugged, MetaData, TimeStamped):
     status = models.IntegerField(
         _("Status"),
         choices=CONTENT_STATUS_CHOICES,
-        default=CONTENT_STATUS_PUBLISHED,
+        default=CONTENT_STATUS_DRAFT,
         help_text=_(
-            "With Draft chosen, will only be shown for admin users " "on the site."
+            "With Draft chosen, the public URL returns 404 unless a "
+            "preview token is used."
         ),
     )
     publish_date = models.DateTimeField(
@@ -295,9 +299,13 @@ class Displayable(Slugged, MetaData, TimeStamped):
 
     def published(self):
         """
-        For non-staff users, return True when status is published and
-        the publish and expiry dates fall before and after the
-        current date when specified.
+        Return True when status is published and the publish/expiry
+        dates (when set) contain now.
+
+        This instance method does not inspect the requesting user.
+        Drafts on the public slug 404 unless a ``preview`` token
+        unions that object in ``PublishedManager.published``. This
+        method stays date/status-only.
         """
         return (
             self.status == CONTENT_STATUS_PUBLISHED
@@ -332,42 +340,30 @@ class Displayable(Slugged, MetaData, TimeStamped):
 
     def set_short_url(self):
         """
-        Generates the ``short_url`` attribute if the model does not
-        already have one. Used by the ``set_short_url_for`` template
-        tag and ``TweetableAdmin``.
+        Ensure ``short_url`` is available for templates.
 
-        If no sharing service is defined (bitly is the one implemented,
-        but others could be by overriding ``generate_short_url``), the
-        ``SHORT_URL_UNSET`` marker gets stored in the DB. In this case,
-        ``short_url`` is temporarily (eg not persisted) set to
-        host + ``get_absolute_url`` - this is so that we don't
-        permanently store ``get_absolute_url``, since it may change
-        over time.
+        No shortening service is called. A stored value is kept; the
+        legacy ``"unset"`` marker (previously written when bit.ly was
+        unavailable) is treated as empty. Otherwise the full absolute
+        URL is used in memory and is not persisted.
         """
-        if not self.short_url or self.short_url == SHORT_URL_UNSET:
-            self.short_url = self.generate_short_url()
+        if self.short_url and self.short_url != SHORT_URL_UNSET:
+            return
+        generated = self.generate_short_url()
+        if generated and generated != SHORT_URL_UNSET:
+            self.short_url = generated
             self.save()
-        if self.short_url == SHORT_URL_UNSET:
+        else:
             self.short_url = self.get_absolute_url_with_host()
 
     def generate_short_url(self):
         """
-        Returns a new short URL generated using bit.ly if credentials for the
-        service have been specified.
-        """
-        from mezzanine.conf import settings
+        Return a shortened URL, or ``None``.
 
-        if settings.BITLY_ACCESS_TOKEN:
-            url = "https://api-ssl.bit.ly/v3/shorten?%s" % urlencode(
-                {
-                    "access_token": settings.BITLY_ACCESS_TOKEN,
-                    "uri": self.get_absolute_url_with_host(),
-                }
-            )
-            response = loads(urlopen(url).read().decode("utf-8"))
-            if response["status_code"] == 200:
-                return response["data"]["url"]
-        return SHORT_URL_UNSET
+        Previously called bit.ly. No network request is made. Subclasses
+        may override. The ``"unset"`` sentinel is no longer written.
+        """
+        return None
 
     def _get_next_or_previous_by_publish_date(self, is_next, **kwargs):
         """
@@ -413,6 +409,67 @@ class RichText(models.Model):
 
     class Meta:
         abstract = True
+
+
+class DocumentBody(models.Model):
+    """
+    Y1.5 JSON document body (PR-025 / KD7).
+
+    Concrete RichText models also inherit this. ``content`` is the HTML
+    projection of ``body`` (version N: wrap on first save).
+    """
+
+    body = models.JSONField(_("Body"), default=dict, blank=True)
+
+    class Meta:
+        abstract = True
+
+    def save(self, *args, **kwargs):
+        from mezzanine.core.document import sync_content_from_body
+
+        sync_content_from_body(self)
+        super().save(*args, **kwargs)
+
+
+def _media_upload_to(instance, filename):
+    """Site-prefixed storage path (PR-026)."""
+    site_id = getattr(instance, "site_id", None) or current_site_id()
+    # Keep basename only to avoid path traversal.
+    base = filename.replace("\\", "/").rsplit("/", 1)[-1] or "file.bin"
+    return "media/site-%s/%s" % (site_id, base)
+
+
+class Media(SiteRelated):
+    """
+    Site-scoped media asset (PR-026 / KD11).
+
+    Not Displayable in Y1.5: no public URL tree, not in sitemaps/search.
+    ``alt`` is required. File path is site-prefixed under MEDIA_ROOT.
+    """
+
+    title = models.CharField(_("Title"), max_length=500, blank=True)
+    file = models.FileField(_("File"), upload_to=_media_upload_to, max_length=255)
+    alt = models.CharField(
+        _("Alt text"),
+        max_length=255,
+        help_text=_("Required accessible description of the file."),
+    )
+    created = models.DateTimeField(_("Created"), auto_now_add=True)
+    updated = models.DateTimeField(_("Updated"), auto_now=True)
+
+    class Meta:
+        verbose_name = _("Media")
+        verbose_name_plural = _("Media")
+        ordering = ("-created",)
+
+    def __str__(self):
+        return self.title or self.alt or str(self.pk)
+
+    def get_absolute_url(self):
+        # Private asset path under /_nova/media/<pk>/ — not the storage URL.
+        from django.urls import reverse
+
+        return reverse("nova_media_detail", kwargs={"pk": self.pk})
 
 
 class OrderableBase(ModelBase):
@@ -468,10 +525,16 @@ class Orderable(models.Model, metaclass=OrderableBase):
         except AttributeError:
             # No ``order_with_respect_to`` specified on the model.
             return {}
-        # Support for generic relations.
+        # Support for generic relations. Django 6 binds GFKs as
+        # GenericForeignKeyDescriptor on the class; the field lives on .field.
         field = getattr(self.__class__, name)
-        if isinstance(field, GenericForeignKey):
-            names = (field.ct_field, field.fk_field)
+        gfk = (
+            field
+            if isinstance(field, GenericForeignKey)
+            else getattr(field, "field", None)
+        )
+        if isinstance(gfk, GenericForeignKey):
+            names = (gfk.ct_field, gfk.fk_field)
             return {n: getattr(self, n) for n in names}
         return {name: value}
 
@@ -546,9 +609,12 @@ class Ownable(models.Model):
 
     def is_editable(self, request):
         """
-        Restrict in-line editing to the objects's owner and superusers.
+        Author: owner only. Editor+ on this site: any object.
+        Superuser: always.
         """
-        return request.user.is_superuser or request.user.id == self.user_id
+        from mezzanine.core.capabilities import user_can_edit
+
+        return user_can_edit(request.user, self)
 
 
 class ContentTyped(models.Model):
@@ -604,21 +670,168 @@ class ContentTyped(models.Model):
         return getattr(self, self.content_model) if self.content_model else self
 
 
-class SitePermission(models.Model):
+ROLE_AUTHOR = "author"
+ROLE_EDITOR = "editor"
+ROLE_PUBLISHER = "publisher"
+ROLE_ADMIN = "admin"
+SITE_ROLE_CHOICES = (
+    (ROLE_AUTHOR, _("Author")),
+    (ROLE_EDITOR, _("Editor")),
+    (ROLE_PUBLISHER, _("Publisher")),
+    (ROLE_ADMIN, _("Admin")),
+)
+
+
+class SiteRole(models.Model):
     """
-    Permission relationship between a user and a site that's
-    used instead of ``User.is_staff``, for admin and inline-editing
-    access.
+    Per-(user, site) role. Replaces ``SitePermission`` (OneToOne + M2M).
+
+    Superuser is cross-site break-glass and does not need a row.
     """
 
-    user = models.OneToOneField(
+    user = models.ForeignKey(
         user_model_name,
         on_delete=models.CASCADE,
-        verbose_name=_("Author"),
-        related_name="%(class)ss",
+        verbose_name=_("User"),
+        related_name="siteroles",
     )
-    sites = models.ManyToManyField("sites.Site", blank=True, verbose_name=_("Sites"))
+    site = models.ForeignKey(
+        "sites.Site",
+        on_delete=models.CASCADE,
+        verbose_name=_("Site"),
+        related_name="siteroles",
+    )
+    role = models.CharField(
+        max_length=16, choices=SITE_ROLE_CHOICES, default=ROLE_EDITOR
+    )
 
     class Meta:
-        verbose_name = _("Site permission")
-        verbose_name_plural = _("Site permissions")
+        verbose_name = _("Site role")
+        verbose_name_plural = _("Site roles")
+        constraints = [
+            models.UniqueConstraint(
+                fields=["user", "site"], name="nova_siterole_user_site"
+            ),
+        ]
+
+    def __str__(self):
+        return "%s @ %s (%s)" % (self.user, self.site, self.role)
+
+
+PREVIEW_ROLE_ANON = "anon"
+PREVIEW_ROLE_STAFF = "staff"
+PREVIEW_ROLE_CHOICES = (
+    (PREVIEW_ROLE_ANON, "anon"),
+    (PREVIEW_ROLE_STAFF, "staff"),
+)
+PREVIEW_TOKEN_DEFAULT_TTL = timedelta(hours=24)
+
+
+class PreviewToken(models.Model):
+    """
+    Opaque, hashed preview capability for a single Displayable.
+
+    The raw token is returned once from ``issue()`` and never stored.
+    Presentation compares with ``hmac.compare_digest`` on the sha256 hex.
+    """
+
+    token_hash = models.CharField(max_length=64, unique=True)
+    content_type = models.ForeignKey(
+        ContentType, on_delete=models.CASCADE, related_name="preview_tokens"
+    )
+    object_pk = models.TextField()
+    site = models.ForeignKey(
+        Site, on_delete=models.CASCADE, related_name="preview_tokens"
+    )
+    as_role = models.CharField(
+        max_length=8, choices=PREVIEW_ROLE_CHOICES, default=PREVIEW_ROLE_ANON
+    )
+    created_by = models.ForeignKey(
+        user_model_name,
+        on_delete=models.CASCADE,
+        related_name="preview_tokens",
+    )
+    expires_at = models.DateTimeField()
+    last_seen_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        verbose_name = _("Preview token")
+        verbose_name_plural = _("Preview tokens")
+
+    def __str__(self):
+        return "%s:%s" % (self.content_type, self.object_pk)
+
+    def covers(self, model):
+        """True when this token's content type matches ``model``.
+
+        Tokens are issued against the base concrete ``Displayable``
+        (``Page`` for every page type). A ``RichTextPage`` queryset
+        is therefore covered by a ``Page`` token.
+        """
+        token_model = self.content_type.model_class()
+        if token_model is None or model is None:
+            return False
+        if token_model is model:
+            return True
+        try:
+            return issubclass(model, token_model) or issubclass(token_model, model)
+        except TypeError:
+            return False
+
+    @staticmethod
+    def hash_token(raw):
+        return hashlib.sha256(raw.encode("utf-8")).hexdigest()
+
+    @classmethod
+    def issue(
+        cls, obj, created_by, as_role=PREVIEW_ROLE_ANON, expires_at=None, site=None
+    ):
+        """
+        Persist a sha256 of a fresh token and return the raw secret once.
+        """
+        if as_role not in (PREVIEW_ROLE_ANON, PREVIEW_ROLE_STAFF):
+            raise ValueError("as_role must be 'anon' or 'staff'")
+        raw = secrets.token_urlsafe(32)
+        if expires_at is None:
+            expires_at = now() + PREVIEW_TOKEN_DEFAULT_TTL
+        if site is None:
+            site_id = getattr(obj, "site_id", None) or current_site_id()
+            site = Site.objects.get(pk=site_id)
+        if isinstance(obj, Displayable):
+            model = base_concrete_model(Displayable, obj)
+        else:
+            model = obj.__class__
+        cls.objects.create(
+            token_hash=cls.hash_token(raw),
+            content_type=ContentType.objects.get_for_model(model),
+            object_pk=str(obj.pk),
+            site=site,
+            as_role=as_role,
+            created_by=created_by,
+            expires_at=expires_at,
+        )
+        return raw
+
+    @classmethod
+    def lookup(cls, raw):
+        """
+        Hash ``raw`` and return the matching row, or ``None``.
+
+        Uses ``hmac.compare_digest`` on the hex even after the unique
+        lookup so presentation never does a raw ``==`` on the secret.
+        """
+        if not raw:
+            return None
+        incoming_hash = cls.hash_token(raw)
+        try:
+            token = cls.objects.select_related("content_type", "site").get(
+                token_hash=incoming_hash
+            )
+        except cls.DoesNotExist:
+            return None
+        try:
+            if not hmac.compare_digest(token.token_hash, incoming_hash):
+                return None
+        except (TypeError, ValueError):
+            return None
+        return token

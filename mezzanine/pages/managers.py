@@ -1,11 +1,14 @@
+from django.apps import apps
+
 from mezzanine.conf import settings
 from mezzanine.core.managers import DisplayableManager
 from mezzanine.utils.deprecation import is_authenticated
+from mezzanine.utils.sites import current_site_id
 from mezzanine.utils.urls import home_slug
 
 
 class PageManager(DisplayableManager):
-    def published(self, for_user=None, include_login_required=False):
+    def published(self, for_user=None, include_login_required=False, preview=None):
         """
         Override ``DisplayableManager.published`` to exclude
         pages with ``login_required`` set to ``True``. if the
@@ -17,15 +20,23 @@ class PageManager(DisplayableManager):
         behaviour in special cases where they want to deal with the
         ``login_required`` field manually, such as the case in
         ``PageMiddleware``.
+
+        A preview token that covers this page is not excluded, so a
+        client can preview a members-only draft.
         """
-        published = super().published(for_user=for_user)
+        published = super().published(for_user=for_user, preview=preview)
         unauthenticated = for_user and not is_authenticated(for_user)
         if (
             unauthenticated
             and not include_login_required
             and not settings.PAGES_PUBLISHED_INCLUDE_LOGIN_REQUIRED
         ):
-            published = published.exclude(login_required=True)
+            if preview is not None and preview.covers(self.model):
+                published = published.exclude(login_required=True) | self.filter(
+                    pk=preview.object_pk
+                )
+            else:
+                published = published.exclude(login_required=True)
         return published
 
     def with_ascendants_for_slug(self, slug, **kwargs):
@@ -65,8 +76,11 @@ class PageManager(DisplayableManager):
         # Find the deepest page that matches one of our slugs.
         # Sorting by "-slug" should ensure that the pages are in
         # descendant -> ascendant order.
+        preview = kwargs.get("preview")
         pages_for_user = self.published(**kwargs)
         pages = list(pages_for_user.filter(slug__in=slugs).order_by("-slug"))
+        if preview is not None and preview.covers(self.model):
+            pages = self._merge_preview_ancestors(pages, slugs, preview)
         if not pages:
             return []
 
@@ -91,3 +105,45 @@ class PageManager(DisplayableManager):
             # Valid parents
             pages[0]._ascendants = pages[1:]
         return pages
+
+    def _merge_preview_ancestors(self, pages, slugs, preview):
+        """
+        Union the previewed page and load its ancestors with the
+        unfiltered page table (site-scoped, ignores publish).
+
+        Ancestors are for template cascade / breadcrumbs only. A token
+        for a parent does not reveal a draft child.
+        """
+        Page = apps.get_model("pages", "Page")
+        try:
+            previewed = Page._base_manager.get(
+                site_id=current_site_id(), pk=preview.object_pk
+            )
+        except Page.DoesNotExist:
+            return pages
+        if previewed.slug not in slugs:
+            return pages
+
+        parent_walk = []
+        parent_id = previewed.parent_id
+        seen = set()
+        while parent_id and parent_id not in seen:
+            seen.add(parent_id)
+            parent_walk.append(parent_id)
+            parent_id = (
+                Page._base_manager.filter(site_id=current_site_id(), pk=parent_id)
+                .values_list("parent_id", flat=True)
+                .first()
+            )
+
+        ancestors = list(
+            Page._base_manager.filter(
+                site_id=current_site_id(), pk__in=parent_walk
+            )
+        )
+        by_slug = {page.slug: page for page in pages}
+        by_slug[previewed.slug] = previewed
+        for ancestor in ancestors:
+            if ancestor.slug in slugs and ancestor.slug not in by_slug:
+                by_slug[ancestor.slug] = ancestor
+        return sorted(by_slug.values(), key=lambda page: page.slug or "", reverse=True)
