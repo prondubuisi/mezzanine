@@ -737,7 +737,6 @@ PREVIEW_ROLE_CHOICES = (
     (PREVIEW_ROLE_ANON, "anon"),
     (PREVIEW_ROLE_STAFF, "staff"),
 )
-PREVIEW_TOKEN_DEFAULT_TTL = timedelta(hours=24)
 
 
 class PreviewToken(models.Model):
@@ -806,7 +805,7 @@ class PreviewToken(models.Model):
             raise ValueError("as_role must be 'anon' or 'staff'")
         raw = secrets.token_urlsafe(32)
         if expires_at is None:
-            expires_at = now() + PREVIEW_TOKEN_DEFAULT_TTL
+            expires_at = now() + timedelta(seconds=settings.PREVIEW_TOKEN_TTL_SECONDS)
         if site is None:
             site_id = getattr(obj, "site_id", None) or current_site_id()
             site = Site.objects.get(pk=site_id)
