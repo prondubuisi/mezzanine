@@ -1,9 +1,11 @@
 from copy import deepcopy
 
+from django import forms
 from django.contrib import admin
 from django.contrib.auth import get_user_model
 from django.contrib.auth.admin import UserAdmin
 from django.contrib.auth.models import User as AuthUser
+from django.contrib.contenttypes.models import ContentType
 from django.contrib.messages import error
 from django.contrib.redirects.admin import RedirectAdmin
 from django.core.exceptions import PermissionDenied
@@ -19,8 +21,14 @@ from mezzanine.core.capabilities import user_can_issue_preview
 from mezzanine.core.forms import DynamicInlineAdminForm
 from mezzanine.core.models import (
     CONTENT_STATUS_PUBLISHED,
+    FIELD_TYPE_BOOLEAN,
+    FIELD_TYPE_CHOICE,
+    FIELD_TYPE_NUMBER,
+    FIELD_TYPE_RICHTEXT,
+    FIELD_TYPE_TEXT,
     PREVIEW_TOKEN_PARAM,
     ContentTyped,
+    FieldSchema,
     Media,
     Orderable,
     PreviewToken,
@@ -30,6 +38,48 @@ from mezzanine.utils.models import base_concrete_model
 from mezzanine.utils.sites import current_site_id
 from mezzanine.utils.static import static_lazy as static
 from mezzanine.utils.urls import admin_url
+
+# Prefix for schema-driven custom field form inputs (KD20 / PR-060).
+_CF_PREFIX = "cf_"
+
+
+def schemas_for_model(model):
+    """FieldSchema rows for a concrete Displayable model (and its MTI base)."""
+    cts = [ContentType.objects.get_for_model(model)]
+    # Multi-table page types also match schemas registered on pages.Page.
+    for parent in model._meta.get_parent_list():
+        if parent._meta.abstract:
+            continue
+        if any(f.name == "custom_fields" for f in parent._meta.local_fields):
+            cts.append(ContentType.objects.get_for_model(parent))
+    return list(
+        FieldSchema.objects.filter(content_type__in=cts)
+        .select_related("content_type")
+        .order_by("order", "name")
+    )
+
+
+def _form_field_for_schema(schema):
+    """Build a Django form field for one FieldSchema definition."""
+    label = schema.label or schema.name
+    required = bool(schema.required)
+    if schema.field_type == FIELD_TYPE_BOOLEAN:
+        return forms.BooleanField(label=label, required=False)
+    if schema.field_type == FIELD_TYPE_NUMBER:
+        return forms.FloatField(label=label, required=required)
+    if schema.field_type == FIELD_TYPE_CHOICE:
+        choices = (schema.options or {}).get("choices") or []
+        return forms.ChoiceField(
+            label=label,
+            required=required,
+            choices=[("", "---------")] + [(c, c) for c in choices],
+        )
+    if schema.field_type == FIELD_TYPE_RICHTEXT:
+        return forms.CharField(
+            label=label, required=required, widget=forms.Textarea(attrs={"rows": 6})
+        )
+    # text, reference, default
+    return forms.CharField(label=label, required=required, max_length=500)
 
 if settings.USE_MODELTRANSLATION:
     from collections import OrderedDict
@@ -138,6 +188,9 @@ class DisplayableAdminForm(ModelForm):
 class DisplayableAdmin(BaseTranslationModelAdmin):
     """
     Admin class for subclasses of the abstract ``Displayable`` model.
+
+    KD20 / PR-060: when ``FieldSchema`` rows exist for the model, schema-driven
+    form fields are injected and persisted into ``custom_fields`` JSON.
     """
 
     list_display = (
@@ -204,6 +257,113 @@ class DisplayableAdmin(BaseTranslationModelAdmin):
         ]
         return custom + super().get_urls()
 
+    def _custom_field_schemas(self):
+        if not any(f.name == "custom_fields" for f in self.model._meta.fields):
+            return []
+        return schemas_for_model(self.model)
+
+    def get_form(self, request, obj=None, **kwargs):
+        """Inject schema-driven fields for KD20 custom_fields (PR-060)."""
+        schemas = self._custom_field_schemas()
+        # ModelForm factory only accepts model fields — omit cf_* from fieldsets
+        # while super().get_form flattens them, then re-add on the form class.
+        self._omit_custom_fieldsets = True
+        try:
+            base_form = super().get_form(request, obj, **kwargs)
+        finally:
+            self._omit_custom_fieldsets = False
+        if not schemas:
+            return base_form
+
+        schema_list = schemas
+
+        class FormWithCustomFields(base_form):
+            def __init__(self, *args, **kw):
+                super().__init__(*args, **kw)
+                existing = {}
+                if getattr(self.instance, "pk", None):
+                    existing = dict(self.instance.custom_fields or {})
+                for schema in schema_list:
+                    key = _CF_PREFIX + schema.name
+                    self.fields[key] = _form_field_for_schema(schema)
+                    if schema.name in existing:
+                        self.fields[key].initial = existing[schema.name]
+
+            def clean(self):
+                cleaned = super().clean()
+                errors = {}
+                for schema in schema_list:
+                    key = _CF_PREFIX + schema.name
+                    if key not in cleaned:
+                        continue
+                    try:
+                        cleaned[key] = schema.clean_value(cleaned.get(key))
+                    except ValueError as exc:
+                        errors[key] = str(exc)
+                if errors:
+                    raise ValidationError(errors)
+                return cleaned
+
+        return FormWithCustomFields
+
+    def get_fieldsets(self, request, obj=None):
+        fieldsets = super().get_fieldsets(request, obj)
+        # Always strip raw custom_fields JSON from admin fieldsets.
+        cleaned = []
+        for title, opts in fieldsets:
+            fields = [
+                f
+                for f in opts.get("fields", ())
+                if f != "custom_fields"
+                and not (isinstance(f, (list, tuple)) and "custom_fields" in f)
+            ]
+            cleaned.append((title, {**opts, "fields": list(fields)}))
+        if getattr(self, "_omit_custom_fieldsets", False):
+            return cleaned
+        schemas = self._custom_field_schemas()
+        if not schemas:
+            return cleaned
+        cf_names = [_CF_PREFIX + s.name for s in schemas]
+        cleaned.append(
+            (
+                _("Custom fields"),
+                {
+                    "fields": cf_names,
+                    "description": _(
+                        "Schema-driven fields from FieldSchema / kit fields.json "
+                        "(KD20)."
+                    ),
+                },
+            )
+        )
+        return cleaned
+
+    def save_model(self, request, obj, form, change):
+        """
+        Merge cf_* form values into ``custom_fields`` (KD20 / PR-060), then
+        save for every language so field auto-population runs for each.
+        """
+        schemas = self._custom_field_schemas()
+        if schemas and hasattr(obj, "custom_fields"):
+            data = dict(obj.custom_fields or {})
+            for schema in schemas:
+                key = _CF_PREFIX + schema.name
+                if key in form.cleaned_data:
+                    data[schema.name] = form.cleaned_data[key]
+            obj.custom_fields = data
+        super().save_model(request, obj, form, change)
+        if settings.USE_MODELTRANSLATION:
+            lang = get_language()
+            for code in OrderedDict(settings.LANGUAGES):
+                if code != lang:  # Already done
+                    try:
+                        activate(code)
+                    except Exception:  # noqa: BLE001
+                        pass
+                    else:
+                        obj.save()
+            activate(lang)
+
     def view_draft_view(self, request, object_id):
         """Issue an opaque preview token and redirect to ``?preview=``."""
         obj = get_object_or_404(self.model, pk=object_id)
@@ -249,24 +409,6 @@ class DisplayableAdmin(BaseTranslationModelAdmin):
         if False.
         """
         pass
-
-    def save_model(self, request, obj, form, change):
-        """
-        Save model for every language so that field auto-population
-        is done for every each of it.
-        """
-        super().save_model(request, obj, form, change)
-        if settings.USE_MODELTRANSLATION:
-            lang = get_language()
-            for code in OrderedDict(settings.LANGUAGES):
-                if code != lang:  # Already done
-                    try:
-                        activate(code)
-                    except:  # noqa
-                        pass
-                    else:
-                        obj.save()
-            activate(lang)
 
 
 class BaseDynamicInlineAdmin:
@@ -621,3 +763,21 @@ class MediaAdmin(admin.ModelAdmin):
     readonly_fields = ("created", "updated")
     fields = ("title", "file", "alt", "is_public", "created", "updated")
     change_list_template = "admin/core/media/change_list.html"
+
+
+@admin.register(FieldSchema)
+class FieldSchemaAdmin(admin.ModelAdmin):
+    """KD20 field definitions (PR-058). Values live on Displayable.custom_fields."""
+
+    list_display = (
+        "name",
+        "label",
+        "field_type",
+        "content_type",
+        "kit",
+        "required",
+        "order",
+    )
+    list_filter = ("field_type", "kit", "required", "content_type")
+    search_fields = ("name", "label", "kit")
+    ordering = ("order", "name")

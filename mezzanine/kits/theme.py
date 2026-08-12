@@ -225,6 +225,10 @@ def set_active_theme(
     """
     if not name:
         raise ThemeError("Theme name is required")
+    # KD21 / PR-061: every activation path checks KitRegistry first.
+    from mezzanine.kits.registry import assert_kit_activatable
+
+    assert_kit_activatable(name)
     meta = load_theme_meta(name)
     missing = missing_theme_plugins(meta)
     if missing:
@@ -244,6 +248,10 @@ def set_active_theme(
             )
         # Importable but not in INSTALLED_APPS — activate still records theme;
         # conf will append on next process boot via .nova-theme.
+    # KD20 / PR-059: validate fields.json before persisting ACTIVE_THEME.
+    from mezzanine.kits.loader import load_fields_json, sync_field_schemas
+
+    fields_data = load_fields_json(name)  # None if absent; KitError if invalid
     from mezzanine.conf import settings as msettings
     from mezzanine.conf.models import Setting
 
@@ -257,6 +265,8 @@ def set_active_theme(
         msettings._loaded = False
     write_nova_theme_marker(name, project_root=project_root)
     _active_theme_template_dir_for_site.cache_clear()
+    if fields_data is not None:
+        sync_field_schemas(name, fields_data=fields_data)
     return meta
 
 

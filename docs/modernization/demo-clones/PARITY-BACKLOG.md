@@ -132,8 +132,8 @@ NOVA_CMS_SRC=/path/to/mezzanine uv run --directory mezzanine \
 | B8 | `Setting` lacks unique `(site, name)`; duplicate rows possible | **Fixed** | PR-044: UniqueConstraint + seed lookup by site |
 | B9 | Flush does not clear BlogCategory / keywords | **Fixed** | PR-044: flush deletes cats + orphan keywords |
 | S1 | All posts same `publish_date` | **Fixed** | Seed staggers by day |
-| S5 | `BLOG_USE_FEATURED_IMAGE` default False hides thumbs | Open | Enable in clone projects |
-| S6 | Section pages not linked to `/blog/category/<slug>/` | Open | Dual IA until X2 |
+| S5 | `BLOG_USE_FEATURED_IMAGE` default False hides thumbs | **Fixed** | `kits/loader.py` auto-enables for blog kits; seed attaches placeholders (`test_seed_featured_images.py`) |
+| S6 | Section pages not linked to `/blog/category/<slug>/` | **Fixed** | Seed appends category-archive link on title match (`test_home_river.py::test_time_politics_section_links_category`) |
 
 ### Watch-agent deltas (explore subagents 2026-08-12)
 
@@ -144,7 +144,7 @@ Additional IDs from automated parity watchers (not full re-list of X/TC/TM/WH/HG
 | S2 | all | Blog not in page_menu (only URL include) | Med |
 | S3 | all | `primary_nav_label` unused by seed/chrome | Low |
 | S4 | all | `related_posts` never seeded | Med |
-| S7 | all | Kit index ignores `{% blog_recent_posts %}` | Med |
+| S7 | all | ~~Kit index ignores `{% blog_recent_posts %}`~~ **Fixed** — all 6 editorial kits include `recent_posts.html` (`test_home_river.py::test_kit_indexes_include_river`) | Med |
 | S8 | all | Search skips category/author/body JSON | Med |
 | TC7–TC9 | techcrunch | Orphan cats; newsletter not chrome; keywords unused | Med–Low |
 | TM6–TM8 | time | Empty cats; no Ideas template; generic homepage | Med–Low |
