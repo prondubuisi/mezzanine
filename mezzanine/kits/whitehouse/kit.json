@@ -1,0 +1,13 @@
+{
+  "name": "whitehouse",
+  "version": "0.1.0",
+  "nova_compat": ">=0.1,<2",
+  "types": [
+    "pages.RichTextPage",
+    "pages.Link",
+    "forms.Form",
+    "blog.BlogPost"
+  ],
+  "tokens": "static/whitehouse/tokens.css",
+  "description": "Official-style briefing/newsroom demo (IA inspired by whitehouse.gov)."
+}

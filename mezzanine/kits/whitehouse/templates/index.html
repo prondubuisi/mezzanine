@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% load i18n %}
+
+{% block meta_title %}{% trans "Home" %}{% endblock %}
+{% block title %}{% endblock %}
+
+{% block breadcrumb_menu %}
+<li class="active">{% trans "Home" %}</li>
+{% endblock %}
+
+{% block main %}
+<div class="wh-banner">
+  <h1>{% trans "The Briefing Room" %}</h1>
+  {% blocktrans %}
+  <p>Demo of an official-style communications site: releases, briefings,
+  presidential actions, and priorities — typed Django pages and news posts.
+  Unofficial IA inspired by whitehouse.gov. Not a government website.</p>
+  {% endblocktrans %}
+  <p style="margin-top:0.85rem">
+    <a href="/releases/">{% trans "Latest releases" %}</a>
+    ·
+    <a href="{% url 'blog_post_list' %}">{% trans "All news" %}</a>
+  </p>
+</div>
+
+<nav class="wh-grid" aria-label="{% trans 'Priorities' %}">
+  <a class="wh-card" href="/priorities/">
+    <strong>{% trans "Priorities" %}</strong>
+    <span>{% trans "Issue hubs" %}</span>
+  </a>
+  <a class="wh-card" href="/briefings/">
+    <strong>{% trans "Briefings" %}</strong>
+    <span>{% trans "Statements & notes" %}</span>
+  </a>
+  <a class="wh-card" href="/presidential-actions/">
+    <strong>{% trans "Actions" %}</strong>
+    <span>{% trans "Orders & memoranda" %}</span>
+  </a>
+  <a class="wh-card" href="/administration/">
+    <strong>{% trans "Administration" %}</strong>
+    <span>{% trans "Leadership" %}</span>
+  </a>
+  <a class="wh-card" href="/nominations/">
+    <strong>{% trans "Nominations" %}</strong>
+    <span>{% trans "Appointments" %}</span>
+  </a>
+  <a class="wh-card" href="/about/">
+    <strong>{% trans "About" %}</strong>
+    <span>{% trans "This demo" %}</span>
+  </a>
+</nav>
+
+{% include "includes/recent_posts.html" %}
+{% endblock %}

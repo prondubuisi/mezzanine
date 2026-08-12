@@ -74,3 +74,35 @@ def autodiscover():
             except:  # noqa
                 if module_has_submodule(module, "page_processors"):
                     raise
+    # Built-in processors (after app ones so apps can override by inserting first).
+    _register_builtin_processors()
+
+
+def _register_builtin_processors():
+    """Section landings: list BlogPosts when page slug matches a category."""
+    from django.conf import settings
+
+    from mezzanine.pages.models import RichTextPage
+
+    @processor_for(RichTextPage, exact_page=True)
+    def section_category_posts(request, page):
+        if "mezzanine.blog" not in settings.INSTALLED_APPS:
+            return {}
+        from mezzanine.blog.models import BlogCategory, BlogPost
+
+        leaf = (page.slug or "").rstrip("/").split("/")[-1]
+        cat = BlogCategory.objects.filter(slug=leaf).first()
+        if cat is None and page.title:
+            cat = BlogCategory.objects.filter(title__iexact=page.title).first()
+        if cat is None:
+            return {}
+        preview = getattr(request, "preview", None)
+        posts = (
+            BlogPost.objects.published(for_user=request.user, preview=preview)
+            .filter(categories=cat)
+            .select_related("user")[:30]
+        )
+        return {
+            "section_category": cat,
+            "section_posts": list(posts),
+        }

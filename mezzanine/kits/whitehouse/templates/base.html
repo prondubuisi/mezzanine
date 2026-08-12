@@ -1,0 +1,13 @@
+{% extends "kit_base.html" %}
+{% load i18n static %}
+
+{% block kit_tokens %}
+<link rel="stylesheet" href="{% static "whitehouse/tokens.css" %}">
+{% endblock %}
+
+{% block kit_primary_nav %}
+<li><a href="{% url 'blog_post_list' %}">{% trans "News" %}</a></li>
+<li><a href="/releases/">{% trans "Releases" %}</a></li>
+<li><a href="/briefings/">{% trans "Briefings" %}</a></li>
+<li><a href="/presidential-actions/">{% trans "Actions" %}</a></li>
+{% endblock %}
