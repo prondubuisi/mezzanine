@@ -297,8 +297,14 @@ class ContentSecurityPolicyMiddleware(MiddlewareMixin):
     The nonce is on ``request.csp_nonce`` for templates
     (``{{ request.csp_nonce }}``). Default policy is permissive enough for
     the Y1 admin / TinyMCE surface (``'unsafe-inline'`` on script and style).
-    Operators can replace the policy via ``CONTENT_SECURITY_POLICY``; use
-    ``{nonce}`` as a placeholder for this request's nonce.
+
+    Operators can:
+
+    * set ``CONTENT_SECURITY_POLICY`` (use ``{nonce}`` for the request nonce);
+    * set ``NOVA_CSP_STRICT=1`` for a nonce-based script policy without
+      ``'unsafe-inline'`` on scripts (templates must emit
+      ``nonce="{{ request.csp_nonce }}"`` on ``<script>`` tags — admin may
+      break until those are audited).
     """
 
     DEFAULT_POLICY = (
@@ -313,6 +319,21 @@ class ContentSecurityPolicyMiddleware(MiddlewareMixin):
         "frame-ancestors 'self'"
     )
 
+    # Y1.5 hardened baseline — scripts require nonce; styles stay looser
+    # because Django admin still injects large inline style blocks.
+    STRICT_POLICY = (
+        "default-src 'self'; "
+        "script-src 'self' 'nonce-{nonce}'; "
+        "style-src 'self' 'unsafe-inline'; "
+        "img-src 'self' data: https:; "
+        "font-src 'self' data:; "
+        "connect-src 'self'; "
+        "object-src 'none'; "
+        "base-uri 'self'; "
+        "frame-ancestors 'self'; "
+        "form-action 'self'"
+    )
+
     def process_request(self, request):
         request.csp_nonce = secrets.token_urlsafe(16)
 
@@ -322,7 +343,13 @@ class ContentSecurityPolicyMiddleware(MiddlewareMixin):
         nonce = getattr(request, "csp_nonce", None) or secrets.token_urlsafe(16)
         policy = getattr(settings, "CONTENT_SECURITY_POLICY", None)
         if not policy:
-            policy = self.DEFAULT_POLICY
+            import os
+
+            strict = getattr(settings, "NOVA_CSP_STRICT", False)
+            if not strict:
+                env = os.environ.get("NOVA_CSP_STRICT", "").strip().lower()
+                strict = env in ("1", "true", "yes", "on")
+            policy = self.STRICT_POLICY if strict else self.DEFAULT_POLICY
         response["Content-Security-Policy"] = policy.replace("{nonce}", nonce)
         return response
 

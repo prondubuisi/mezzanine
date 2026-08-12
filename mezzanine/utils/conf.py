@@ -201,6 +201,12 @@ def set_dynamic_settings(s):
     except ValueError:
         pass
 
+    # PR-023b: optional staff TOTP when NOVA_STAFF_2FA is set and django-otp
+    # is importable. Off by default; pytest never enables this unless a test
+    # opts in. Device enrollment should happen before enabling the flag in
+    # production (see mezzanine.core.staff_2fa).
+    _wire_staff_2fa(s, append=append)
+
     # Remove caching middleware if no backend defined.
     if not (s.get("CACHE_BACKEND") or s.get("CACHES")):
         s["MIDDLEWARE"] = [
@@ -248,6 +254,50 @@ def set_dynamic_settings(s):
         elif shortname == "mysql":
             # Required MySQL collation for tests.
             db.setdefault("TEST", {}).setdefault("COLLATION", "utf8_general_ci")
+
+
+def _wire_staff_2fa(s, append):
+    """Install django-otp apps + middleware when staff 2FA is requested."""
+    import os
+
+    env = os.environ.get("NOVA_STAFF_2FA", "").strip().lower()
+    if env in ("0", "false", "no", "off"):
+        flag = False
+    elif env in ("1", "true", "yes", "on"):
+        flag = True
+    else:
+        flag = bool(s.get("NOVA_STAFF_2FA", False))
+    s["NOVA_STAFF_2FA"] = flag
+    if not flag:
+        return
+    try:
+        import django_otp  # noqa: F401
+    except ImportError:
+        # Defer hard fail to checks / first admin hit so settings still load
+        # in documentation builds. ImproperlyConfigured at runtime via checks.
+        s["NOVA_STAFF_2FA_MISSING_PKG"] = True
+        return
+    s["NOVA_STAFF_2FA_MISSING_PKG"] = False
+    for app in (
+        "django_otp",
+        "django_otp.plugins.otp_totp",
+        "django_otp.plugins.otp_static",
+    ):
+        append("INSTALLED_APPS", app)
+    otp_mw = "django_otp.middleware.OTPMiddleware"
+    # After AuthenticationMiddleware.
+    mw = list(s.get("MIDDLEWARE", []))
+    if otp_mw not in mw:
+        try:
+            idx = next(
+                i
+                for i, m in enumerate(mw)
+                if m.endswith("AuthenticationMiddleware")
+            )
+            mw.insert(idx + 1, otp_mw)
+        except StopIteration:
+            mw.append(otp_mw)
+        s["MIDDLEWARE"] = mw
 
 
 def real_project_name(project_name):
