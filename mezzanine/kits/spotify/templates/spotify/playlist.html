@@ -1,0 +1,24 @@
+{% extends "spotify/shell.html" %}
+{% load i18n %}
+
+{% block title %}{{ playlist.title }} · {{ site_name }}{% endblock %}
+
+{% block content %}
+<header class="sp-detail-head">
+  <div class="sp-cover sp-cover-lg cover-{{ playlist.cover }}"></div>
+  <div>
+    <div class="sp-kicker">{% trans "Playlist" %}</div>
+    <h1>{{ playlist.title }}</h1>
+    <p class="sp-lede">{{ playlist.description }}</p>
+    <p class="sp-meta">{{ playlist.owner }} · {{ playlist.tracks|length }} {% trans "songs" %}</p>
+    <button type="button" class="sp-btn-play"
+      data-play-title="{{ playlist.tracks.0.title }}"
+      data-play-artist="{{ playlist.tracks.0.artist.name }}"
+      data-play-duration="{{ playlist.tracks.0.duration }}"
+      data-play-cover="{{ playlist.tracks.0.cover }}">
+      {% trans "Play" %}
+    </button>
+  </div>
+</header>
+{% include "spotify/includes/track_table.html" with tracks=playlist.tracks %}
+{% endblock %}

@@ -1,0 +1,49 @@
+{% extends "spotify/shell.html" %}
+{% load i18n %}
+
+{% block title %}{% trans "Your Library" %} · {{ site_name }}{% endblock %}
+
+{% block content %}
+<section class="sp-hero sp-hero-compact">
+  <h1>{% trans "Your Library" %}</h1>
+</section>
+
+<section class="sp-shelf">
+  <h2>{% trans "Playlists" %}</h2>
+  <div class="sp-grid">
+    {% for pl in playlists %}
+    <a class="sp-card" href="{% url 'spotify_playlist' pl.id %}">
+      <div class="sp-cover cover-{{ pl.cover }}"></div>
+      <div class="sp-card-title">{{ pl.title }}</div>
+      <div class="sp-card-sub">{{ pl.owner }} · {{ pl.track_ids|length }} {% trans "songs" %}</div>
+    </a>
+    {% endfor %}
+  </div>
+</section>
+
+<section class="sp-shelf">
+  <h2>{% trans "Artists" %}</h2>
+  <div class="sp-grid">
+    {% for ar in artists %}
+    <a class="sp-card sp-card-round" href="{% url 'spotify_artist' ar.id %}">
+      <div class="sp-cover cover-{{ ar.cover }} sp-cover-round"></div>
+      <div class="sp-card-title">{{ ar.name }}</div>
+      <div class="sp-card-sub">{{ ar.monthly_listeners }} {% trans "monthly listeners" %}</div>
+    </a>
+    {% endfor %}
+  </div>
+</section>
+
+<section class="sp-shelf">
+  <h2>{% trans "Albums" %}</h2>
+  <div class="sp-grid">
+    {% for al in albums %}
+    <a class="sp-card" href="{% url 'spotify_album' al.id %}">
+      <div class="sp-cover cover-{{ al.cover }}"></div>
+      <div class="sp-card-title">{{ al.title }}</div>
+      <div class="sp-card-sub">{{ al.artist.name }}</div>
+    </a>
+    {% endfor %}
+  </div>
+</section>
+{% endblock %}

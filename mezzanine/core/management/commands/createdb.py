@@ -120,8 +120,8 @@ class Command(BaseCommand):
         kit_apps = (
             (
                 "mezzanine.kits.spotify",
-                "Spotify Newsroom–style",
-                "Company/product/culture newsroom (seed_site_clone).",
+                "Spotify Web Player–style",
+                "Music UI demo (catalog data; no seed required).",
             ),
             (
                 "mezzanine.kits.whitehouse",

@@ -144,6 +144,15 @@ def kit_seed_profile(meta: dict) -> str | None:
     return seed or None
 
 
+def kit_urlconf(meta: dict) -> str | None:
+    """Optional dotted urlpatterns module mounted at site root."""
+    urlconf = meta.get("urlconf")
+    if urlconf is None:
+        return None
+    urlconf = str(urlconf).strip()
+    return urlconf or None
+
+
 def apply_kit(name: str, project_dir: str | Path, project_app: str) -> dict:
     """
     Overlay a kit onto a project written by nova-project.
@@ -160,6 +169,7 @@ def apply_kit(name: str, project_dir: str | Path, project_app: str) -> dict:
     # Settings first so a rewrite failure does not leave kit templates alone.
     # First-party kits always rewrite apps; blog is derived from kit.json types.
     _apply_kit_settings(project_app_dir, name, with_blog=kit_wants_blog(meta))
+    _apply_kit_urls(project_app_dir, meta)
 
     templates_dest = project_dir / "templates"
     if templates_dest.exists():
@@ -282,3 +292,51 @@ def _apply_kit_settings(
 def _apply_brochure_settings(project_app_dir: Path) -> None:
     """Backward-compatible alias for tests."""
     _apply_kit_settings(project_app_dir, "brochure", with_blog=False)
+
+
+def _apply_kit_urls(project_app_dir: Path, meta: dict) -> None:
+    """
+    Mount kit urlconf at site root when kit.json declares ``urlconf``.
+
+    Replaces the default static ``index.html`` homepage pattern so player /
+    app kits own ``/`` without fighting mezzanine.pages catch-all ordering.
+    """
+    urlconf = kit_urlconf(meta)
+    if not urlconf:
+        return
+    if not re.fullmatch(r"[\w.]+", urlconf):
+        raise KitError("Invalid kit urlconf %r" % urlconf)
+    urls_path = project_app_dir / "urls.py"
+    if not urls_path.is_file():
+        raise KitError("Project urls.py missing; cannot mount kit urlconf")
+    text = urls_path.read_text(encoding="utf-8")
+    if urlconf in text and "include(\"%s\")" % urlconf in text:
+        return
+    # Strip any prior kit homepage include we may have written.
+    text = re.sub(
+        r'\n?\s*path\(""\s*,\s*include\("[^"]+"\)\),\s*'
+        r"# kit urlconf \(nova\)\n",
+        "\n",
+        text,
+    )
+    home_static = (
+        'path("", TemplateView.as_view(template_name="index.html"), name="home"),'
+    )
+    kit_home = (
+        'path("", include("%s")),  # kit urlconf (nova)' % urlconf
+    )
+    if home_static in text:
+        text = text.replace(home_static, kit_home, 1)
+    else:
+        # Insert before mezzanine.urls include.
+        needle = 'path("", include("mezzanine.urls")),'
+        if needle not in text:
+            raise KitError("Could not mount kit urlconf in urls.py")
+        text = text.replace(needle, kit_home + "\n    " + needle, 1)
+    if "include" not in text.split("from django.urls import", 1)[-1].split("\n", 1)[0]:
+        text = text.replace(
+            "from django.urls import path",
+            "from django.urls import include, path",
+            1,
+        )
+    urls_path.write_text(text, encoding="utf-8")

@@ -1,0 +1,45 @@
+{% extends "spotify/shell.html" %}
+{% load i18n %}
+
+{% block title %}{{ artist.name }} · {{ site_name }}{% endblock %}
+
+{% block content %}
+<header class="sp-detail-head sp-detail-artist">
+  <div class="sp-cover sp-cover-lg sp-cover-round cover-{{ artist.cover }}"></div>
+  <div>
+    <div class="sp-kicker">{% trans "Artist" %}</div>
+    <h1>{{ artist.name }}</h1>
+    <p class="sp-lede">{{ artist.bio }}</p>
+    <p class="sp-meta">{{ artist.monthly_listeners }} {% trans "monthly listeners" %}</p>
+    {% if artist.tracks %}
+    <button type="button" class="sp-btn-play"
+      data-play-title="{{ artist.tracks.0.title }}"
+      data-play-artist="{{ artist.name }}"
+      data-play-duration="{{ artist.tracks.0.duration }}"
+      data-play-cover="{{ artist.tracks.0.cover }}">
+      {% trans "Play" %}
+    </button>
+    {% endif %}
+  </div>
+</header>
+
+<section class="sp-shelf">
+  <h2>{% trans "Popular" %}</h2>
+  {% include "spotify/includes/track_table.html" with tracks=artist.tracks %}
+</section>
+
+{% if artist.albums %}
+<section class="sp-shelf">
+  <h2>{% trans "Discography" %}</h2>
+  <div class="sp-grid">
+    {% for al in artist.albums %}
+    <a class="sp-card" href="{% url 'spotify_album' al.id %}">
+      <div class="sp-cover cover-{{ al.cover }}"></div>
+      <div class="sp-card-title">{{ al.title }}</div>
+      <div class="sp-card-sub">{{ al.year }} · {{ al.type }}</div>
+    </a>
+    {% endfor %}
+  </div>
+</section>
+{% endif %}
+{% endblock %}

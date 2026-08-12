@@ -31,7 +31,8 @@ class Command(BaseCommand):
             default=None,
             help=(
                 "Site kit to install after the project is written "
-                "(e.g. brochure, magazine, institute, wporg, whitehouse, spotify)."
+                "(e.g. brochure, magazine, institute, wporg, whitehouse, "
+                "spotify [web player UI])."
             ),
         )
 

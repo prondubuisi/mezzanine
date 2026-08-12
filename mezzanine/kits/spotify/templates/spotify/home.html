@@ -1,0 +1,62 @@
+{% extends "spotify/shell.html" %}
+{% load i18n %}
+
+{% block title %}{{ greeting }} · {{ site_name }}{% endblock %}
+
+{% block content %}
+<section class="sp-hero">
+  <h1>{{ greeting }}</h1>
+  <p class="sp-lede">{% trans "Made for you — demo shelves with sample playlists and albums." %}</p>
+</section>
+
+<section class="sp-shelf" aria-label="{% trans 'Playlists' %}">
+  <div class="sp-shelf-head">
+    <h2>{% trans "Made for you" %}</h2>
+    <a href="{% url 'spotify_library' %}">{% trans "Show all" %}</a>
+  </div>
+  <div class="sp-grid">
+    {% for pl in playlists %}
+    <a class="sp-card" href="{% url 'spotify_playlist' pl.id %}">
+      <div class="sp-cover cover-{{ pl.cover }}"></div>
+      <div class="sp-card-title">{{ pl.title }}</div>
+      <div class="sp-card-sub">{{ pl.description }}</div>
+    </a>
+    {% endfor %}
+  </div>
+</section>
+
+<section class="sp-shelf" aria-label="{% trans 'Albums' %}">
+  <div class="sp-shelf-head">
+    <h2>{% trans "Popular albums" %}</h2>
+  </div>
+  <div class="sp-grid">
+    {% for al in albums %}
+    <a class="sp-card" href="{% url 'spotify_album' al.id %}">
+      <div class="sp-cover cover-{{ al.cover }}"></div>
+      <div class="sp-card-title">{{ al.title }}</div>
+      <div class="sp-card-sub">
+        <span href="{% url 'spotify_artist' al.artist.id %}">{{ al.artist.name }}</span>
+      </div>
+    </a>
+    {% endfor %}
+  </div>
+</section>
+
+<section class="sp-shelf" aria-label="{% trans 'Jump back in' %}">
+  <div class="sp-shelf-head">
+    <h2>{% trans "Jump back in" %}</h2>
+  </div>
+  <div class="sp-quick">
+    {% for t in recent %}
+    <button type="button" class="sp-quick-item"
+      data-play-title="{{ t.title }}"
+      data-play-artist="{{ t.artist.name }}"
+      data-play-duration="{{ t.duration }}"
+      data-play-cover="{{ t.cover }}">
+      <div class="sp-cover sp-cover-sm cover-{{ t.cover }}"></div>
+      <span>{{ t.title }}</span>
+    </button>
+    {% endfor %}
+  </div>
+</section>
+{% endblock %}
