@@ -88,10 +88,12 @@ class Command(BaseCommand):
 
             Setting.objects.update_or_create(
                 name="SITE_TITLE",
+                site_id=site.id,
                 defaults={"value": profile["site_name"][:50]},
             )
             Setting.objects.update_or_create(
                 name="SITE_TAGLINE",
+                site_id=site.id,
                 defaults={"value": profile.get("tagline", "")[:100]},
             )
             # Clear conf cache so next request sees new titles.
@@ -103,14 +105,18 @@ class Command(BaseCommand):
             pass
 
         if options["flush"]:
-            self.stdout.write("Flushing pages/posts/forms…")
+            self.stdout.write("Flushing pages/posts/forms/categories…")
             RichTextPage.objects.all().delete()
             if "mezzanine.blog" in settings.INSTALLED_APPS:
-                from mezzanine.blog.models import BlogPost
+                from mezzanine.blog.models import BlogCategory, BlogPost
 
                 BlogPost.objects.all().delete()
+                # B4/B9: categories and keyword assignments left behind when
+                # switching profiles (posts deleted, cats/keywords kept).
+                BlogCategory.objects.all().delete()
             if "mezzanine.forms" in settings.INSTALLED_APPS:
                 Form.objects.all().delete()
+            self._flush_orphan_keywords()
 
         self.stdout.write(
             self.style.NOTICE(
@@ -254,3 +260,26 @@ class Command(BaseCommand):
         self.stdout.write("Parity notes for later:")
         for note in profile.get("notes", []):
             self.stdout.write(f"  - {note}")
+
+    def _flush_orphan_keywords(self):
+        """Drop AssignedKeyword rows and Keyword tags with no assignments (B9)."""
+        if "mezzanine.generic" not in settings.INSTALLED_APPS:
+            return
+        from django.contrib.contenttypes.models import ContentType
+
+        from mezzanine.generic.models import AssignedKeyword, Keyword
+
+        # Generic FKs are not cascade-deleted when posts/pages go away.
+        for model_label in (
+            "pages.richtextpage",
+            "pages.page",
+            "blog.blogpost",
+            "forms.form",
+        ):
+            try:
+                app_label, model = model_label.split(".")
+                ct = ContentType.objects.get(app_label=app_label, model=model)
+            except ContentType.DoesNotExist:
+                continue
+            AssignedKeyword.objects.filter(content_type=ct).delete()
+        Keyword.objects.filter(assignments__isnull=True).delete()

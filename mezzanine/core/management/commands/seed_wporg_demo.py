@@ -60,14 +60,35 @@ class Command(BaseCommand):
             Site.objects.filter(id=site.id).update(name="Open Publish")
 
         if options["flush"]:
-            self.stdout.write("Flushing pages and posts for current site…")
+            self.stdout.write("Flushing pages, posts, and categories…")
             RichTextPage.objects.all().delete()
             if "mezzanine.blog" in settings.INSTALLED_APPS:
-                from mezzanine.blog.models import BlogPost
+                from mezzanine.blog.models import BlogCategory, BlogPost
 
                 BlogPost.objects.all().delete()
+                BlogCategory.objects.all().delete()
             if "mezzanine.forms" in settings.INSTALLED_APPS:
                 Form.objects.all().delete()
+            if "mezzanine.generic" in settings.INSTALLED_APPS:
+                from django.contrib.contenttypes.models import ContentType
+
+                from mezzanine.generic.models import AssignedKeyword, Keyword
+
+                for model_label in (
+                    "pages.richtextpage",
+                    "pages.page",
+                    "blog.blogpost",
+                    "forms.form",
+                ):
+                    try:
+                        app_label, model = model_label.split(".")
+                        ct = ContentType.objects.get(
+                            app_label=app_label, model=model
+                        )
+                    except ContentType.DoesNotExist:
+                        continue
+                    AssignedKeyword.objects.filter(content_type=ct).delete()
+                Keyword.objects.filter(assignments__isnull=True).delete()
 
         pages = [
             (

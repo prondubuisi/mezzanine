@@ -125,12 +125,12 @@ NOVA_CMS_SRC=/path/to/mezzanine uv run --directory mezzanine \
 | B1 | Multi-line `{# #}` template comments leak to HTML | **Fixed** | PR #22; single-line only |
 | B2 | Project names cannot contain hyphens in `nova-project` | Open | Use `openpublish` not `openpublish-demo` |
 | B3 | `just up` background session can die when agent tool times out | Open | Operators should run compose detached in their terminal |
-| B4 | Seed may leave orphan categories on `--flush` (categories not deleted) | Open | Flush only posts/pages/forms |
+| B4 | Seed may leave orphan categories on `--flush` (categories not deleted) | **Fixed** | PR-044: flush deletes BlogCategory |
 | B5 | Site name / SITE_TITLE | **Mitigated** | Seed now writes `Setting` SITE_TITLE/TAGLINE; project settings.py may still win |
 | B6 | makemigrations noise in compose logs for dirty model state | Open | Cosmetic in demo containers |
 | B7 | Re-seed without `--flush` did not update HTML (`body` JSON overwrote content) | **Fixed** | Seed sets `body=body_from_html(html)` |
-| B8 | `Setting` lacks unique `(site, name)`; duplicate rows possible | Open | Conf may ignore DB when settings.py defines same key |
-| B9 | Flush does not clear BlogCategory / keywords | Open | Orphans when switching profiles |
+| B8 | `Setting` lacks unique `(site, name)`; duplicate rows possible | **Fixed** | PR-044: UniqueConstraint + seed lookup by site |
+| B9 | Flush does not clear BlogCategory / keywords | **Fixed** | PR-044: flush deletes cats + orphan keywords |
 | S1 | All posts same `publish_date` | **Fixed** | Seed staggers by day |
 | S5 | `BLOG_USE_FEATURED_IMAGE` default False hides thumbs | Open | Enable in clone projects |
 | S6 | Section pages not linked to `/blog/category/<slug>/` | Open | Dual IA until X2 |
