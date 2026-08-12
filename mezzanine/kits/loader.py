@@ -327,12 +327,17 @@ def _apply_kit_settings(
             "STATICFILES_DIRS = [os.path.join(PROJECT_ROOT, \"static\")]",
             1,
         )
-    # Editorial kits: comments stay off for marketing / newsroom parity.
+    # Editorial kits: comments off; featured images on for seed thumbs.
     if with_blog and "COMMENTS_DEFAULT_APPROVED" not in new_text:
         new_text += (
             f"\n# {kit_name.capitalize()} kit: comments off by default.\n"
             "COMMENTS_DEFAULT_APPROVED = False\n"
             "COMMENTS_ACCOUNT_REQUIRED = True\n"
+        )
+    if with_blog and "BLOG_USE_FEATURED_IMAGE" not in new_text:
+        new_text += (
+            "\n# Show featured images from seed / admin on list + detail.\n"
+            "BLOG_USE_FEATURED_IMAGE = True\n"
         )
     settings_path.write_text(new_text, encoding="utf-8")
 

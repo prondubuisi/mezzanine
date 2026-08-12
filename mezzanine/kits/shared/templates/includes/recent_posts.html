@@ -7,11 +7,20 @@
   <h2>{% trans "Latest" %}</h2>
   <ul>
   {% for post in recent_posts %}
-    <li>
-      <a href="{{ post.get_absolute_url }}"><strong>{{ post.title }}</strong></a>
-      {% if post.publish_date %}
-      <div class="meta">{{ post.publish_date }}</div>
+    <li class="nova-river-item"{% if settings.BLOG_USE_FEATURED_IMAGE and post.featured_image %} style="display:flex;gap:0.75rem;align-items:flex-start"{% endif %}>
+      {% if settings.BLOG_USE_FEATURED_IMAGE and post.featured_image %}
+      <a href="{{ post.get_absolute_url }}" class="nova-river-thumb" aria-hidden="true">
+        <img src="{{ MEDIA_URL }}{% thumbnail post.featured_image 72 72 %}"
+          alt="" width="72" height="72"
+          style="width:72px;height:72px;object-fit:cover;border-radius:var(--nova-radius,4px);border:1px solid var(--nova-line,#e5e7eb)">
+      </a>
       {% endif %}
+      <div>
+        <a href="{{ post.get_absolute_url }}"><strong>{{ post.title }}</strong></a>
+        {% if post.publish_date %}
+        <div class="meta">{{ post.publish_date }}</div>
+        {% endif %}
+      </div>
     </li>
   {% endfor %}
   </ul>
