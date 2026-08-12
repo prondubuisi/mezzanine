@@ -149,6 +149,19 @@ def models_for_pages(*args):
     return PageAdmin.get_content_models()
 
 
+def _object_perms(request, opts):
+    """
+    Django add/change/delete model permissions for *opts*, as a dict.
+
+    Shared by ``set_model_permissions`` and ``set_page_permissions``.
+    """
+    perm_name = opts.app_label + ".%s_" + opts.object_name.lower()
+    return {
+        perm_type: request.user.has_perm(perm_name % perm_type)
+        for perm_type in ("add", "change", "delete")
+    }
+
+
 @register.render_tag
 def set_model_permissions(context, token):
     """
@@ -159,12 +172,8 @@ def set_model_permissions(context, token):
     checks for the navigation tree.
     """
     model = context[token.split_contents()[1]]
-    opts = model._meta
-    perm_name = opts.app_label + ".%s_" + opts.object_name.lower()
     request = context["request"]
-    setattr(model, "perms", {})
-    for perm_type in ("add", "change", "delete"):
-        model.perms[perm_type] = request.user.has_perm(perm_name % perm_type)
+    setattr(model, "perms", _object_perms(request, model._meta))
     return ""
 
 
@@ -198,11 +207,10 @@ def set_page_permissions(context, token):
             )
             obj = model.__class__.__name__
         raise ImproperlyConfigured(error + " '%s'" % obj)
-    perm_name = opts.app_label + ".%s_" + opts.object_name.lower()
     request = context["request"]
-    setattr(page, "perms", {})
-    for perm_type in ("add", "change", "delete"):
-        perm = request.user.has_perm(perm_name % perm_type)
-        perm = perm and getattr(model, "can_%s" % perm_type)(request)
-        page.perms[perm_type] = perm
+    perms = _object_perms(request, opts)
+    page.perms = {
+        perm_type: perm and getattr(model, "can_%s" % perm_type)(request)
+        for perm_type, perm in perms.items()
+    }
     return ""

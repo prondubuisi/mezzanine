@@ -1,4 +1,3 @@
-from copy import deepcopy
 from csv import writer
 from datetime import datetime
 from io import BytesIO, StringIO
@@ -15,7 +14,7 @@ from django.utils.translation import gettext_lazy as _
 from django.utils.translation import ngettext
 
 from mezzanine.conf import settings
-from mezzanine.core.admin import TabularDynamicInlineAdmin
+from mezzanine.core.admin import TabularDynamicInlineAdmin, extend_fieldsets
 from mezzanine.core.forms import DynamicInlineAdminForm
 from mezzanine.forms.forms import EntriesForm
 from mezzanine.forms.models import Field, FieldEntry, Form, FormEntry
@@ -27,23 +26,26 @@ from mezzanine.utils.urls import admin_url, slugify
 fs = FileSystemStorage(location=settings.FORMS_UPLOAD_ROOT)
 
 # Copy the fieldsets for PageAdmin and add the extra fields for FormAdmin.
-form_fieldsets = deepcopy(PageAdmin.fieldsets)
-form_fieldsets[0][1]["fields"][3:0] = ["content", "button_text", "response"]
-form_fieldsets = list(form_fieldsets)
-form_fieldsets.insert(
-    1,
-    (
-        _("Email"),
-        {
-            "fields": (
-                "send_email",
-                "email_from",
-                "email_copies",
-                "email_subject",
-                "email_message",
-            )
-        },
-    ),
+form_fieldsets = extend_fieldsets(
+    PageAdmin.fieldsets,
+    [
+        (3, ["content", "button_text", "response"]),
+        (
+            1,
+            (
+                _("Email"),
+                {
+                    "fields": (
+                        "send_email",
+                        "email_from",
+                        "email_copies",
+                        "email_subject",
+                        "email_message",
+                    )
+                },
+            ),
+        ),
+    ],
 )
 
 inline_field_excludes = []

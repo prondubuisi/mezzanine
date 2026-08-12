@@ -10,16 +10,18 @@ from mezzanine.core.admin import (
     ContentTypedAdmin,
     DisplayableAdmin,
     DisplayableAdminForm,
+    extend_fieldsets,
 )
 from mezzanine.pages.models import Link, Page, RichTextPage
 from mezzanine.utils.urls import clean_slashes
 
 # Add extra fields for pages to the Displayable fields.
 # We only add the menu field if PAGE_MENU_TEMPLATES has values.
-page_fieldsets = deepcopy(DisplayableAdmin.fieldsets)
+_page_insertions = []
 if settings.PAGE_MENU_TEMPLATES:
-    page_fieldsets[0][1]["fields"] += ("in_menus",)
-page_fieldsets[0][1]["fields"] += ("login_required",)
+    _page_insertions.append("in_menus")
+_page_insertions.append("login_required")
+page_fieldsets = extend_fieldsets(DisplayableAdmin.fieldsets, _page_insertions)
 
 
 class PageAdminForm(DisplayableAdminForm):
