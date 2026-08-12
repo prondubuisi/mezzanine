@@ -36,6 +36,60 @@ class ThemeError(KitError):
     """Theme package missing or invalid."""
 
 
+# Theme customizer color values (DESIGN.md Amendment 3 S1 / PR-045).
+# Only hex CSS colors are accepted — never free-form strings into |safe CSS.
+_HEX_COLOR_RE = re.compile(
+    r"^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$"
+)
+_CSS_COLOR_KEYWORDS = frozenset(
+    {
+        "transparent",
+        "currentcolor",
+        "black",
+        "white",
+        "red",
+        "green",
+        "blue",
+        "yellow",
+        "orange",
+        "purple",
+        "gray",
+        "grey",
+        "silver",
+        "navy",
+        "teal",
+        "maroon",
+        "olive",
+        "lime",
+        "aqua",
+        "fuchsia",
+    }
+)
+
+
+def normalize_theme_color(value: str | None) -> str | None:
+    """
+    Return a safe CSS color string, empty string to clear, or None if invalid.
+
+    Accepts ``#rgb`` / ``#rrggbb`` / ``#rgba`` / ``#rrggbbaa`` (case-insensitive)
+    and a small fixed keyword allowlist. Rejects everything else so values
+    never become a stored-XSS vector via ``theme_customizer_css``.
+    """
+    if value is None:
+        return None
+    val = str(value).strip()
+    if not val:
+        return ""
+    if len(val) > 64:
+        return None
+    if _HEX_COLOR_RE.match(val):
+        return val.lower()
+    lower = val.lower()
+    if lower in _CSS_COLOR_KEYWORDS:
+        return lower
+    return None
+
+
 def kits_root() -> Path:
     return Path(mezzanine.__path__[0]) / "kits"
 
@@ -321,9 +375,9 @@ def get_theme_colors() -> dict[str, str]:
         }
         for key, setting_name in mapping.items():
             val = getattr(msettings, setting_name, "") or ""
-            val = str(val).strip()
-            if val:
-                colors[key] = val
+            safe = normalize_theme_color(str(val).strip())
+            if safe:
+                colors[key] = safe
     except Exception:  # noqa: BLE001
         pass
     return colors
@@ -339,7 +393,12 @@ def get_theme_logo_url() -> str:
 
 
 def theme_customizer_css() -> str:
-    """Inline CSS variable overrides for active theme colors."""
+    """
+    Inline CSS variable overrides for active theme colors.
+
+    Only normalized (hex/keyword) colors are emitted — defense in depth
+    for values that may predate PR-045 validation (S1).
+    """
     colors = get_theme_colors()
     if not colors:
         return ""
@@ -356,16 +415,21 @@ def theme_customizer_css() -> str:
         "sp_surface": "--sp-surface",
     }
     lines = []
+    safe_colors: dict[str, str] = {}
+    for key, raw in colors.items():
+        safe = normalize_theme_color(raw)
+        if safe:
+            safe_colors[key] = safe
     for key, css_var in var_map.items():
-        if key in colors:
-            lines.append("%s: %s;" % (css_var, colors[key]))
+        if key in safe_colors:
+            lines.append("%s: %s;" % (css_var, safe_colors[key]))
     # Also mirror accent/ink onto Spotify vars when present.
-    if "accent" in colors and "sp_accent" not in colors:
-        lines.append("--sp-accent: %s;" % colors["accent"])
-    if "ink" in colors and "sp_surface" not in colors:
-        lines.append("--sp-surface: %s;" % colors["ink"])
-    if "canvas" in colors and "sp_bg" not in colors:
-        lines.append("--sp-bg: %s;" % colors["canvas"])
+    if "accent" in safe_colors and "sp_accent" not in safe_colors:
+        lines.append("--sp-accent: %s;" % safe_colors["accent"])
+    if "ink" in safe_colors and "sp_surface" not in safe_colors:
+        lines.append("--sp-surface: %s;" % safe_colors["ink"])
+    if "canvas" in safe_colors and "sp_bg" not in safe_colors:
+        lines.append("--sp-bg: %s;" % safe_colors["canvas"])
     if not lines:
         return ""
     return ":root {\n  " + "\n  ".join(lines) + "\n}\n"
@@ -391,10 +455,13 @@ def set_theme_customizer(
         for key, setting_name in color_settings.items():
             if key not in colors:
                 continue
-            val = str(colors[key] or "").strip()
-            if val:
+            safe = normalize_theme_color(colors[key])
+            if safe is None:
+                # Reject invalid (e.g. XSS payloads); leave prior value alone.
+                continue
+            if safe:
                 Setting.objects.update_or_create(
-                    name=setting_name, defaults={"value": val[:64]}
+                    name=setting_name, defaults={"value": safe}
                 )
             else:
                 Setting.objects.filter(name=setting_name).delete()
