@@ -737,6 +737,8 @@ PREVIEW_ROLE_CHOICES = (
     (PREVIEW_ROLE_ANON, "anon"),
     (PREVIEW_ROLE_STAFF, "staff"),
 )
+# Query-param name for opaque preview tokens (reader + admin issuer).
+PREVIEW_TOKEN_PARAM = "preview"
 
 
 class PreviewToken(models.Model):
@@ -802,7 +804,9 @@ class PreviewToken(models.Model):
         Persist a sha256 of a fresh token and return the raw secret once.
         """
         if as_role not in (PREVIEW_ROLE_ANON, PREVIEW_ROLE_STAFF):
-            raise ValueError("as_role must be 'anon' or 'staff'")
+            raise ValueError(
+                f"as_role must be {PREVIEW_ROLE_ANON!r} or {PREVIEW_ROLE_STAFF!r}"
+            )
         raw = secrets.token_urlsafe(32)
         if expires_at is None:
             expires_at = now() + timedelta(seconds=settings.PREVIEW_TOKEN_TTL_SECONDS)

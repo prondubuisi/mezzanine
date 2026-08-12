@@ -1,5 +1,6 @@
 from mezzanine import template
 from mezzanine.generic.forms import RatingForm
+from mezzanine.generic.models import RATING_COOKIE_NAME
 
 register = template.Library()
 
@@ -12,7 +13,7 @@ def rating_for(context, obj):
     """
     context["rating_object"] = context["rating_obj"] = obj
     context["rating_form"] = RatingForm(context["request"], obj)
-    ratings = context["request"].COOKIES.get("mezzanine-rating", "")
+    ratings = context["request"].COOKIES.get(RATING_COOKIE_NAME, "")
     rating_string = f"{obj._meta}.{obj.pk}"
     context["rated"] = rating_string in ratings
     rating_name = obj.get_ratingfield_name()

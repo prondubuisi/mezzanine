@@ -29,6 +29,7 @@ from mezzanine.core.management.commands.createdb import (
 )
 from mezzanine.core.models import (
     PREVIEW_ROLE_STAFF,
+    PREVIEW_TOKEN_PARAM,
     PreviewToken,
     SiteRole,
 )
@@ -137,7 +138,7 @@ class PreviewTokenMiddleware(MiddlewareMixin):
     """
 
     def process_request(self, request):
-        raw = request.GET.get("preview")
+        raw = request.GET.get(PREVIEW_TOKEN_PARAM)
         if not raw:
             return None
         token = PreviewToken.lookup(raw)

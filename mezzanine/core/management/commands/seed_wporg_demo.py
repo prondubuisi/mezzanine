@@ -22,6 +22,7 @@ from django.utils import timezone
 
 from mezzanine.core.models import CONTENT_STATUS_PUBLISHED
 from mezzanine.forms import fields as form_fields
+from mezzanine.utils.seed import DEFAULT_SUPERUSER_USERNAME
 from mezzanine.utils.sites import current_site_id
 
 
@@ -40,8 +41,11 @@ class Command(BaseCommand):
         parser.add_argument(
             "--user",
             dest="username",
-            default="admin",
-            help="Author username for blog posts (default: admin).",
+            default=DEFAULT_SUPERUSER_USERNAME,
+            help=(
+                "Author username for blog posts "
+                f"(default: {DEFAULT_SUPERUSER_USERNAME})."
+            ),
         )
 
     def handle(self, *args, **options):

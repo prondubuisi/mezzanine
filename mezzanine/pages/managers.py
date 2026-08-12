@@ -113,33 +113,37 @@ class PageManager(DisplayableManager):
 
         Ancestors are for template cascade / breadcrumbs only. A token
         for a parent does not reveal a draft child.
+
+        Parent-id chain is walked in memory from a single site-scoped
+        ``(id, parent_id)`` query (N2) rather than one query per level.
         """
         Page = apps.get_model("pages", "Page")
+        site_id = current_site_id()
         try:
             previewed = Page._base_manager.get(
-                site_id=current_site_id(), pk=preview.object_pk
+                site_id=site_id, pk=preview.object_pk
             )
         except Page.DoesNotExist:
             return pages
         if previewed.slug not in slugs:
             return pages
 
+        # One query: parent pointers for this site; walk the chain in Python.
+        parent_of = dict(
+            Page._base_manager.filter(site_id=site_id).values_list("id", "parent_id")
+        )
         parent_walk = []
         parent_id = previewed.parent_id
         seen = set()
         while parent_id and parent_id not in seen:
             seen.add(parent_id)
             parent_walk.append(parent_id)
-            parent_id = (
-                Page._base_manager.filter(site_id=current_site_id(), pk=parent_id)
-                .values_list("parent_id", flat=True)
-                .first()
-            )
+            parent_id = parent_of.get(parent_id)
 
-        ancestors = list(
-            Page._base_manager.filter(
-                site_id=current_site_id(), pk__in=parent_walk
-            )
+        ancestors = (
+            list(Page._base_manager.filter(site_id=site_id, pk__in=parent_walk))
+            if parent_walk
+            else []
         )
         by_slug = {page.slug: page for page in pages}
         by_slug[previewed.slug] = previewed

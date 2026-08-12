@@ -319,7 +319,8 @@ def media_list(request):
     from mezzanine.utils.sites import current_site_id
 
     _require_staff_site(request)
-    qs = Media.objects.filter(site_id=current_site_id()).order_by("-created")[:200]
+    limit = int(settings.MEDIA_LIST_PAGE_SIZE)
+    qs = Media.objects.filter(site_id=current_site_id()).order_by("-created")[:limit]
     return JsonResponse({"ok": True, "results": [_media_payload(a) for a in qs]})
 
 
@@ -342,10 +343,11 @@ def media_chooser(request):
         qs = qs.filter(
             Q(title__icontains=q) | Q(alt__icontains=q) | Q(file__icontains=q)
         )
+    limit = int(settings.MEDIA_CHOOSER_PAGE_SIZE)
     return TemplateResponse(
         request,
         "admin/media_chooser.html",
-        {"assets": list(qs[:100]), "q": q},
+        {"assets": list(qs[:limit]), "q": q},
     )
 
 

@@ -7,11 +7,17 @@ from django.core.management.base import BaseCommand, CommandError
 from django.db import connection
 
 from mezzanine.conf import settings
+from mezzanine.utils.seed import (
+    DEFAULT_SUPERUSER_EMAIL,
+    DEFAULT_SUPERUSER_PASSWORD,
+    DEFAULT_SUPERUSER_USERNAME,
+)
 from mezzanine.utils.tests import copy_test_to_media
 
-DEFAULT_USERNAME = "admin"
-DEFAULT_EMAIL = "example@example.com"
-DEFAULT_PASSWORD = "default"
+# Re-export historic names (middleware + tests import these).
+DEFAULT_USERNAME = DEFAULT_SUPERUSER_USERNAME
+DEFAULT_EMAIL = DEFAULT_SUPERUSER_EMAIL
+DEFAULT_PASSWORD = DEFAULT_SUPERUSER_PASSWORD
 
 
 class Command(BaseCommand):
