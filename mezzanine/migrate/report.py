@@ -1,8 +1,10 @@
-"""Printed migration report for WordPress imports (design §12)."""
+"""Printed migration report for WordPress imports (design §12 / KD15)."""
 
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass, field
+from typing import Any
 
 
 @dataclass
@@ -25,6 +27,24 @@ class MigrationReport:
 
     def note_attachment_failure(self, message: str) -> None:
         self.failed_attachments.append(message)
+
+    def to_dict(self) -> dict[str, Any]:
+        """Machine-readable report (KD15: MigrationReport JSON)."""
+        return {
+            "posts_imported": self.posts_imported,
+            "pages_imported": self.pages_imported,
+            "comments_imported": self.comments_imported,
+            "redirects_created": self.redirects_created,
+            "unmapped_types": dict(sorted(self.unmapped_types.items())),
+            "failed_attachments": list(self.failed_attachments),
+            "skipped": list(self.skipped),
+            "url_fidelity": [
+                {"old": old, "new": new} for old, new in self.url_pairs
+            ],
+        }
+
+    def to_json(self, *, indent: int | None = 2) -> str:
+        return json.dumps(self.to_dict(), indent=indent, ensure_ascii=False)
 
     def render(self) -> str:
         lines = [

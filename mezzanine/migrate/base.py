@@ -1,5 +1,6 @@
 """Base importer command (moved from mezzanine.blog.management.base)."""
 
+from pathlib import Path
 from urllib.parse import urlparse
 
 from django.contrib.auth import get_user_model
@@ -54,6 +55,12 @@ class BaseImporterCommand(BaseCommand):
             action="store_true",
             dest="in_footer",
             help="Add any imported pages to footer navigation",
+        )
+        parser.add_argument(
+            "--report-json",
+            dest="report_json",
+            metavar="PATH",
+            help="Write MigrationReport JSON to PATH (KD15 machine report).",
         )
 
     def __init__(self, **kwargs):
@@ -298,8 +305,17 @@ class BaseImporterCommand(BaseCommand):
                         obj["page"].save()
                         break
 
+        report_json = options.get("report_json")
+        if report_json:
+            path = Path(report_json)
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(self.report.to_json() + "\n", encoding="utf-8")
+            if verbosity >= 1:
+                print("Wrote migration report JSON: %s" % path)
         if verbosity >= 1:
+            # Human summary + one-line machine JSON (design KD15).
             print(self.report.render())
+            print(self.report.to_json(indent=None))
 
     def add_meta(self, obj, tags, prompt, verbosity, old_url=None):
         for tag in tags:

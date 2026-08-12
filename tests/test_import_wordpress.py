@@ -1,5 +1,6 @@
 """Adult WordPress importer (PR-035)."""
 
+import json
 import re
 from pathlib import Path
 
@@ -12,6 +13,7 @@ from django.core.management.base import CommandError
 import mezzanine
 from mezzanine.blog.models import BlogPost
 from mezzanine.core.models import CONTENT_STATUS_DRAFT, CONTENT_STATUS_PUBLISHED
+from mezzanine.migrate.report import MigrationReport
 from mezzanine.pages.models import Page, RichTextPage
 
 REPO_ROOT = Path(mezzanine.__file__).resolve().parent.parent
@@ -77,12 +79,71 @@ def test_import_wordpress_sample_wxr(import_user, capsys):
     assert Redirect.objects.filter(old_path="/about/").exists()
     assert Redirect.objects.filter(old_path="/about/team/").exists()
 
-    # Report covers fidelity, unmapped types, attachments.
+    # Report covers fidelity, unmapped types, attachments (text + JSON).
     assert "migration report" in out.lower() or "Posts imported" in out
     assert "product" in out
     assert "attachment" in out.lower()
     assert BlogPost.objects.filter(title="Custom Product").count() == 0
     assert not Page.objects.filter(title="Hero Image").exists()
+    # KD15: machine JSON is printed after the human summary.
+    payload = _last_json_object(out)
+    assert payload["posts_imported"] >= 1
+    assert payload["pages_imported"] >= 1
+    assert payload["redirects_created"] >= 1
+    assert "product" in payload["unmapped_types"]
+    assert payload["failed_attachments"]
+    assert any(pair["old"] for pair in payload["url_fidelity"])
+
+
+def _last_json_object(text: str) -> dict:
+    """Parse the trailing one-line JSON object from command stdout."""
+    for line in reversed(text.splitlines()):
+        line = line.strip()
+        if line.startswith("{") and line.endswith("}"):
+            return json.loads(line)
+    raise AssertionError("expected JSON report line in stdout")
+
+
+@pytest.mark.django_db
+def test_import_wordpress_report_json_file(import_user, tmp_path):
+    report_path = tmp_path / "migration.json"
+    call_command(
+        "import_wordpress",
+        mezzanine_user=import_user.username,
+        url=str(WXR),
+        report_json=str(report_path),
+        verbosity=0,
+        interactive=False,
+    )
+    data = json.loads(report_path.read_text(encoding="utf-8"))
+    assert data["posts_imported"] >= 1
+    assert data["pages_imported"] >= 1
+    assert "url_fidelity" in data
+    assert isinstance(data["unmapped_types"], dict)
+
+
+def test_migration_report_json_shape():
+    report = MigrationReport(
+        posts_imported=1,
+        pages_imported=2,
+        comments_imported=4,
+    )
+    report.note_unmapped("product")
+    report.note_redirect("https://example.com/a/", "/a/")
+    report.note_attachment_failure("attachment not imported: x.jpg")
+    report.skipped.append("posts skipped")
+    data = report.to_dict()
+    assert data == {
+        "posts_imported": 1,
+        "pages_imported": 2,
+        "comments_imported": 4,
+        "redirects_created": 1,
+        "unmapped_types": {"product": 1},
+        "failed_attachments": ["attachment not imported: x.jpg"],
+        "skipped": ["posts skipped"],
+        "url_fidelity": [{"old": "https://example.com/a/", "new": "/a/"}],
+    }
+    assert json.loads(report.to_json(indent=None)) == data
 
 
 @pytest.mark.django_db
