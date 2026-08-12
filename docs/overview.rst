@@ -25,6 +25,11 @@ Then, optionally::
     $ just import-wp ./export.xml
     $ just test
 
+``import_wordpress`` (via ``just import-wp``) is the adult WXR importer:
+pages and posts, parent page tree, ``old_url`` redirects, Yoast title
+and description into meta fields, and a printed migration report.
+Install ``nova-cms[migrate]`` for the ``feedparser`` dependency.
+
 ``nova-project`` writes ``compose.yaml``, ``justfile``, and
 ``.env.example`` into the new project. The same files live at the
 repository root, where ``just test`` runs the package tests and

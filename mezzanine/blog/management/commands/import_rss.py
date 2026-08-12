@@ -5,7 +5,7 @@ from urllib.request import urlopen
 
 from django.core.management.base import CommandError
 
-from mezzanine.blog.management.base import BaseImporterCommand
+from mezzanine.migrate.base import BaseImporterCommand
 
 
 class Command(BaseImporterCommand):

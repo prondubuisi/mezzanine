@@ -48,6 +48,7 @@ BROCHURE_APPS = [
     "mezzanine.generic",
     "mezzanine.pages",
     "mezzanine.forms",
+    "mezzanine.migrate",
     "filebrowser_safe",
     "grappelli_safe",
     "tests",
@@ -249,6 +250,7 @@ def test_nova_project_kit_brochure(tmp_path):
     settings_text = (project / "mysite" / "settings.py").read_text()
     assert '"mezzanine.kits.brochure"' in settings_text
     assert '"mezzanine.forms"' in settings_text
+    assert '"mezzanine.migrate"' in settings_text
     assert '"mezzanine.blog"' not in settings_text
     assert '"mezzanine.galleries"' not in settings_text
     assert '"mezzanine.accounts"' not in settings_text

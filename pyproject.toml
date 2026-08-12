@@ -60,11 +60,14 @@ blog = []
 forms = []
 galleries = []
 accounts = []
-migrate = []
+migrate = [
+    "feedparser>=6",
+]
 testing = [
     "pytest-django>=4,<5",
     "pytest-cov>=2",
     "requirements-parser>=0.11",
+    "feedparser>=6",
 ]
 codestyle = [
     "ruff>=0.16,<0.17",

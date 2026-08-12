@@ -279,6 +279,7 @@ INSTALLED_APPS = [
     "mezzanine.blog",
     "mezzanine.forms",
     "mezzanine.galleries",
+    "mezzanine.migrate",
     # 'mezzanine.accounts',
 ]
 

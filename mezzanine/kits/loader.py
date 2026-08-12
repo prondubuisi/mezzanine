@@ -183,6 +183,7 @@ def _apply_brochure_settings(project_app_dir: Path) -> None:
     "mezzanine.generic",
     "mezzanine.pages",
     "mezzanine.forms",
+    "mezzanine.migrate",
 ]
 """
     new_text, n = re.subn(

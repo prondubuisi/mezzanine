@@ -45,7 +45,8 @@ Importing from Wordpress
 Dependencies
 ------------
 
-  * Mark Pilgrim's `feedparser <http://code.google.com/p/feedparser/>`_
+  * Mark Pilgrim's `feedparser <https://pypi.org/project/feedparser/>`_
+    (``pip install 'nova-cms[migrate]'``)
 
 The first step is to export your Wordpress data. Login to Wordpress and
 go to ``Tools -> Export``. Here you can select your filters,
@@ -68,7 +69,8 @@ Importing RSS
 Dependencies
 ------------
 
-  * Mark Pilgrim's `feedparser <http://code.google.com/p/feedparser/>`_
+  * Mark Pilgrim's `feedparser <https://pypi.org/project/feedparser/>`_
+    (``pip install 'nova-cms[migrate]'``)
 
 Simply run the ``import_rss`` command where the ``rss-url`` argument
 contains the URL for your RSS feed::
