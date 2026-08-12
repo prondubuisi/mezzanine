@@ -61,9 +61,13 @@ def test_import_wordpress_sample_wxr(import_user, capsys):
     assert published.description == "Hello SEO description"
     assert "First post body" in published.content
     assert published.categories.filter(title="News").exists()
+    # Attachment id 20 + _thumbnail_id → BlogPost.featured_image (A0 FileField).
+    assert published.featured_image
+    assert published.featured_image.name.endswith("hero.jpg")
 
     draft = BlogPost.objects.get(title="Draft Only")
     assert draft.status == CONTENT_STATUS_DRAFT
+    assert not draft.featured_image
 
     about = RichTextPage.objects.get(title="About")
     assert about.status == CONTENT_STATUS_PUBLISHED
@@ -82,7 +86,6 @@ def test_import_wordpress_sample_wxr(import_user, capsys):
     # Report covers fidelity, unmapped types, attachments (text + JSON).
     assert "migration report" in out.lower() or "Posts imported" in out
     assert "product" in out
-    assert "attachment" in out.lower()
     assert BlogPost.objects.filter(title="Custom Product").count() == 0
     assert not Page.objects.filter(title="Hero Image").exists()
     # KD15: machine JSON is printed after the human summary.
@@ -90,10 +93,9 @@ def test_import_wordpress_sample_wxr(import_user, capsys):
     assert payload["posts_imported"] >= 1
     assert payload["pages_imported"] >= 1
     assert payload["redirects_created"] >= 1
+    assert payload["attachments_imported"] >= 1
     assert "product" in payload["unmapped_types"]
-    assert payload["failed_attachments"]
     assert any(pair["old"] for pair in payload["url_fidelity"])
-
 
 def _last_json_object(text: str) -> dict:
     """Parse the trailing one-line JSON object from command stdout."""
@@ -127,6 +129,7 @@ def test_migration_report_json_shape():
         posts_imported=1,
         pages_imported=2,
         comments_imported=4,
+        attachments_imported=1,
     )
     report.note_unmapped("product")
     report.note_redirect("https://example.com/a/", "/a/")
@@ -138,12 +141,27 @@ def test_migration_report_json_shape():
         "pages_imported": 2,
         "comments_imported": 4,
         "redirects_created": 1,
+        "attachments_imported": 1,
         "unmapped_types": {"product": 1},
         "failed_attachments": ["attachment not imported: x.jpg"],
         "skipped": ["posts skipped"],
         "url_fidelity": [{"old": "https://example.com/a/", "new": "/a/"}],
     }
     assert json.loads(report.to_json(indent=None)) == data
+
+
+@pytest.mark.django_db
+def test_import_wordpress_skip_attachments(import_user):
+    call_command(
+        "import_wordpress",
+        mezzanine_user=import_user.username,
+        url=str(WXR),
+        skip_attachments=True,
+        verbosity=0,
+        interactive=False,
+    )
+    published = BlogPost.objects.get(title="Hello World")
+    assert not published.featured_image
 
 
 @pytest.mark.django_db

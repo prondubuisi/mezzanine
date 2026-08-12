@@ -46,6 +46,10 @@
 			<wp:meta_key><![CDATA[_yoast_wpseo_metadesc]]></wp:meta_key>
 			<wp:meta_value><![CDATA[Hello SEO description]]></wp:meta_value>
 		</wp:postmeta>
+		<wp:postmeta>
+			<wp:meta_key><![CDATA[_thumbnail_id]]></wp:meta_key>
+			<wp:meta_value><![CDATA[20]]></wp:meta_value>
+		</wp:postmeta>
 		<wp:comment>
 			<wp:comment_id>1</wp:comment_id>
 			<wp:comment_author><![CDATA[Alice]]></wp:comment_author>
@@ -133,7 +137,8 @@
 		<wp:status>inherit</wp:status>
 		<wp:post_parent>1</wp:post_parent>
 		<wp:post_type>attachment</wp:post_type>
-		<wp:attachment_url>https://example.com/wp-content/uploads/hero.jpg</wp:attachment_url>
+		<!-- Relative to the WXR file (same fixtures dir); no network in tests. -->
+		<wp:attachment_url>hero.jpg</wp:attachment_url>
 	</item>
 
 	<item>

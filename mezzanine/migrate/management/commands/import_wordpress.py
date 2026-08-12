@@ -2,12 +2,16 @@
 
 from __future__ import annotations
 
+import mimetypes
 import re
 from collections import defaultdict
 from datetime import datetime, timedelta
 from datetime import timezone as dt_timezone
 from pathlib import Path
 from time import mktime, timezone
+from urllib.error import URLError
+from urllib.parse import urlparse
+from urllib.request import Request, urlopen
 from xml.dom import Node
 from xml.dom.minidom import parse
 
@@ -27,6 +31,8 @@ _YOAST_DESC_KEYS = (
     "_yoast_wpseo_metadesc",
     "yoast_wpseo_metadesc",
 )
+_THUMBNAIL_KEYS = ("_thumbnail_id", "thumbnail_id")
+_ATTACHMENT_FETCH_TIMEOUT = 20
 
 
 class Command(BaseImporterCommand):
@@ -36,6 +42,10 @@ class Command(BaseImporterCommand):
     Maps posts → BlogPost (when blog is installed), pages → RichTextPage
     with parent tree, old URLs → Redirect, and Yoast title/description
     into MetaData fields. HTML stays in ``content``.
+
+    Attachments are not a Media model (Y1.5): when an attachment is the
+    featured image of a post (``_thumbnail_id`` or sole attached child),
+    bytes are stored on ``BlogPost.featured_image``.
     """
 
     help = "Import a WordPress WXR export (posts, pages, redirects, Yoast meta)."
@@ -47,6 +57,12 @@ class Command(BaseImporterCommand):
             "--url",
             dest="url",
             help="Path or URL to a WXR export file",
+        )
+        parser.add_argument(
+            "--skip-attachments",
+            action="store_true",
+            dest="skip_attachments",
+            help="Do not download attachment bytes for featured images.",
         )
 
     def get_text(self, xml, name):
@@ -92,14 +108,76 @@ class Command(BaseImporterCommand):
             return CONTENT_STATUS_PUBLISHED
         return CONTENT_STATUS_DRAFT
 
+    @staticmethod
+    def _coerce_id(value):
+        if value in (None, "", 0, "0"):
+            return None
+        try:
+            return int(value)
+        except (TypeError, ValueError):
+            return value
+
+    def _fetch_attachment_bytes(self, att_url: str) -> tuple[str, bytes] | None:
+        """
+        Load attachment bytes from a local path or HTTP(S) URL.
+
+        Returns ``(filename, content)`` or None on failure.
+        """
+        if not att_url:
+            return None
+        parsed = urlparse(att_url)
+        name = Path(parsed.path or att_url).name or "attachment.bin"
+        # Local filesystem: absolute, cwd-relative, or next to the WXR file.
+        candidates = []
+        if parsed.scheme in ("", "file"):
+            raw = parsed.path if parsed.scheme == "file" else att_url
+            candidates.append(Path(raw))
+            if not Path(raw).is_absolute():
+                base = getattr(self, "_wxr_dir", None)
+                if base is not None:
+                    candidates.append(Path(base) / raw)
+                candidates.append(Path.cwd() / raw)
+        else:
+            candidates.append(Path(att_url))
+        for path in candidates:
+            try:
+                if path.is_file():
+                    return name, path.read_bytes()
+            except OSError:
+                continue
+        if parsed.scheme in ("http", "https"):
+            try:
+                req = Request(att_url, headers={"User-Agent": "nova-cms-import/1.0"})
+                with urlopen(req, timeout=_ATTACHMENT_FETCH_TIMEOUT) as resp:
+                    data = resp.read()
+                    ctype = resp.headers.get("Content-Type", "")
+                    if not Path(name).suffix and ctype:
+                        ext = mimetypes.guess_extension(ctype.split(";")[0].strip())
+                        if ext:
+                            name = name + ext
+                    return name, data
+            except (URLError, OSError, ValueError) as exc:
+                self.report.note_attachment_failure(
+                    "download failed for %s: %s" % (att_url, exc)
+                )
+                return None
+        self.report.note_attachment_failure(
+            "unsupported attachment URL: %s" % att_url
+        )
+        return None
+
     def handle_import(self, options):
         url = options.get("url")
         if url is None:
             raise CommandError("Usage is import_wordpress --url=<path-or-url>")
+        skip_attachments = bool(options.get("skip_attachments"))
         # Local paths must exist; feedparser also accepts file:// and http(s).
         path = Path(url)
+        self._wxr_dir = Path.cwd()
         if path.exists():
-            url = str(path.resolve())
+            resolved = path.resolve()
+            url = str(resolved)
+            self._wxr_dir = resolved.parent
         try:
             import feedparser
         except ImportError as exc:
@@ -117,10 +195,64 @@ class Command(BaseImporterCommand):
 
         xml = parse(url)
         xmlitems = xml.getElementsByTagName("item")
-        if len(xmlitems) != len(feed.get("entries", [])):
-            # Prefer feedparser length; minidom may include extra nodes.
-            pass
 
+        # Pass 1: index attachments and post→thumbnail meta before creating rows.
+        attachments: dict = {}  # att_id -> {url, parent_id, title}
+        post_thumbnails: dict = {}  # post_wp_id -> att_id
+        children: dict = defaultdict(list)  # parent_wp_id -> [att_id, ...]
+
+        for i, entry in enumerate(feed["entries"]):
+            xmlitem = xmlitems[i] if i < len(xmlitems) else None
+            meta = self._postmeta(xmlitem) if xmlitem is not None else {}
+            post_type = getattr(entry, "wp_post_type", None) or "post"
+            wp_id = self._coerce_id(getattr(entry, "wp_post_id", None))
+            parent_id = self._coerce_id(getattr(entry, "wp_post_parent", None))
+            old_url = entry.get("link") or entry.get("id")
+
+            if post_type == "attachment":
+                att_url = getattr(entry, "wp_attachment_url", None) or old_url
+                if wp_id is not None:
+                    attachments[wp_id] = {
+                        "url": att_url,
+                        "parent_id": parent_id,
+                        "title": entry.title,
+                    }
+                    if parent_id is not None:
+                        children[parent_id].append(wp_id)
+                else:
+                    self.report.note_attachment_failure(
+                        "attachment without wp:post_id: %s" % att_url
+                    )
+            elif post_type == "post" and wp_id is not None:
+                for key in _THUMBNAIL_KEYS:
+                    if meta.get(key):
+                        post_thumbnails[wp_id] = self._coerce_id(meta[key])
+                        break
+
+        def featured_for_post(wp_id):
+            if skip_attachments or wp_id is None:
+                return None
+            att_id = post_thumbnails.get(wp_id)
+            if att_id is None:
+                kids = children.get(wp_id) or []
+                if len(kids) == 1:
+                    att_id = kids[0]
+            if att_id is None:
+                return None
+            att = attachments.get(att_id)
+            if not att:
+                self.report.note_attachment_failure(
+                    "thumbnail id %s missing for post %s" % (att_id, wp_id)
+                )
+                return None
+            fetched = self._fetch_attachment_bytes(att["url"])
+            if not fetched:
+                return None
+            name, content = fetched
+            return {"name": name, "content": content}
+
+        # Pass 2: create posts/pages/comments; map featured images onto posts.
+        used_attachment_ids = set()
         for i, entry in enumerate(feed["entries"]):
             xmlitem = xmlitems[i] if i < len(xmlitems) else None
             content_value = ""
@@ -150,8 +282,19 @@ class Command(BaseImporterCommand):
             status = self._wp_status(entry)
             post_type = getattr(entry, "wp_post_type", None) or "post"
             old_url = entry.get("link") or entry.get("id")
+            wp_id = self._coerce_id(getattr(entry, "wp_post_id", None))
 
             if post_type == "post":
+                featured = featured_for_post(wp_id)
+                if featured:
+                    # Track which attachment ids were consumed as featured images.
+                    att_id = post_thumbnails.get(wp_id)
+                    if att_id is None:
+                        kids = children.get(wp_id) or []
+                        if len(kids) == 1:
+                            att_id = kids[0]
+                    if att_id is not None:
+                        used_attachment_ids.add(att_id)
                 post = self.add_post(
                     title=entry.title,
                     content=content,
@@ -162,6 +305,7 @@ class Command(BaseImporterCommand):
                     status=status,
                     meta_title=yoast_title,
                     meta_description=yoast_desc,
+                    featured_image=featured,
                 )
                 if xmlitem is not None:
                     for c in xmlitem.getElementsByTagName("wp:comment"):
@@ -193,15 +337,12 @@ class Command(BaseImporterCommand):
                         )
 
             elif post_type == "page":
-                old_id = getattr(entry, "wp_post_id", None)
-                parent_id = getattr(entry, "wp_post_parent", None) or None
-                if parent_id in (0, "0"):
-                    parent_id = None
+                parent_id = self._coerce_id(getattr(entry, "wp_post_parent", None))
                 self.add_page(
                     title=entry.title,
                     content=content,
                     tags=terms.get("tag") or set(),
-                    old_id=old_id,
+                    old_id=wp_id,
                     old_parent_id=parent_id,
                     old_url=old_url,
                     status=status,
@@ -210,14 +351,25 @@ class Command(BaseImporterCommand):
                 )
 
             elif post_type == "attachment":
-                # Attachments stay FileField until Media-as-Displayable (Y1.5).
-                att_url = getattr(entry, "wp_attachment_url", None) or old_url
-                self.report.note_attachment_failure(
-                    "attachment not imported (no Media model in Y1): %s" % att_url
-                )
+                # Reported after posts so featured-image success is not noise.
+                continue
 
             else:
                 self.report.note_unmapped(str(post_type))
+
+        # Residual attachments: not used as a post featured image (no Media yet).
+        for att_id, att in attachments.items():
+            if att_id in used_attachment_ids:
+                continue
+            if skip_attachments:
+                self.report.skipped.append(
+                    "attachment skipped (--skip-attachments): %s" % att["url"]
+                )
+            else:
+                self.report.note_attachment_failure(
+                    "attachment not linked to a post featured image "
+                    "(no Media model in Y1): %s" % att["url"]
+                )
 
     def wp_caption(self, post):
         for match in re.finditer(r"\[caption (.*?)\](.*?)\[/caption\]", post):

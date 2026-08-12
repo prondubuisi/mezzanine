@@ -13,6 +13,7 @@ class MigrationReport:
     pages_imported: int = 0
     redirects_created: int = 0
     comments_imported: int = 0
+    attachments_imported: int = 0
     url_pairs: list[tuple[str, str]] = field(default_factory=list)
     unmapped_types: dict[str, int] = field(default_factory=dict)
     failed_attachments: list[str] = field(default_factory=list)
@@ -35,6 +36,7 @@ class MigrationReport:
             "pages_imported": self.pages_imported,
             "comments_imported": self.comments_imported,
             "redirects_created": self.redirects_created,
+            "attachments_imported": self.attachments_imported,
             "unmapped_types": dict(sorted(self.unmapped_types.items())),
             "failed_attachments": list(self.failed_attachments),
             "skipped": list(self.skipped),
@@ -53,6 +55,7 @@ class MigrationReport:
             f"Pages imported:      {self.pages_imported}",
             f"Comments imported:   {self.comments_imported}",
             f"Redirects created:   {self.redirects_created}",
+            f"Attachments imported:{self.attachments_imported:>3}",
         ]
         if self.unmapped_types:
             lines.append("Unmapped types:")

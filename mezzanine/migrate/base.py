@@ -81,7 +81,14 @@ class BaseImporterCommand(BaseCommand):
         status=None,
         meta_title=None,
         meta_description=None,
+        featured_image=None,
     ):
+        """
+        Queue a blog post for import.
+
+        ``featured_image`` is optional ``{"name": str, "content": bytes}``
+        written to ``BlogPost.featured_image`` (A0 FileField; not Media).
+        """
         if not title:
             title = strip_tags(content).split(". ")[0]
         title = decode_entities(title)
@@ -109,6 +116,7 @@ class BaseImporterCommand(BaseCommand):
                 "status": status,
                 "meta_title": meta_title,
                 "meta_description": meta_description,
+                "featured_image": featured_image,
             }
         )
         return self.posts[-1]
@@ -208,6 +216,9 @@ class BaseImporterCommand(BaseCommand):
             self.posts = []
 
         if blog_installed:
+            from django.core.files.base import ContentFile
+            from django.core.files.storage import default_storage
+
             from mezzanine.blog.models import BlogCategory, BlogPost
 
             for post_data in self.posts:
@@ -217,6 +228,7 @@ class BaseImporterCommand(BaseCommand):
                 old_url = post_data.pop("old_url")
                 meta_title = post_data.pop("meta_title", None)
                 meta_description = post_data.pop("meta_description", None)
+                featured_image = post_data.pop("featured_image", None)
                 post_data = self.trunc(BlogPost, prompt, **post_data)
                 initial = {
                     "title": post_data.pop("title"),
@@ -232,6 +244,20 @@ class BaseImporterCommand(BaseCommand):
                     post.description = meta_description
                     post.gen_description = False
                 post.save()
+                if featured_image and (created or not post.featured_image):
+                    name = featured_image.get("name") or "attachment.bin"
+                    content = featured_image.get("content") or b""
+                    if content:
+                        # Mezzanine FileField may be filebrowser_safe's
+                        # FileBrowseField (no FieldFile.generate_filename).
+                        # Save via storage then assign the relative path.
+                        rel = "blog/%s" % name
+                        saved = default_storage.save(rel, ContentFile(content))
+                        post.featured_image = saved
+                        post.save()
+                        self.report.attachments_imported += 1
+                        if verbosity >= 1:
+                            print("Imported featured image for: %s" % post)
                 if created:
                     self.report.posts_imported += 1
                     if verbosity >= 1:
