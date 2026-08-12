@@ -418,10 +418,26 @@ class CoreTests(TestCase):
         return csrf[0]
 
     def _get_formurl(self, response):
-        action = re.findall(rb'<form action="([^"]*)" method="post">', response.content)
+        # Django 6 may emit method before action (or omit empty action).
+        content = response.content
+        action = re.findall(
+            rb'<form[^>]*\baction="([^"]*)"[^>]*\bmethod="post"',
+            content,
+            flags=re.I,
+        )
+        if not action:
+            action = re.findall(
+                rb'<form[^>]*\bmethod="post"[^>]*\baction="([^"]*)"',
+                content,
+                flags=re.I,
+            )
+        if not action:
+            action = re.findall(rb'<form[^>]*\bmethod="post"', content, flags=re.I)
+            if action:
+                return response.request["PATH_INFO"]
         self.assertEqual(len(action), 1, "No form with action found!")
         if action[0] == b"":
-            action = response.request["PATH_INFO"]
+            return response.request["PATH_INFO"]
         return action
 
     @skipUnless("mezzanine.pages" in settings.INSTALLED_APPS, "pages app required")

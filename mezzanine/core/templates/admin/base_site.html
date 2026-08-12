@@ -28,9 +28,12 @@
 {{ media }}
 {% endblock extrahead %}
 
-{% block stylesheets %}
+{% block extrastyle %}
 {{ block.super }}
 <link rel="stylesheet" href="{% static "mezzanine/css/admin/global.css" %}">
+{% if LANGUAGE_BIDI %}
+<link rel="stylesheet" type="text/css" href="{% static "mezzanine/css/admin/rtl.css" %}" />
+{% endif %}
 <style>
     /* These are set in PageAdmin's view methods, and mezzanine.utils.admin.SingletonAdmin */
     {% if hide_delete_link or singleton %}.submit-row .deletelink {display:none !important;}{% endif %}
@@ -39,12 +42,9 @@
 </style>
 {% endblock %}
 
-{% block rtl_styles %}
+{# Django 5.2/6 removed before_content; hang the Mezzanine menu off nav-global. #}
+{% block nav-global %}
 {{ block.super }}
-<link rel="stylesheet" type="text/css" href="{% static "mezzanine/css/admin/rtl.css" %}" />
-{% endblock %}
-
-{% block before_content %}
 {% if user.is_staff and not is_popup and not request.GET.pop %}
 {% admin_dropdown_menu %}
 {% endif %}
