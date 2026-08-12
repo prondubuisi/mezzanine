@@ -30,10 +30,21 @@ test *args:
 	fi
 
 # Start Postgres, Redis, and the web process.
+# Pre-PyPI: from a generated project, point at the monorepo so web can
+# ``pip install -e`` it: ``NOVA_CMS_SRC=../mezzanine just up`` (or absolute).
 up *args:
 	#!/usr/bin/env bash
 	set -euo pipefail
 	just _ensure-env
+	if [ -z "${NOVA_CMS_SRC:-}" ] && [ -f manage.py ]; then
+		# Walk up for a monorepo checkout (common when developing A0′).
+		for cand in .. ../.. ../../..; do
+			if [ -f "$cand/pyproject.toml" ] && grep -q 'name = "nova-cms"' "$cand/pyproject.toml" 2>/dev/null; then
+				export NOVA_CMS_SRC="$(cd "$cand" && pwd)"
+				break
+			fi
+		done
+	fi
 	docker compose up "$@"
 
 # Import a WordPress WXR export. Usage: just import-wp path/to/export.xml

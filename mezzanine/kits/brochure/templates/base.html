@@ -22,12 +22,13 @@
 {% block extra_css %}{% endblock %}
 {% endcompress %}
 
-{# Public pages load no jQuery (KD12). Staff sessions only. #}
+{# Public pages load no jQuery (KD12). Staff sessions only.
+   nevercache re-parses without ``{% load static %}`` — use STATIC_URL. #}
 {% nevercache %}
 {% if user.is_authenticated and user.is_staff %}
-<script src="{% static "mezzanine/js/"|add:settings.JQUERY_FILENAME %}"></script>
-<script src="{% static "js/bootstrap.js" %}"></script>
-<script src="{% static "js/bootstrap-extras.js" %}"></script>
+<script src="{{ STATIC_URL }}mezzanine/js/{{ settings.JQUERY_FILENAME }}"></script>
+<script src="{{ STATIC_URL }}js/bootstrap.js"></script>
+<script src="{{ STATIC_URL }}js/bootstrap-extras.js"></script>
 {% endif %}
 {% endnevercache %}
 {% block extra_js %}{% endblock %}

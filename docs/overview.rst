@@ -10,7 +10,7 @@ and a web process::
     $ uvx nova-project mysite --kit brochure
     $ cd mysite
     $ just bootstrap
-    $ just up
+    $ just up          # site at http://127.0.0.1:8001/
 
 ``--kit brochure`` is the Year-1 site kit: pages + forms, design tokens,
 and demo fixtures (no blog, no galleries). Omit ``--kit`` for the full

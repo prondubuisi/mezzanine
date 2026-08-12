@@ -36,7 +36,12 @@ Friday path (Brochure kit — the Year‑1 install)::
     $ uvx nova-project mysite --kit brochure
     $ cd mysite
     $ just bootstrap    # Postgres + Redis via compose, migrate, superuser
-    $ just up
+    $ just up           # http://127.0.0.1:8001/  (host ports 5433/6380/8001)
+
+Before the first PyPI release of ``nova-cms``, start web with the monorepo
+mounted so the container can ``pip install -e`` it::
+
+    $ NOVA_CMS_SRC=/path/to/mezzanine just up
 
 ``just bootstrap`` does not take a kit argument; the kit is chosen when
 ``nova-project`` writes the project. Optionally::

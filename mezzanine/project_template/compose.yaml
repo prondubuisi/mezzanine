@@ -11,7 +11,8 @@ services:
       POSTGRES_PASSWORD: nova
       POSTGRES_DB: nova
     ports:
-      - "5432:5432"
+      # Host 5433 avoids colliding with a local Homebrew/system Postgres on 5432.
+      - "5433:5432"
     volumes:
       - nova_pgdata:/var/lib/postgresql/data
     healthcheck:
@@ -23,7 +24,8 @@ services:
   redis:
     image: redis:7-alpine
     ports:
-      - "6379:6379"
+      # Host 6380 avoids colliding with a local Redis on 6379.
+      - "6380:6379"
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 2s
@@ -35,6 +37,9 @@ services:
     working_dir: /app
     volumes:
       - .:/app
+      # Optional monorepo mount for pre-PyPI Friday smoke:
+      #   NOVA_CMS_SRC=/path/to/mezzanine just up
+      - ${NOVA_CMS_SRC:-/dev/null}:/nova-cms-src:ro
     env_file:
       - path: .env
         required: false
@@ -53,19 +58,25 @@ services:
       redis:
         condition: service_healthy
     ports:
-      - "8000:8000"
+      # Host 8001 avoids colliding with other local services on 8000.
+      - "8001:8000"
     entrypoint: ["/bin/bash", "-c"]
     command:
       - |
         set -euo pipefail
-        python -c "import mezzanine, psycopg, redis" 2>/dev/null || {
+        install_pkg() {
           pip install --no-cache-dir -q 'psycopg[binary]' redis
-          if [ -f pyproject.toml ] && grep -q 'name = "nova-cms"' pyproject.toml; then
+          if [ -f /nova-cms-src/pyproject.toml ] && grep -q 'name = "nova-cms"' /nova-cms-src/pyproject.toml; then
+            pip install --no-cache-dir -q -e /nova-cms-src
+          elif [ -f pyproject.toml ] && grep -q 'name = "nova-cms"' pyproject.toml; then
             pip install --no-cache-dir -q -e '.[testing]'
           elif [ -f manage.py ]; then
-            pip install --no-cache-dir -q nova-cms
+            # Published wheel (after first PyPI release).
+            pip install --no-cache-dir -q 'nova-cms[migrate]' \
+              || { echo "nova-cms not on PyPI; re-run with NOVA_CMS_SRC=/path/to/monorepo" >&2; exit 1; }
           fi
         }
+        python -c "import mezzanine, psycopg, redis" 2>/dev/null || install_pkg
         if [ -f manage.py ]; then
           python manage.py migrate --noinput
           exec python manage.py runserver 0.0.0.0:8000
