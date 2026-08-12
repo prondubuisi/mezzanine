@@ -13,11 +13,14 @@ from __future__ import annotations
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.sites.models import Site
+from django.core.files.base import ContentFile
+from django.core.files.storage import default_storage
 from django.core.management.base import BaseCommand, CommandError
 from django.utils import timezone
 
 from mezzanine.core.document import body_from_html
 from mezzanine.core.models import CONTENT_STATUS_PUBLISHED
+from mezzanine.demos.seed_images import placeholder_png
 from mezzanine.demos.site_profiles import get_profile, list_sites
 from mezzanine.forms import fields as form_fields
 from mezzanine.utils.sites import current_site_id
@@ -227,6 +230,20 @@ class Command(BaseCommand):
                     post.save()
                 if cat_title in cat_map:
                     post.categories.add(cat_map[cat_title])
+                # Featured image placeholders (S5 / parity backlog).
+                if not post.featured_image:
+                    try:
+                        png = placeholder_png(post_slug)
+                        rel = "blog/seed/%s.png" % post_slug
+                        saved = default_storage.save(rel, ContentFile(png))
+                        post.featured_image = saved
+                        post.save(update_fields=["featured_image"])
+                    except Exception as exc:  # noqa: BLE001 — seed continues
+                        self.stdout.write(
+                            self.style.WARNING(
+                                "  featured image skip %s: %s" % (post_slug, exc)
+                            )
+                        )
                 self.stdout.write(f"  post: {post_slug} [{cat_title}]")
 
         self.stdout.write(self.style.SUCCESS(f"Done: {slug}"))
