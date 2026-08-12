@@ -82,8 +82,11 @@ def test_nova_theme_marker_roundtrip(tmp_path):
 @pytest.mark.django_db
 @override_settings(DEBUG=True)
 def test_customizer_page_renders():
+    from tests.factories import SuperUserFactory
+
     set_active_theme("whitehouse")
     client = Client()
+    client.force_login(SuperUserFactory())
     resp = client.get("/_nova/theme-customizer/")
     assert resp.status_code == 200
     body = resp.content.decode("utf-8")
@@ -94,8 +97,11 @@ def test_customizer_page_renders():
 @pytest.mark.django_db
 @override_settings(DEBUG=True)
 def test_customizer_save_post():
+    from tests.factories import SuperUserFactory
+
     set_active_theme("whitehouse")
     client = Client()
+    client.force_login(SuperUserFactory())
     resp = client.post(
         "/_nova/theme-customizer/save/",
         {
@@ -110,6 +116,22 @@ def test_customizer_save_post():
     assert resp.status_code in (302, 200)
     colors = get_theme_colors()
     assert colors.get("accent") == "#abcdef"
+
+
+@pytest.mark.django_db
+@override_settings(DEBUG=True)
+def test_customizer_anonymous_blocked_even_when_debug():
+    """S2 / PR-046: DEBUG must not open customizer to unauthenticated clients."""
+    set_active_theme("whitehouse")
+    client = Client()
+    assert client.get("/_nova/theme-customizer/").status_code == 404
+    resp = client.post(
+        "/_nova/theme-customizer/save/",
+        {"color_accent": "#ff0000"},
+    )
+    assert resp.status_code == 404
+    # Must not have persisted.
+    assert get_theme_colors().get("accent") != "#ff0000"
 
 
 def test_docs_mark_open_items_done():
