@@ -26,6 +26,13 @@ from mezzanine.utils.seed import DEFAULT_SUPERUSER_USERNAME
 from mezzanine.utils.sites import current_site_id
 
 
+def _default_in_menus():
+    """All PAGE_MENU_TEMPLATES IDs (same pattern as WP importer)."""
+    from mezzanine.conf import settings as msettings
+
+    return [m[0] for m in msettings.PAGE_MENU_TEMPLATES]
+
+
 class Command(BaseCommand):
     help = (
         "Seed pages + news posts recreating a wordpress.org–style marketing IA "
@@ -158,7 +165,7 @@ class Command(BaseCommand):
                     "title": title,
                     "status": CONTENT_STATUS_PUBLISHED,
                     "content": html,
-                    "in_menus": [1, 2, 3],
+                    "in_menus": _default_in_menus(),
                     "_order": order,
                     "publish_date": timezone.now(),
                 },
@@ -167,7 +174,7 @@ class Command(BaseCommand):
                 page.title = title
                 page.content = html
                 page.status = CONTENT_STATUS_PUBLISHED
-                page.in_menus = [1, 2, 3]
+                page.in_menus = _default_in_menus()
                 page._order = order
                 page.save()
             order += 1
@@ -185,7 +192,7 @@ class Command(BaseCommand):
                     ),
                     "button_text": "Send",
                     "response": "<p>Thanks — we received your message.</p>",
-                    "in_menus": [1, 2, 3],
+                    "in_menus": _default_in_menus(),
                     "_order": order,
                     "publish_date": timezone.now(),
                 },
