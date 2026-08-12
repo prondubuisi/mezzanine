@@ -8,6 +8,7 @@ from django.core.management.commands.startproject import Command as BaseCommand
 from django.utils.crypto import get_random_string
 
 import mezzanine
+from mezzanine.kits.loader import KitError, apply_kit
 
 
 class Command(BaseCommand):
@@ -23,6 +24,13 @@ class Command(BaseCommand):
             metavar="PACKAGE",
             help="Alternate package to use, containing a project_template",
         )
+        parser.add_argument(
+            "--kit",
+            dest="kit",
+            metavar="NAME",
+            default=None,
+            help="Site kit to install after the project is written (e.g. brochure).",
+        )
 
     def handle(self, *args, **options):
 
@@ -33,6 +41,8 @@ class Command(BaseCommand):
 
         # Indicate that local_settings.py.template should be rendered
         options["files"].append("local_settings.py.template")
+
+        kit = options.pop("kit", None)
 
         super().handle(*args, **options)
 
@@ -69,6 +79,12 @@ class Command(BaseCommand):
         # the documentation can be generated, but including it in new projects
         # causes issues with running tests under Python >= 3.7, so remove it.
         os.remove(os.path.join(project_dir, "__init__.py"))
+
+        if kit:
+            try:
+                apply_kit(kit, project_dir, name)
+            except KitError as exc:
+                raise CommandError(str(exc)) from exc
 
     def get_project_directory(self, name, target):
         """

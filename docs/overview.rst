@@ -7,10 +7,14 @@ Friday install
 Compose + ``just`` is the documented local path. Postgres, Redis,
 and a web process::
 
-    $ uvx nova-project mysite
+    $ uvx nova-project mysite --kit brochure
     $ cd mysite
     $ just bootstrap
     $ just up
+
+``--kit brochure`` is the Year-1 site kit: pages + forms, design tokens,
+and demo fixtures (no blog, no galleries). Omit ``--kit`` for the full
+template with blog and galleries still enabled.
 
 ``just bootstrap`` starts Postgres and Redis, runs migrations, and
 creates a superuser. It does not take a kit argument — the kit is

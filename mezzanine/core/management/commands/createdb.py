@@ -50,15 +50,9 @@ class Command(BaseCommand):
             [self.create_site, ["django.contrib.sites"]],
             [self.create_user, ["django.contrib.auth"]],
             [self.translation_fields, ["modeltranslation"]],
-            [
-                self.create_pages,
-                [
-                    "mezzanine.pages",
-                    "mezzanine.forms",
-                    "mezzanine.blog",
-                    "mezzanine.galleries",
-                ],
-            ],
+            # pages alone is enough — brochure installs pages+forms without
+            # blog/galleries (PR-032). create_pages branches on kit apps.
+            [self.create_pages, ["mezzanine.pages"]],
             [self.create_shop, ["cartridge.shop"]],
         ]
 
@@ -122,6 +116,20 @@ class Command(BaseCommand):
         User.objects.create_superuser(*args)
 
     def create_pages(self):
+        # Brochure Friday path: kit fixture only (no blog page, no gallery).
+        if "mezzanine.kits.brochure" in settings.INSTALLED_APPS:
+            if self.no_data:
+                return
+            install = self.confirm(
+                "\nWould you like to install Brochure demo pages?\n"
+                "About, Services, Contact form. (yes/no): "
+            )
+            if install:
+                if self.verbosity >= 1:
+                    print("\nLoading Brochure demo pages ...\n")
+                call_command("loaddata", "demo")
+            return
+
         call_command("loaddata", "mezzanine_required.json")
         install_optional = not self.no_data and self.confirm(
             "\nWould you like to install some initial "
@@ -131,14 +139,15 @@ class Command(BaseCommand):
         if install_optional:
             if self.verbosity >= 1:
                 print("\nCreating demo pages: About us, Contact form, " "Gallery ...\n")
-            from mezzanine.galleries.models import Gallery
-
             call_command("loaddata", "mezzanine_optional.json")
-            zip_name = "gallery.zip"
-            copy_test_to_media("mezzanine.core", zip_name)
-            gallery = Gallery.objects.get()
-            gallery.zip_import = zip_name
-            gallery.save()
+            if "mezzanine.galleries" in settings.INSTALLED_APPS:
+                from mezzanine.galleries.models import Gallery
+
+                zip_name = "gallery.zip"
+                copy_test_to_media("mezzanine.core", zip_name)
+                gallery = Gallery.objects.get()
+                gallery.zip_import = zip_name
+                gallery.save()
 
     def create_shop(self):
         call_command("loaddata", "cartridge_required.json")

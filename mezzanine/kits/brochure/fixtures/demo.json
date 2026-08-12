@@ -1,0 +1,140 @@
+[
+  {
+    "pk": 2,
+    "model": "pages.page",
+    "fields": {
+      "status": 2,
+      "_order": 0,
+      "parent": null,
+      "description": "Who we are",
+      "title": "About",
+      "titles": "About",
+      "content_model": "richtextpage",
+      "in_menus": [1, 2, 3],
+      "slug": "about",
+      "site": 1
+    }
+  },
+  {
+    "pk": 3,
+    "model": "pages.page",
+    "fields": {
+      "status": 2,
+      "_order": 1,
+      "parent": null,
+      "description": "What we offer",
+      "title": "Services",
+      "titles": "Services",
+      "content_model": "richtextpage",
+      "in_menus": [1, 2, 3],
+      "slug": "services",
+      "site": 1
+    }
+  },
+  {
+    "pk": 4,
+    "model": "pages.page",
+    "fields": {
+      "status": 2,
+      "_order": 2,
+      "parent": null,
+      "description": "Get in touch",
+      "title": "Contact",
+      "titles": "Contact",
+      "content_model": "form",
+      "in_menus": [1, 2, 3],
+      "slug": "contact",
+      "site": 1
+    }
+  },
+  {
+    "pk": 5,
+    "model": "pages.page",
+    "fields": {
+      "status": 2,
+      "_order": 0,
+      "parent": 2,
+      "description": "Team",
+      "title": "Team",
+      "titles": "About / Team",
+      "content_model": "richtextpage",
+      "in_menus": [1, 2, 3],
+      "slug": "about/team",
+      "site": 1
+    }
+  },
+  {
+    "pk": 2,
+    "model": "pages.richtextpage",
+    "fields": {
+      "content": "<p>We help Django shops replace one marketing WordPress box.</p>"
+    }
+  },
+  {
+    "pk": 3,
+    "model": "pages.richtextpage",
+    "fields": {
+      "content": "<p>Brochure pages, forms, draft preview, and a Friday install path.</p>"
+    }
+  },
+  {
+    "pk": 5,
+    "model": "pages.richtextpage",
+    "fields": {
+      "content": "<p>Editors, publishers, and engineers on one typed content tree.</p>"
+    }
+  },
+  {
+    "pk": 4,
+    "model": "forms.form",
+    "fields": {
+      "send_email": true,
+      "email_copies": "",
+      "content": "<p>Fill in the form below to get in touch.</p>",
+      "response": "<p>Thanks — we will get back to you soon.</p>",
+      "email_from": ""
+    }
+  },
+  {
+    "pk": 1,
+    "model": "forms.field",
+    "fields": {
+      "field_type": 1,
+      "_order": 0,
+      "form": 4,
+      "required": true,
+      "label": "Name",
+      "visible": true,
+      "choices": "",
+      "default": ""
+    }
+  },
+  {
+    "pk": 2,
+    "model": "forms.field",
+    "fields": {
+      "field_type": 3,
+      "_order": 1,
+      "form": 4,
+      "required": true,
+      "label": "Email",
+      "visible": true,
+      "choices": "",
+      "default": ""
+    }
+  },
+  {
+    "pk": 3,
+    "model": "forms.field",
+    "fields": {
+      "field_type": 2,
+      "_order": 2,
+      "form": 4,
+      "required": true,
+      "label": "Message",
+      "visible": true,
+      "choices": "",
+      "default": ""
+    }
+  }
+]
