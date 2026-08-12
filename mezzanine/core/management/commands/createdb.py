@@ -171,12 +171,14 @@ class Command(BaseCommand):
         """Create one published sample post for Magazine kit demos."""
         if "mezzanine.blog" not in settings.INSTALLED_APPS:
             return
+        from django.contrib.auth import get_user_model
+
         from mezzanine.blog.models import BlogPost
         from mezzanine.core.models import CONTENT_STATUS_PUBLISHED
 
         if BlogPost.objects.exists():
             return
-        user = User.objects.order_by("id").first()
+        user = get_user_model().objects.order_by("id").first()
         if user is None:
             return
         BlogPost.objects.create(
