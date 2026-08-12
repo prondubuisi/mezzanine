@@ -262,3 +262,13 @@ def test_overview_documents_friday_just_recipes():
     assert "just test" in text
     assert "just import-wp" in text
     assert "does not take a kit argument" in text
+
+
+def test_pyproject_declares_module_extras():
+    """PR-024: blog/forms/galleries/accounts/migrate extras exist (markers)."""
+    text = (REPO_ROOT / "pyproject.toml").read_text()
+    assert "[project.optional-dependencies]" in text
+    for name in ("blog", "forms", "galleries", "accounts", "migrate"):
+        assert re.search(r"^%s\s*=" % re.escape(name), text, re.M), name
+    # Code does not move — extras are empty marker lists, not new packages.
+    assert re.search(r"^blog\s*=\s*\[\s*\]", text, re.M)
