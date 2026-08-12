@@ -15,6 +15,12 @@ class Setting(SiteRelated):
     class Meta:
         verbose_name = _("Setting")
         verbose_name_plural = _("Settings")
+        constraints = [
+            models.UniqueConstraint(
+                fields=["site", "name"],
+                name="nova_setting_site_name",
+            ),
+        ]
 
     def __str__(self):
         return f"{self.name}: {self.value}"
