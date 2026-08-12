@@ -59,6 +59,32 @@ demo-whitehouse *args:
 	set -euo pipefail
 	just demo-clone whitehouse --flush "$@"
 
+# Seed Spotify Newsroom–style demo content into the current project.
+# Project should be created with: nova-project spotdemo --kit spotify
+# Usage: just demo-spotify
+demo-spotify *args:
+	#!/usr/bin/env bash
+	set -euo pipefail
+	just demo-clone spotify_newsroom --flush "$@"
+
+# Print the Spotify newsroom visitor flow URLs after seeding.
+# Usage: just demo-spotify-flow
+demo-spotify-flow *args:
+	#!/usr/bin/env bash
+	set -euo pipefail
+	just demo-spotify "$@"
+	host="${NOVA_DEMO_HOST:-http://127.0.0.1:8002}"
+	echo ""
+	echo "Spotify newsroom demo flow (open in order):"
+	echo "  1. Home        $host/"
+	echo "  2. Company     $host/company-news/"
+	echo "  3. Story       $host/blog/new-listening-feature/"
+	echo "  4. Category    $host/blog/category/product-features/"
+	echo "  5. Press       $host/for-the-press/"
+	echo "  6. Contact     $host/contact/"
+	echo "  7. All stories $host/blog/"
+	echo "  Admin          $host/admin/  (admin / default if DEBUG createdb)"
+
 # Seed a named IA site clone. Usage: just demo-clone techcrunch
 # Also: just demo-clone -- --list
 demo-clone *args:

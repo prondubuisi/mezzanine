@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% load i18n %}
+
+{% block meta_title %}{% trans "Home" %}{% endblock %}
+{% block title %}{% endblock %}
+
+{% block breadcrumb_menu %}
+<li class="active">{% trans "Home" %}</li>
+{% endblock %}
+
+{% block main %}
+<div class="nova-banner">
+  <h1>{% trans "Newsroom" %}</h1>
+  {% blocktrans %}
+  <p>Company announcements, product stories, culture notes, and press
+  resources — a corporate newsroom demo built on Nova pages and posts.
+  Unofficial IA inspired by newsroom.spotify.com. Not affiliated with Spotify.</p>
+  {% endblocktrans %}
+  <p style="margin-top:0.85rem">
+    <a href="/company-news/">{% trans "Company news" %}</a>
+    ·
+    <a href="/for-the-press/">{% trans "For the press" %}</a>
+    ·
+    <a href="{% url 'blog_post_list' %}">{% trans "All stories" %}</a>
+  </p>
+</div>
+
+<nav class="nova-grid" aria-label="{% trans 'Sections' %}">
+  <a class="nova-card" href="/company-news/">
+    <strong>{% trans "Company" %}</strong>
+    <span>{% trans "Announcements" %}</span>
+  </a>
+  <a class="nova-card" href="/product-features/">
+    <strong>{% trans "Product" %}</strong>
+    <span>{% trans "Features & launches" %}</span>
+  </a>
+  <a class="nova-card" href="/culture/">
+    <strong>{% trans "Culture" %}</strong>
+    <span>{% trans "Teams & workplace" %}</span>
+  </a>
+  <a class="nova-card" href="/creators/">
+    <strong>{% trans "Creators" %}</strong>
+    <span>{% trans "Artist & podcaster stories" %}</span>
+  </a>
+  <a class="nova-card" href="/policy/">
+    <strong>{% trans "Policy" %}</strong>
+    <span>{% trans "Trust & safety" %}</span>
+  </a>
+  <a class="nova-card" href="/for-the-press/">
+    <strong>{% trans "Press" %}</strong>
+    <span>{% trans "Media kit & contact" %}</span>
+  </a>
+</nav>
+
+{% include "includes/recent_posts.html" %}
+{% endblock %}

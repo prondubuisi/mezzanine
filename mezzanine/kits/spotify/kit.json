@@ -1,0 +1,14 @@
+{
+  "name": "spotify",
+  "version": "0.1.0",
+  "nova_compat": ">=0.1,<2",
+  "types": [
+    "pages.RichTextPage",
+    "pages.Link",
+    "forms.Form",
+    "blog.BlogPost"
+  ],
+  "tokens": "static/spotify/tokens.css",
+  "seed_profile": "spotify_newsroom",
+  "description": "Corporate newsroom demo (IA inspired by newsroom.spotify.com)."
+}

@@ -110,10 +110,13 @@
 </div>
 </div>
 
-<footer>
+<footer class="nova-kit-footer">
 <div class="container">
+{% block kit_footer_nav %}
 {% page_menu "pages/menus/footer.html" %}
+{% endblock %}
 
+{% block kit_footer_meta %}
 <div class="row">
 <p class="site-info text-center">
     {% trans "Powered by" %}
@@ -122,6 +125,7 @@
     <a href="http://www.djangoproject.com">Django</a>
 </p>
 </div>
+{% endblock %}
 </div>
 </footer>
 

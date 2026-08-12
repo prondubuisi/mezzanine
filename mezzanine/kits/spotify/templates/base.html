@@ -1,0 +1,26 @@
+{% extends "kit_base.html" %}
+{% load i18n static %}
+
+{% block kit_tokens %}
+<link rel="stylesheet" href="{% static "spotify/tokens.css" %}">
+{% endblock %}
+
+{% block kit_primary_nav %}
+<li><a href="{% url 'blog_post_list' %}">{% trans "News" %}</a></li>
+<li><a href="/company-news/">{% trans "Company" %}</a></li>
+<li><a href="/product-features/">{% trans "Product" %}</a></li>
+<li><a href="/culture/">{% trans "Culture" %}</a></li>
+<li><a href="/creators/">{% trans "Creators" %}</a></li>
+<li><a href="/for-the-press/">{% trans "Press" %}</a></li>
+{% endblock %}
+
+{% block kit_footer_nav %}
+<ul class="footer-links">
+  <li><a href="/company-news/">{% trans "Company news" %}</a></li>
+  <li><a href="/product-features/">{% trans "Product" %}</a></li>
+  <li><a href="/for-the-press/">{% trans "For the press" %}</a></li>
+  <li><a href="/contact/">{% trans "Contact" %}</a></li>
+  <li><a href="/about/">{% trans "About this demo" %}</a></li>
+  <li><a href="{% url 'blog_post_list' %}">{% trans "All stories" %}</a></li>
+</ul>
+{% endblock %}

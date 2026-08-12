@@ -443,58 +443,131 @@ PROFILES: dict[str, dict[str, Any]] = {
     },
     "spotify_newsroom": {
         "display_name": "Spotify Newsroom-shaped demo",
-        "site_name": "Newsroom Demo",
-        "tagline": "Company newsroom (IA demo)",
+        "site_name": "Nova Newsroom",
+        "tagline": "Company news, product, culture (demo)",
         "inspired_by": "https://newsroom.spotify.com/",
-        "primary_nav_label": "Company",
+        "primary_nav_label": "News",
+        # Page slugs match BlogCategory slugs so section landings list posts.
         "pages": [
             (
                 "Company News",
                 "company-news",
-                "<p>Corporate announcements landing.</p>",
+                "<p>Corporate announcements and company milestones. Items "
+                "below are published posts in the <strong>Company News</strong> "
+                "category.</p>",
             ),
             (
                 "Product & Features",
                 "product-features",
-                "<p>Product launch narratives.</p>",
+                "<p>Product launches, feature narratives, and listening "
+                "experience stories for this newsroom demo.</p>",
             ),
             (
                 "Culture",
                 "culture",
-                "<p>Workplace and culture stories.</p>",
+                "<p>Workplace, teams, and culture stories from across the "
+                "organization.</p>",
+            ),
+            (
+                "Creators",
+                "creators",
+                "<p>Stories about artists, podcasters, and the creator "
+                "economy — sample posts for press and partners.</p>",
+            ),
+            (
+                "Policy",
+                "policy",
+                "<p>Trust, safety, and policy updates relevant to creators "
+                "and the public.</p>",
             ),
             (
                 "For the Press",
                 "for-the-press",
-                "<p>Media kit and contact paths for journalists. Gap: asset "
-                "kit downloads and embargo workflow.</p>",
+                "<p>Media kit overview and journalist contact paths. Full "
+                "asset packs and embargo workflows are later enhancements; "
+                "use the contact form for demo press inquiries.</p>"
+                "<ul>"
+                "<li>Brand assets — placeholder (Media library)</li>"
+                "<li>Executive bios — placeholder</li>"
+                '<li><a href="/contact/">Press contact form</a></li>'
+                "</ul>",
             ),
             (
                 "About",
                 "about",
-                "<p>About this <strong>IA demo</strong> inspired by Spotify "
-                "Newsroom. Not affiliated with Spotify AB.</p>",
+                "<p>This is an <strong>unofficial Nova demo</strong> of a "
+                "corporate newsroom. Information architecture is inspired by "
+                "newsroom.spotify.com. It is not affiliated with Spotify AB.</p>"
+                "<p>Recreate it with <code>nova-project … --kit spotify</code> "
+                "then <code>seed_site_clone --site spotify_newsroom</code>.</p>",
             ),
         ],
-        "categories": ["Company", "Product", "Culture", "Creators", "Policy"],
+        "categories": [
+            "Company News",
+            "Product & Features",
+            "Culture",
+            "Creators",
+            "Policy",
+        ],
         "posts": [
             (
-                "Introducing a new listening feature",
+                "Introducing a smarter home listening mode",
                 "new-listening-feature",
-                "Product",
-                "<p>Sample product launch post.</p>",
+                "Product & Features",
+                "<p>Sample product launch: a new listening mode that adapts "
+                "playlists to room activity. Press quotes and screenshots "
+                "would attach here in a fuller newsroom package.</p>"
+                "<p><em>Original demo copy — not a real product announcement.</em></p>",
+            ),
+            (
+                "Q2 product roadmap themes for creators",
+                "q2-product-roadmap-creators",
+                "Product & Features",
+                "<p>Sample feature narrative covering discovery tools, "
+                "analytics improvements, and monetization experiments.</p>",
             ),
             (
                 "How our teams build in public",
                 "teams-build-in-public",
                 "Culture",
-                "<p>Sample culture story.</p>",
+                "<p>Sample culture story about engineering blogs, open design "
+                "critiques, and cross-team demo days.</p>",
             ),
             (
-                "Policy update for creators",
+                "Mentorship circles expand across hubs",
+                "mentorship-circles-expand",
+                "Culture",
+                "<p>Sample workplace story on peer mentorship programs in "
+                "design, data, and trust &amp; safety teams.</p>",
+            ),
+            (
+                "Company update: new regional studio partnership",
+                "regional-studio-partnership",
+                "Company News",
+                "<p>Sample company announcement about a partnership to support "
+                "emerging creators in two regions. Financial details omitted "
+                "in this demo stub.</p>",
+            ),
+            (
+                "Annual transparency report summary",
+                "annual-transparency-report",
+                "Company News",
+                "<p>Sample corporate post summarizing content moderation "
+                "metrics and appeals outcomes for the past year.</p>",
+            ),
+            (
+                "Creator fund: what changed this season",
+                "creator-fund-season-update",
+                "Creators",
+                "<p>Sample creators desk post explaining eligibility updates "
+                "and payout timelines for a fictional fund.</p>",
+            ),
+            (
+                "Policy update for creators on synthetic media",
                 "policy-update-creators",
                 "Policy",
-                "<p>Sample policy note for press.</p>",
+                "<p>Sample policy note describing labeling requirements for "
+                "AI-assisted audio and how appeals work.</p>",
             ),
         ],
         "contact": True,
