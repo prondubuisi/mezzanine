@@ -21,10 +21,10 @@
         <a class="sp-nav-item{% if page == 'home' %} is-active{% endif %}" href="{% url 'home' %}">
           <span class="sp-ico" aria-hidden="true">⌂</span> {% trans "Home" %}
         </a>
-        <a class="sp-nav-item{% if page == 'search' %} is-active{% endif %}" href="{% url 'spotify_search' %}">
+        <a class="sp-nav-item{% if page == 'search' %} is-active{% endif %}" href="{% url 'music_search' %}">
           <span class="sp-ico" aria-hidden="true">⌕</span> {% trans "Search" %}
         </a>
-        <a class="sp-nav-item{% if page == 'library' %} is-active{% endif %}" href="{% url 'spotify_library' %}">
+        <a class="sp-nav-item{% if page == 'library' %} is-active{% endif %}" href="{% url 'music_library' %}">
           <span class="sp-ico" aria-hidden="true">☰</span> {% trans "Your Library" %}
         </a>
       </nav>
@@ -32,40 +32,45 @@
         <div class="sp-sidebar-label">{% trans "Playlists" %}</div>
         <ul class="sp-playlist-list">
           {% for pl in library_playlists %}
-          <li>
-            <a href="{% url 'spotify_playlist' pl.id %}">{{ pl.title }}</a>
-          </li>
+          <li><a href="{{ pl.get_absolute_url }}">{{ pl.title }}</a></li>
+          {% empty %}
+          <li class="sp-muted">{% trans "Seed music content to populate." %}</li>
           {% endfor %}
         </ul>
       </div>
       <p class="sp-sidebar-note">{{ disclaimer }}</p>
     </aside>
 
-    <main class="sp-main" id="sp-main">
+    <main class="sp-main">
       <header class="sp-topbar">
         <div class="sp-topbar-left">
           <button type="button" class="sp-chip" onclick="history.back()" aria-label="{% trans 'Back' %}">‹</button>
           <button type="button" class="sp-chip" onclick="history.forward()" aria-label="{% trans 'Forward' %}">›</button>
         </div>
         <div class="sp-topbar-right">
-          <a class="sp-pill" href="{% url 'spotify_search' %}">{% trans "Search" %}</a>
+          <a class="sp-pill" href="{% url 'music_search' %}">{% trans "Search" %}</a>
           <span class="sp-user" title="{% trans 'Demo account' %}">D</span>
         </div>
       </header>
-      <div class="sp-content">
-        {% block content %}{% endblock %}
-      </div>
+      <div class="sp-content">{% block content %}{% endblock %}</div>
     </main>
 
-    <footer class="sp-player" id="sp-player" role="region" aria-label="{% trans 'Now playing' %}">
+    <footer class="sp-player" role="region" aria-label="{% trans 'Now playing' %}">
       <div class="sp-player-track">
-        <div class="sp-cover sp-cover-sm cover-{{ now_playing.cover }}" id="np-cover" aria-hidden="true"></div>
+        {% if now_playing %}
+        <div class="sp-cover sp-cover-sm cover-{{ now_playing.cover_key }}" id="np-cover"></div>
         <div class="sp-player-meta">
           <div class="sp-player-title" id="np-title">{{ now_playing.title }}</div>
           <div class="sp-player-artist" id="np-artist">
-            <a href="{% url 'spotify_artist' now_playing.artist.id %}">{{ now_playing.artist.name }}</a>
+            <a href="{{ now_playing.artist.get_absolute_url }}">{{ now_playing.artist.title }}</a>
           </div>
         </div>
+        {% else %}
+        <div class="sp-player-meta">
+          <div class="sp-player-title" id="np-title">{% trans "Nothing playing" %}</div>
+          <div class="sp-player-artist" id="np-artist">{% trans "Seed tracks in Admin → Music" %}</div>
+        </div>
+        {% endif %}
       </div>
       <div class="sp-player-controls">
         <div class="sp-player-buttons">
@@ -76,15 +81,14 @@
         <div class="sp-player-progress">
           <span id="np-elapsed">0:00</span>
           <div class="sp-bar" id="np-bar"><div class="sp-bar-fill" id="np-fill"></div></div>
-          <span id="np-duration">{{ now_playing.duration }}</span>
+          <span id="np-duration">{% if now_playing %}{{ now_playing.duration }}{% else %}0:00{% endif %}</span>
         </div>
       </div>
       <div class="sp-player-extra">
-        <span class="sp-muted">{% trans "Demo player — no audio" %}</span>
+        <span class="sp-muted">{% trans "Demo player — CMS data, no audio" %}</span>
       </div>
     </footer>
   </div>
   <script src="{% static 'spotify/player.js' %}"></script>
-  {% block extra_js %}{% endblock %}
 </body>
 </html>

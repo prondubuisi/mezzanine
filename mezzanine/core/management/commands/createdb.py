@@ -120,8 +120,8 @@ class Command(BaseCommand):
         kit_apps = (
             (
                 "mezzanine.kits.spotify",
-                "Spotify Web Player–style",
-                "Music UI demo (catalog data; no seed required).",
+                "Spotify listening theme",
+                "Theme + music plugin: seed CMS artists/albums/tracks/playlists.",
             ),
             (
                 "mezzanine.kits.whitehouse",
@@ -159,15 +159,23 @@ class Command(BaseCommand):
                     print(f"\nLoading {label} demo content ...\n")
                 kit_name = app_label.rsplit(".", 1)[-1]
                 seed_profile = None
+                seed_command = None
                 try:
-                    from mezzanine.kits.loader import kit_seed_profile, load_kit_meta
+                    from mezzanine.kits.loader import (
+                        kit_seed_command,
+                        kit_seed_profile,
+                        load_kit_meta,
+                    )
 
                     _, meta = load_kit_meta(kit_name)
                     seed_profile = kit_seed_profile(meta)
+                    seed_command = kit_seed_command(meta)
                 except Exception:  # noqa: BLE001 — fall back to fixtures
-                    seed_profile = None
+                    pass
                 if seed_profile:
                     call_command("seed_site_clone", site=seed_profile)
+                elif seed_command:
+                    call_command(seed_command)
                 elif app_label == "mezzanine.kits.wporg":
                     call_command("seed_wporg_demo")
                 else:

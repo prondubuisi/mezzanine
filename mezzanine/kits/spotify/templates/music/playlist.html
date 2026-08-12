@@ -1,0 +1,22 @@
+{% extends "music/base.html" %}
+{% load i18n %}
+{% block title %}{{ playlist.title }} · {{ site_name }}{% endblock %}
+{% block content %}
+<header class="sp-detail-head">
+  <div class="sp-cover sp-cover-lg cover-{{ playlist.cover_key }}"></div>
+  <div>
+    <div class="sp-kicker">{% trans "Playlist" %}</div>
+    <h1>{{ playlist.title }}</h1>
+    <p class="sp-lede">{{ playlist.description }}</p>
+    <p class="sp-meta">{{ playlist.owner_label }} · {{ tracks|length }} {% trans "songs" %}</p>
+    {% if tracks %}
+    <button type="button" class="sp-btn-play"
+      data-play-title="{{ tracks.0.title }}"
+      data-play-artist="{{ tracks.0.artist.title }}"
+      data-play-duration="{{ tracks.0.duration }}"
+      data-play-cover="{{ tracks.0.cover_key }}">{% trans "Play" %}</button>
+    {% endif %}
+  </div>
+</header>
+{% include "music/includes/track_table.html" with tracks=tracks %}
+{% endblock %}

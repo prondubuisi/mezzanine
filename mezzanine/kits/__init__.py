@@ -3,6 +3,8 @@
 from mezzanine.kits.loader import (
     apply_kit,
     kit_path,
+    kit_plugins,
+    kit_seed_command,
     kit_seed_profile,
     kit_urlconf,
     kit_wants_blog,
@@ -13,6 +15,8 @@ from mezzanine.kits.loader import (
 __all__ = [
     "apply_kit",
     "kit_path",
+    "kit_plugins",
+    "kit_seed_command",
     "kit_seed_profile",
     "kit_urlconf",
     "kit_wants_blog",

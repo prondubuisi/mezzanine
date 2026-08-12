@@ -1,8 +1,11 @@
 """
-Demo music catalog for the Spotify Web Player–style kit.
+Seed *source* for the music CMS plugin (not runtime catalog).
 
-Plain data only — no Django models. Presentation lives in ``mezzanine.kits.spotify``.
-Original demo titles/artists (not licensed catalog or trademarks).
+``seed_music_demo`` writes these dicts into ``mezzanine.music`` models.
+Themes never import this module at request time — WordPress analogue:
+import JSON / demo content, not hard-coded theme data.
+
+Original demo titles (not licensed catalog or trademarks).
 """
 
 from __future__ import annotations

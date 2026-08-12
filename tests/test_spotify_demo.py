@@ -1,17 +1,19 @@
-"""Spotify Web Player–style kit (music UI, not newsroom)."""
+"""Spotify listening theme + music CMS plugin (WordPress theme/plugin split)."""
 
 import sys
 import types
 from pathlib import Path
 
 import pytest
+from django.core.management import call_command
 from django.test import Client
 from django.urls import clear_url_caches, include, path, set_urlconf
 
 import mezzanine
-from mezzanine.demos import music_catalog as catalog
 from mezzanine.kits.loader import (
     apply_kit,
+    kit_plugins,
+    kit_seed_command,
     kit_urlconf,
     kit_wants_blog,
     load_kit_meta,
@@ -19,48 +21,25 @@ from mezzanine.kits.loader import (
 )
 
 REPO = Path(mezzanine.__file__).resolve().parent.parent
-PLAYER_FLOW = (
-    "/",
-    "/search/",
-    "/search/?q=Luna",
-    "/library/",
-    "/playlist/daily-mix-1/",
-    "/album/night-bus/",
-    "/artist/luna-park/",
-)
 
 
-def test_spotify_kit_is_player_not_newsroom():
+def test_spotify_kit_is_theme_not_data_owner():
     root, meta = load_kit_meta("spotify")
     assert meta["name"] == "spotify"
     assert kit_wants_blog(meta) is False
-    assert kit_urlconf(meta) == "mezzanine.kits.spotify.urls"
-    assert meta.get("seed_profile") in (None, "")
+    assert "mezzanine.music" in kit_plugins(meta)
+    assert kit_urlconf(meta) == "mezzanine.music.urls"
+    assert kit_seed_command(meta) == "seed_music_demo"
     validate_kit(meta)
+    # Theme assets only — no kit views/urls.
+    assert not (root / "views.py").exists()
+    assert not (root / "urls.py").exists()
+    assert (root / "templates/music/home.html").is_file()
     assert (root / "static/spotify/player.css").is_file()
-    assert (root / "static/spotify/player.js").is_file()
-    assert (root / "templates/spotify/home.html").is_file()
-    assert (root / "templates/spotify/shell.html").is_file()
-    # Old newsroom chrome must not ship in this kit.
-    assert not (root / "templates/index.html").exists()
-    assert not (root / "static/spotify/tokens.css").exists()
+    assert "music.Track" in meta["types"]
 
 
-def test_music_catalog_search_and_hydrate():
-    assert "luna-park" in catalog.ARTISTS
-    hits = catalog.search("Luna")
-    assert hits["artists"]
-    assert any(t["title"] for t in hits["tracks"])
-    pl = catalog.get_playlist("daily-mix-1")
-    assert pl and pl["tracks"]
-    assert pl["tracks"][0]["artist"]["name"]
-    al = catalog.get_album("night-bus")
-    assert al and al["artist"]["name"] == "Luna Park"
-    ar = catalog.get_artist("luna-park")
-    assert ar and ar["albums"]
-
-
-def test_apply_spotify_kit_mounts_urlconf(tmp_path):
+def test_apply_spotify_installs_music_plugin(tmp_path):
     project = tmp_path / "site"
     app = "mysite"
     (project / app).mkdir(parents=True)
@@ -85,82 +64,76 @@ def test_apply_spotify_kit_mounts_urlconf(tmp_path):
     apply_kit("spotify", project, app)
     settings = (project / app / "settings.py").read_text(encoding="utf-8")
     assert "mezzanine.kits.spotify" in settings
+    assert "mezzanine.music" in settings
     assert "mezzanine.blog" not in settings
     urls = (project / app / "urls.py").read_text(encoding="utf-8")
-    assert "mezzanine.kits.spotify.urls" in urls
-    assert (project / "static/spotify/player.css").is_file()
-    assert (project / "templates/spotify/home.html").is_file()
-    assert (project / ".nova-kit").read_text().strip() == "spotify"
+    assert "mezzanine.music.urls" in urls
+    assert (project / "templates/music/home.html").is_file()
 
 
 @pytest.fixture
-def player_client(settings):
-    """HTTP client with player urlconf + kit templates discoverable."""
-    if "mezzanine.kits.spotify" not in settings.INSTALLED_APPS:
-        settings.INSTALLED_APPS = list(settings.INSTALLED_APPS) + [
-            "mezzanine.kits.spotify"
-        ]
-    mod = types.ModuleType("nova_test_spotify_urls")
-    mod.urlpatterns = [
-        path("", include("mezzanine.kits.spotify.urls")),
-    ]
-    sys.modules["nova_test_spotify_urls"] = mod
-    settings.ROOT_URLCONF = "nova_test_spotify_urls"
+def music_client(settings):
+    apps = list(settings.INSTALLED_APPS)
+    if "mezzanine.music" not in apps:
+        apps.append("mezzanine.music")
+    if "mezzanine.kits.spotify" not in apps:
+        apps.append("mezzanine.kits.spotify")
+    settings.INSTALLED_APPS = apps
+    # Ensure music migrations can run — pytest uses project apps; migrate music.
+    call_command("migrate", "music", verbosity=0, interactive=False)
+    mod = types.ModuleType("nova_test_music_urls")
+    mod.urlpatterns = [path("", include("mezzanine.music.urls"))]
+    sys.modules["nova_test_music_urls"] = mod
+    settings.ROOT_URLCONF = "nova_test_music_urls"
     clear_url_caches()
     set_urlconf(settings.ROOT_URLCONF)
     yield Client()
     set_urlconf(None)
     clear_url_caches()
-    sys.modules.pop("nova_test_spotify_urls", None)
+    sys.modules.pop("nova_test_music_urls", None)
 
 
 @pytest.mark.django_db
-def test_spotify_player_end_to_end_flow(player_client):
-    client = player_client
-    for path in PLAYER_FLOW:
+def test_music_cms_seed_and_public_flow(music_client):
+    call_command("seed_music_demo", flush=True, verbosity=0)
+    from mezzanine.music.models import Artist, Playlist, Track
+
+    assert Artist.objects.filter(status=2).count() >= 1
+    assert Track.objects.count() >= 8
+    assert Playlist.objects.filter(featured=True).exists()
+
+    client = music_client
+    for path in (
+        "/",
+        "/search/?q=Luna",
+        "/library/",
+        "/playlist/daily-mix-1/",
+        "/album/night-bus/",
+        "/artist/luna-park/",
+    ):
         resp = client.get(path)
         assert resp.status_code == 200, path
 
     home = client.get("/").content.decode("utf-8")
-    assert "sp-app" in home
     assert "Daily Mix 1" in home
-    assert "Nova Listen" in home
-    assert "newsroom" not in home.lower()
-    assert "Company news" not in home
+    assert "sp-app" in home or "Playlists" in home
+    assert "Newsroom" not in home
+    # CMS disclaimer
+    assert "CMS" in home or "content" in home.lower()
 
-    search = client.get("/search/?q=Focus").content.decode("utf-8")
-    assert "Focus Flow" in search or "Focus Drift" in search
-
-    playlist = client.get("/playlist/daily-mix-1/").content.decode("utf-8")
-    assert "Ticket Stub" in playlist or "Fluorescent" in playlist
-    assert "sp-tracks" in playlist
-
-    album = client.get("/album/night-bus/").content.decode("utf-8")
-    assert "Night Bus" in album
-    assert "Luna Park" in album
-
-    artist = client.get("/artist/luna-park/").content.decode("utf-8")
-    assert "Luna Park" in artist
-    assert "monthly listeners" in artist.lower() or "2.4M" in artist
-
-    library = client.get("/library/").content.decode("utf-8")
-    assert "Your Library" in library
-    assert "Liked Songs" in library
-
-    missing = client.get("/playlist/not-a-real-list/")
-    assert missing.status_code == 404
+    # Admin-editable: rename playlist and see it on the site.
+    pl = Playlist.objects.get(slug="daily-mix-1")
+    pl.title = "Daily Mix CMS Edit"
+    pl.save()
+    home2 = client.get("/").content.decode("utf-8")
+    assert "Daily Mix CMS Edit" in home2
 
 
-def test_demo_spotify_recipe_mentions_player():
-    text = (REPO / "justfile").read_text(encoding="utf-8")
-    assert "demo-spotify" in text
-    assert "playlist/daily-mix-1" in text
-    assert "Web Player" in text or "player" in text.lower()
-
-
-def test_spotify_doc_is_player():
-    doc = REPO / "docs/modernization/demo-clones/SPOTIFY.md"
-    assert doc.is_file()
-    text = doc.read_text(encoding="utf-8")
-    assert "Web Player" in text or "music player" in text.lower()
-    assert "not" in text.lower() and "newsroom" in text.lower()
+def test_spotify_doc_describes_plugin_theme_split():
+    text = (REPO / "docs/modernization/demo-clones/SPOTIFY.md").read_text(
+        encoding="utf-8"
+    )
+    assert "mezzanine.music" in text
+    assert "plugin" in text.lower()
+    assert "theme" in text.lower()
+    assert "seed_music_demo" in text

@@ -1,0 +1,10 @@
+{% extends "music/base.html" %}
+{% block content %}
+<form method="get"><input name="q" value="{{ q }}" placeholder="Search"></form>
+{% if q %}
+  <h2>Songs</h2>
+  <ul>{% for t in results.tracks %}<li>{{ t.title }} — {{ t.artist.title }}</li>{% empty %}<li>None</li>{% endfor %}</ul>
+  <h2>Artists</h2>
+  <ul>{% for a in results.artists %}<li><a href="{{ a.get_absolute_url }}">{{ a.title }}</a></li>{% empty %}<li>None</li>{% endfor %}</ul>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,10 @@
+{% extends "music/base.html" %}
+{% block content %}
+<h1>{{ artist.title }}</h1>
+<p>{{ artist.bio }}</p>
+<ol>
+{% for t in tracks %}
+  <li>{{ t.title }}</li>
+{% endfor %}
+</ol>
+{% endblock %}

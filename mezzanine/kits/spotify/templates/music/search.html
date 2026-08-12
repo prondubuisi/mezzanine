@@ -1,0 +1,57 @@
+{% extends "music/base.html" %}
+{% load i18n %}
+{% block title %}{% trans "Search" %} · {{ site_name }}{% endblock %}
+{% block content %}
+<section class="sp-search">
+  <form method="get" action="{% url 'music_search' %}" class="sp-search-form" role="search">
+    <label class="sp-sr" for="q">{% trans "Search" %}</label>
+    <input id="q" name="q" type="search" value="{{ q }}"
+      placeholder="{% trans 'What do you want to listen to?' %}" autocomplete="off" autofocus>
+  </form>
+</section>
+{% if q %}
+  {% if results.tracks %}
+  <section class="sp-shelf"><h2>{% trans "Songs" %}</h2>
+  {% include "music/includes/track_table.html" with tracks=results.tracks %}</section>
+  {% endif %}
+  {% if results.artists %}
+  <section class="sp-shelf"><h2>{% trans "Artists" %}</h2>
+  <div class="sp-grid">
+  {% for ar in results.artists %}
+    <a class="sp-card sp-card-round" href="{{ ar.get_absolute_url }}">
+      <div class="sp-cover cover-{{ ar.cover_key }} sp-cover-round"></div>
+      <div class="sp-card-title">{{ ar.title }}</div>
+    </a>
+  {% endfor %}
+  </div></section>
+  {% endif %}
+  {% if results.albums %}
+  <section class="sp-shelf"><h2>{% trans "Albums" %}</h2>
+  <div class="sp-grid">
+  {% for al in results.albums %}
+    <a class="sp-card" href="{{ al.get_absolute_url }}">
+      <div class="sp-cover cover-{{ al.cover_key }}"></div>
+      <div class="sp-card-title">{{ al.title }}</div>
+      <div class="sp-card-sub">{{ al.artist.title }}</div>
+    </a>
+  {% endfor %}
+  </div></section>
+  {% endif %}
+  {% if results.playlists %}
+  <section class="sp-shelf"><h2>{% trans "Playlists" %}</h2>
+  <div class="sp-grid">
+  {% for pl in results.playlists %}
+    <a class="sp-card" href="{{ pl.get_absolute_url }}">
+      <div class="sp-cover cover-{{ pl.cover_key }}"></div>
+      <div class="sp-card-title">{{ pl.title }}</div>
+    </a>
+  {% endfor %}
+  </div></section>
+  {% endif %}
+  {% if not results.tracks and not results.artists and not results.albums and not results.playlists %}
+  <p class="sp-empty">{% blocktrans %}No CMS results for “{{ q }}”.{% endblocktrans %}</p>
+  {% endif %}
+{% else %}
+  <p class="sp-lede">{% trans "Search published catalog content." %}</p>
+{% endif %}
+{% endblock %}

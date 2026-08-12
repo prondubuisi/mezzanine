@@ -1,0 +1,10 @@
+{% extends "music/base.html" %}
+{% block content %}
+<h1>{{ playlist.title }}</h1>
+<p>{{ playlist.description }}</p>
+<ol>
+{% for t in tracks %}
+  <li>{{ t.title }} — {{ t.artist.title }} ({{ t.duration }})</li>
+{% endfor %}
+</ol>
+{% endblock %}

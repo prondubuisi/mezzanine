@@ -17,6 +17,10 @@ _TYPE_IMPORTS = {
     "forms.Form": "mezzanine.forms.models.Form",
     "blog.BlogPost": "mezzanine.blog.models.BlogPost",
     "galleries.Gallery": "mezzanine.galleries.models.Gallery",
+    "music.Artist": "mezzanine.music.models.Artist",
+    "music.Album": "mezzanine.music.models.Album",
+    "music.Track": "mezzanine.music.models.Track",
+    "music.Playlist": "mezzanine.music.models.Playlist",
 }
 
 
@@ -153,6 +157,35 @@ def kit_urlconf(meta: dict) -> str | None:
     return urlconf or None
 
 
+def kit_plugins(meta: dict) -> list[str]:
+    """
+    Extra Django apps required by the kit (WordPress “plugins”).
+
+    Declared in kit.json as ``plugins``: [\"mezzanine.music\", …].
+    Types like ``music.Track`` also imply ``mezzanine.music``.
+    """
+    plugins: list[str] = []
+    for raw in meta.get("plugins") or []:
+        p = str(raw).strip()
+        if p and p not in plugins:
+            plugins.append(p)
+    for type_name in meta.get("types") or []:
+        if str(type_name).startswith("music."):
+            if "mezzanine.music" not in plugins:
+                plugins.append("mezzanine.music")
+            break
+    return plugins
+
+
+def kit_seed_command(meta: dict) -> str | None:
+    """Optional management command name to seed CMS content after createdb."""
+    cmd = meta.get("seed_command")
+    if cmd is None:
+        return None
+    cmd = str(cmd).strip()
+    return cmd or None
+
+
 def apply_kit(name: str, project_dir: str | Path, project_app: str) -> dict:
     """
     Overlay a kit onto a project written by nova-project.
@@ -167,8 +200,13 @@ def apply_kit(name: str, project_dir: str | Path, project_app: str) -> dict:
     project_app_dir = project_dir / project_app
 
     # Settings first so a rewrite failure does not leave kit templates alone.
-    # First-party kits always rewrite apps; blog is derived from kit.json types.
-    _apply_kit_settings(project_app_dir, name, with_blog=kit_wants_blog(meta))
+    # Blog from types; plugins from kit.json / music.* types (WP theme+plugins).
+    _apply_kit_settings(
+        project_app_dir,
+        name,
+        with_blog=kit_wants_blog(meta),
+        plugins=kit_plugins(meta),
+    )
     _apply_kit_urls(project_app_dir, meta)
 
     templates_dest = project_dir / "templates"
@@ -234,7 +272,11 @@ def apply_kit(name: str, project_dir: str | Path, project_app: str) -> dict:
 
 
 def _apply_kit_settings(
-    project_app_dir: Path, kit_name: str, *, with_blog: bool
+    project_app_dir: Path,
+    kit_name: str,
+    *,
+    with_blog: bool,
+    plugins: list[str] | None = None,
 ) -> None:
     """Rewrite INSTALLED_APPS for a first-party kit from its feature flags."""
     settings_path = project_app_dir / "settings.py"
@@ -260,6 +302,12 @@ def _apply_kit_settings(
     ]
     if with_blog:
         apps.insert(apps.index("mezzanine.pages") + 1, "mezzanine.blog")
+    for plugin in plugins or []:
+        if not re.fullmatch(r"[\w.]+", plugin):
+            raise KitError("Invalid kit plugin %r" % plugin)
+        if plugin not in apps:
+            # Plugins sit with other content apps (after pages).
+            apps.insert(apps.index("mezzanine.forms") + 1, plugin)
     apps_block = "INSTALLED_APPS = [\n" + "".join(
         f'    "{app}",\n' for app in apps
     ) + "]"
@@ -291,7 +339,7 @@ def _apply_kit_settings(
 
 def _apply_brochure_settings(project_app_dir: Path) -> None:
     """Backward-compatible alias for tests."""
-    _apply_kit_settings(project_app_dir, "brochure", with_blog=False)
+    _apply_kit_settings(project_app_dir, "brochure", with_blog=False, plugins=None)
 
 
 def _apply_kit_urls(project_app_dir: Path, meta: dict) -> None:

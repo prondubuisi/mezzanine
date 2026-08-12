@@ -136,18 +136,26 @@ Append observations under **Session notes** below.
 
 ## Implemented slice (2026-08-12)
 
-After White House IA parity, common surface was extracted before the Spotify kit:
+### Editorial (White House / newsroom clones)
 
 | Piece | Status |
 |-------|--------|
-| `kit_base.html` + tokens block | Done (all first-party kits) |
-| Shared `nova_kits/newsroom.css` (banner/grid/card/river) | Done |
-| `kit_wants_blog(meta)` from kit.json types | Done (no kit-name allowlist) |
-| `seed_profile` on kit.json → createdb | Done (whitehouse, spotify) |
-| Section slug ↔ category listing | Done (page processor) |
-| Installable theme.json / Customizer | Still gap (see above) |
+| `kit_base.html` + tokens | Done |
+| Shared `nova_kits/newsroom.css` | Done |
+| `kit_wants_blog` / `seed_profile` | Done |
+| Section slug ↔ category listing | Done |
 
-White House and Spotify kits are **thin**: tokens + nav + home copy only.
+### Listening (Spotify) — WordPress plugin + theme
+
+| Piece | Status |
+|-------|--------|
+| Plugin `mezzanine.music` (Artist/Album/Track/Playlist + admin) | Done |
+| Theme kit `spotify` (templates/CSS only) | Done |
+| `kit.json` `plugins` + `seed_command` + `urlconf` | Done |
+| Runtime data from **DB**, not theme Python | Done |
+| Installable theme.json / Customizer | Still gap |
+
+**Rule:** kits/themes never own catalog data; plugins own content types.
 
 ## Session notes
 

@@ -22,6 +22,10 @@ INSTALLED_APPS.append("tests")
 if "mezzanine.accounts" not in INSTALLED_APPS:
     INSTALLED_APPS.append("mezzanine.accounts")
 
+# Music plugin (listening demos / Spotify theme) — models available to tests.
+if "mezzanine.music" not in INSTALLED_APPS:
+    INSTALLED_APPS.append("mezzanine.music")
+
 # Use the MD5 password hasher by default for quicker test runs.
 PASSWORD_HASHERS = ('django.contrib.auth.hashers.MD5PasswordHasher',)
 
