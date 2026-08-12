@@ -22,7 +22,8 @@ def test_shared_recent_posts_include_exists():
 
 
 def test_kit_indexes_include_river():
-    for name in ("wporg", "magazine", "institute", "whitehouse", "spotify"):
+    # Editorial kits use index.html river; listening theme uses music/home.html.
+    for name in ("wporg", "magazine", "institute", "whitehouse"):
         idx = (REPO / "kits" / name / "templates/index.html").read_text(
             encoding="utf-8"
         )

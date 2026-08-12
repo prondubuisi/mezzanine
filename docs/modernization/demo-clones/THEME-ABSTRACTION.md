@@ -99,13 +99,23 @@ Theme packages only override tokens + a few layout blocks.
 
 See also `PARITY-BACKLOG.md`. Theme-specific:
 
-1. No installable theme package contract (`theme.json`)  
-2. Kits **copy** templates into the project — switching theme is manual  
-3. No home/section/single **slot** map; one `base.html` + content types  
-4. Section pages ≠ category archives (dual IA)  
+1. ~~No installable theme package contract (`theme.json`)~~ **Done** — `kits/*/theme.json` + `mezzanine.kits.theme`  
+2. ~~Kits copy freezes chrome~~ **Mitigated** — `ACTIVE_THEME` + `active_theme.Loader` loads package templates *before* project copy  
+3. Slot map declared in `theme.json` `slots` — not yet a full template hierarchy router  
+4. Section pages ≠ category archives (dual IA) — mitigated for WH/Spotify newsroom seeds  
 5. Featured image default off; no theme supports “post thumbnail” UX  
-6. No Customizer-equivalent for logo/colors without code  
+6. No full Customizer UI — `colors` live in theme.json; tokens CSS still hand-authored  
 
+### Runtime theme API
+
+```bash
+python manage.py activate_theme --list
+python manage.py activate_theme whitehouse --seed
+python manage.py activate_theme spotify --seed
+# or DEBUG lab: /_nova/demo-sites/  → Themes → Activate + seed
+```
+
+Setting: **ACTIVE_THEME** (editable). Loader order: host_themes → **active_theme** → project filesystem → app_directories.
 ---
 
 ## Sit lab testing protocol
@@ -153,7 +163,9 @@ Append observations under **Session notes** below.
 | Theme kit `spotify` (templates/CSS only) | Done |
 | `kit.json` `plugins` + `seed_command` + `urlconf` | Done |
 | Runtime data from **DB**, not theme Python | Done |
-| Installable theme.json / Customizer | Still gap |
+| Installable `theme.json` + `ACTIVE_THEME` loader | **Done** |
+| Demo lab theme activate (+ seed) | **Done** |
+| Full Customizer UI for colors/logo | Still gap (JSON + tokens only) |
 
 **Rule:** kits/themes never own catalog data; plugins own content types.
 

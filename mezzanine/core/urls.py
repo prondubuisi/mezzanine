@@ -60,4 +60,9 @@ urlpatterns += [
         core_views.demo_sites_switch,
         name="nova_demo_sites_switch",
     ),
+    path(
+        "_nova/demo-sites/theme/",
+        core_views.demo_theme_activate,
+        name="nova_demo_theme_activate",
+    ),
 ]

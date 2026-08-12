@@ -398,15 +398,23 @@ def _require_staff_site(request):
 @require_GET
 def demo_sites_index(request):
     """
-    Local IA site-clone lab. Only available when DEBUG=True.
+    Local IA site-clone + theme lab. Only available when DEBUG=True.
     """
     from django.conf import settings as dj_settings
 
     from mezzanine.demos.site_profiles import PROFILES
+    from mezzanine.kits.theme import (
+        get_active_theme_name,
+        list_theme_names,
+        load_theme_meta,
+        profile_theme_map,
+        theme_plugins_installed,
+    )
 
     if not dj_settings.DEBUG:
         raise Http404
     current = request.session.get("nova_demo_site", "")
+    theme_for_profile = profile_theme_map()
     sites = [
         {
             "slug": slug,
@@ -416,30 +424,52 @@ def demo_sites_index(request):
             "pages": [p[0] for p in meta.get("pages", [])],
             "post_count": len(meta.get("posts", [])),
             "active": slug == current,
+            "theme": theme_for_profile.get(slug, ""),
         }
         for slug, meta in sorted(PROFILES.items())
     ]
+    active_theme = get_active_theme_name()
+    themes = []
+    for name in list_theme_names():
+        try:
+            meta = load_theme_meta(name)
+        except Exception:  # noqa: BLE001
+            continue
+        themes.append(
+            {
+                "name": name,
+                "description": meta.get("description", ""),
+                "version": meta.get("version", ""),
+                "plugins_ok": theme_plugins_installed(meta),
+                "active": name == active_theme,
+                "colors": meta.get("colors") or {},
+            }
+        )
     return TemplateResponse(
         request,
         "admin/demo_sites.html",
         {
-            "title": "Site clone lab",
+            "title": "Site clone & theme lab",
             "sites": sites,
+            "themes": themes,
+            "active_theme": active_theme,
             "current": current,
             "switch_hint": "just demo-clone <slug> --flush",
+            "theme_hint": "python manage.py activate_theme <name> [--seed]",
         },
     )
 
 
 @require_POST
 def demo_sites_switch(request):
-    """Load a named IA clone. Only when DEBUG=True."""
+    """Load a named IA clone and optional theme. Only when DEBUG=True."""
     from django.conf import settings as dj_settings
     from django.contrib import messages
     from django.core.management import call_command
     from django.http import HttpResponseRedirect
 
     from mezzanine.demos.site_profiles import get_profile
+    from mezzanine.kits.theme import profile_theme_map, set_active_theme
 
     if not dj_settings.DEBUG:
         raise Http404
@@ -450,10 +480,72 @@ def demo_sites_switch(request):
         raise Http404 from None
     call_command("seed_site_clone", site=slug, flush=True, verbosity=0)
     request.session["nova_demo_site"] = slug
-    messages.success(
-        request,
-        "Switched demo content to %s. Hard-refresh if needed." % slug,
-    )
+    theme = profile_theme_map().get(slug) or (request.POST.get("theme") or "").strip()
+    if theme:
+        try:
+            set_active_theme(theme)
+            messages.success(
+                request,
+                "Switched content to %s and ACTIVE_THEME=%s." % (slug, theme),
+            )
+        except Exception as exc:  # noqa: BLE001
+            messages.warning(
+                request,
+                "Content → %s, but theme not activated: %s" % (slug, exc),
+            )
+    else:
+        messages.success(
+            request,
+            "Switched demo content to %s. Hard-refresh if needed." % slug,
+        )
+    return HttpResponseRedirect("/")
+
+
+@require_POST
+def demo_theme_activate(request):
+    """Activate a theme package (+ optional seed). DEBUG only."""
+    from django.conf import settings as dj_settings
+    from django.contrib import messages
+    from django.core.management import call_command
+    from django.http import HttpResponseRedirect
+
+    from mezzanine.kits.theme import ThemeError, load_theme_meta, set_active_theme
+
+    if not dj_settings.DEBUG:
+        raise Http404
+    name = (request.POST.get("theme") or "").strip()
+    do_seed = request.POST.get("seed") == "1"
+    try:
+        meta = set_active_theme(name)
+    except ThemeError as exc:
+        messages.error(request, str(exc))
+        return HttpResponseRedirect("/_nova/demo-sites/")
+    msg = "ACTIVE_THEME = %s" % name
+    if do_seed:
+        seed_cmd = meta.get("seed_command")
+        seed_profile = meta.get("seed_profile")
+        if not seed_cmd and not seed_profile:
+            try:
+                from mezzanine.kits.loader import (
+                    kit_seed_command,
+                    kit_seed_profile,
+                    load_kit_meta,
+                )
+
+                _, kit_meta = load_kit_meta(name)
+                seed_cmd = kit_seed_command(kit_meta)
+                seed_profile = kit_seed_profile(kit_meta)
+            except Exception:  # noqa: BLE001
+                pass
+        if seed_cmd:
+            call_command(seed_cmd, flush=True, verbosity=0)
+            msg += " + %s" % seed_cmd
+        elif seed_profile:
+            call_command(
+                "seed_site_clone", site=seed_profile, flush=True, verbosity=0
+            )
+            msg += " + seed %s" % seed_profile
+    messages.success(request, msg)
     return HttpResponseRedirect("/")
 
 

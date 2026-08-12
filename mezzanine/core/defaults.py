@@ -197,6 +197,20 @@ register_setting(
 )
 
 register_setting(
+    name="ACTIVE_THEME",
+    label=_("Active theme"),
+    description=_(
+        "First-party kit name that supplies the active theme package "
+        "(WordPress-style). When set, templates under "
+        "mezzanine/kits/<name>/templates/ load before the project's "
+        "copied templates. Empty disables runtime theme override. "
+        "Requires the kit app (and any theme plugins) in INSTALLED_APPS."
+    ),
+    editable=True,
+    default="",
+)
+
+register_setting(
     name="INLINE_EDITING_ENABLED",
     description=_("If ``True``, front-end inline editing will be enabled."),
     editable=False,

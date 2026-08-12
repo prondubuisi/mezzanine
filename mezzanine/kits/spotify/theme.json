@@ -1,0 +1,25 @@
+{
+  "name": "spotify",
+  "version": "0.3.0",
+  "description": "Listening UI theme for mezzanine.music (presentation only).",
+  "kind": "theme",
+  "slots": {
+    "chrome": "music/base.html",
+    "home": "music/home.html",
+    "search": "music/search.html",
+    "library": "music/library.html",
+    "playlist": "music/playlist.html",
+    "album": "music/album.html",
+    "artist": "music/artist.html"
+  },
+  "menus": ["primary", "library"],
+  "colors": {
+    "ink": "#121212",
+    "accent": "#1db954",
+    "canvas": "#000000",
+    "paper": "#181818"
+  },
+  "tokens": "static/spotify/player.css",
+  "plugins": ["mezzanine.music"],
+  "seed_command": "seed_music_demo"
+}

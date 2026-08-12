@@ -59,12 +59,23 @@ demo-whitehouse *args:
 	set -euo pipefail
 	just demo-clone whitehouse --flush "$@"
 
+# Activate a theme package (ACTIVE_THEME). Usage: just activate-theme spotify
+# Optional: just activate-theme spotify --seed
+activate-theme *args:
+	#!/usr/bin/env bash
+	set -euo pipefail
+	if [ "$#" -lt 1 ]; then
+		just _django activate_theme --list
+		exit 2
+	fi
+	just _django activate_theme "$@"
+
 # Seed CMS music catalog + print listening-theme flow URLs.
 # Project: nova-project spotdemo --kit spotify  (theme + mezzanine.music plugin)
 demo-spotify *args:
 	#!/usr/bin/env bash
 	set -euo pipefail
-	just _django seed_music_demo --flush "$@"
+	just _django activate_theme spotify --seed "$@" || just _django seed_music_demo --flush "$@"
 	just demo-spotify-flow
 
 demo-spotify-flow *args:

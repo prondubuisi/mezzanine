@@ -238,6 +238,10 @@ def set_dynamic_settings(s):
         )
         s["MIDDLEWARE"].insert(session + 1, "django.middleware.locale.LocaleMiddleware")
 
+    # WordPress-style active theme: load kit package templates before
+    # project copy-on-create templates (see mezzanine.kits.theme).
+    _wire_active_theme_loader(s)
+
     # Revert tuple settings back to tuples.
     for setting in tuple_list_settings:
         s[setting] = tuple(s[setting])
@@ -254,6 +258,28 @@ def set_dynamic_settings(s):
         elif shortname == "mysql":
             # Required MySQL collation for tests.
             db.setdefault("TEST", {}).setdefault("COLLATION", "utf8_general_ci")
+
+
+def _wire_active_theme_loader(s):
+    """Prepend ACTIVE_THEME template loader when TEMPLATES define loaders."""
+    active_loader = "mezzanine.template.loaders.active_theme.Loader"
+    templates = s.get("TEMPLATES") or []
+    for engine in templates:
+        if not isinstance(engine, dict):
+            continue
+        options = engine.setdefault("OPTIONS", {})
+        loaders = options.get("loaders")
+        if not loaders:
+            continue
+        loaders = list(loaders)
+        if active_loader not in loaders:
+            # After host_themes (if present), before filesystem.
+            host = "mezzanine.template.loaders.host_themes.Loader"
+            if host in loaders:
+                loaders.insert(loaders.index(host) + 1, active_loader)
+            else:
+                loaders.insert(0, active_loader)
+            options["loaders"] = loaders
 
 
 def _wire_staff_2fa(s, append):
