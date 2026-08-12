@@ -62,7 +62,9 @@ def test_displayable_admin_injects_custom_field_fields():
     fieldsets = admin.get_fieldsets(request, obj=page)
     titles = [fs[0] for fs in fieldsets]
     assert "Custom fields" in titles
-    custom_fields = next(fs[1]["fields"] for fs in fieldsets if fs[0] == "Custom fields")
+    custom_fields = next(
+        fs[1]["fields"] for fs in fieldsets if fs[0] == "Custom fields"
+    )
     assert "cf_faculty_title" in custom_fields
     assert "cf_department" in custom_fields
 

@@ -252,8 +252,8 @@ def _resolve_content_type(dotted: str):
 
     Uses the same type map as kit.json ``types`` where possible.
     """
-    from django.contrib.contenttypes.models import ContentType
     from django.apps import apps as django_apps
+    from django.contrib.contenttypes.models import ContentType
 
     dotted = str(dotted).strip()
     if dotted in _TYPE_IMPORTS:
@@ -262,7 +262,10 @@ def _resolve_content_type(dotted: str):
         parts = module_path.split(".")
         model_name = parts[-1]
         # app label is the package under mezzanine (pages, blog, …)
-        app_label = parts[1] if parts[0] == "mezzanine" and len(parts) >= 4 else parts[0]
+        if parts[0] == "mezzanine" and len(parts) >= 4:
+            app_label = parts[1]
+        else:
+            app_label = parts[0]
     elif "." in dotted:
         app_label, model_name = dotted.split(".", 1)
     else:
@@ -272,7 +275,8 @@ def _resolve_content_type(dotted: str):
         model = django_apps.get_model(app_label, model_name)
     except LookupError as exc:
         raise KitError(
-            "Unknown content_type %r (app=%s model=%s)" % (dotted, app_label, model_name)
+            "Unknown content_type %r (app=%s model=%s)"
+            % (dotted, app_label, model_name)
         ) from exc
     return ContentType.objects.get_for_model(model)
 

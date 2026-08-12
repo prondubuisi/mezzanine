@@ -102,11 +102,9 @@ def test_load_fields_json_rejects_bad_name(tmp_path, monkeypatch):
 
 
 def test_set_active_theme_syncs_institute_fields():
-    from mezzanine.kits.theme import set_active_theme
-
     # Institute may not declare theme slots; set_active_theme requires theme meta.
     # Call sync path directly if institute is not a "theme"; if it is, activate.
-    from mezzanine.kits.theme import load_theme_meta, ThemeError
+    from mezzanine.kits.theme import ThemeError, load_theme_meta, set_active_theme
 
     try:
         load_theme_meta("institute")

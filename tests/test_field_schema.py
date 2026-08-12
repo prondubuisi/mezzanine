@@ -24,7 +24,7 @@ pytestmark = pytest.mark.django_db
 def test_displayable_custom_fields_default_empty_dict():
     """Characterization: new pages start with empty custom_fields."""
     page = RichTextPageFactory(title="No custom fields yet")
-    assert page.custom_fields == {} or page.custom_fields is None or page.custom_fields == {}
+    assert not page.custom_fields  # {} or None
     # After save path, treat missing as empty for getters.
     assert page.get_custom_field("faculty_title") is None
 

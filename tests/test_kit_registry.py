@@ -6,16 +6,14 @@ unlisted kits are blocked.
 
 import pytest
 from django.test import Client
-from django.urls import reverse
 
 from mezzanine.kits.registry import (
     RegistryError,
     assert_kit_activatable,
-    get_registry_entry,
     is_kit_registered,
     list_registry_entries,
 )
-from mezzanine.kits.theme import ThemeError, set_active_theme
+from mezzanine.kits.theme import set_active_theme
 from tests.factories import SuperUserFactory
 
 pytestmark = pytest.mark.django_db

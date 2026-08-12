@@ -25,7 +25,6 @@ from mezzanine.core.models import (
     FIELD_TYPE_CHOICE,
     FIELD_TYPE_NUMBER,
     FIELD_TYPE_RICHTEXT,
-    FIELD_TYPE_TEXT,
     PREVIEW_TOKEN_PARAM,
     ContentTyped,
     FieldSchema,
