@@ -2,6 +2,8 @@
 
 **Preference:** a **WordPress-like theme system** (packaged look + templates +
 assets, swappable without rewriting the project).  
+**Design contract:** Amendment 1 §A1.2a (KD12b) in local `docs/modernization/DESIGN.md`
+(gitignored — not uploaded). Mock: `docs/modernization/demo/index.html` → **Themes**.  
 **Today:** Nova has **HOST_THEMES** (hostname → package) + **kits** (copy-on-create
 tokens/templates). Clones reuse one chrome and swap **content**.
 
