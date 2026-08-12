@@ -280,8 +280,10 @@
       <button data-mode="forms">Forms</button>
       <button data-mode="preview">Draft preview</button>
       <button data-mode="themes">Themes (KD12b)</button>
+      <button data-mode="fields">Custom fields (KD20)</button>
+      <button data-mode="marketplace">Marketplace (KD21)</button>
     </div>
-    <div class="hint">A0′ mocks + Ecosystem theme package mock — not Grappelli admin</div>
+    <div class="hint">A0′ + Ecosystem Track mocks (KD20/KD21) — not Grappelli admin</div>
   </header>
 
   <div class="app">
@@ -292,8 +294,10 @@
       <button data-mode="forms">Form entries</button>
       <button data-mode="preview">Share preview</button>
       <button data-mode="themes">Themes</button>
+      <button data-mode="fields">Custom fields</button>
+      <button data-mode="marketplace">Marketplace</button>
       <h2>Institute kit</h2>
-      <button disabled>People</button>
+      <button data-mode="fields">People fields</button>
       <button disabled>Events</button>
       <button disabled>Stories</button>
       <h2>System</h2>
@@ -471,14 +475,157 @@
           </div>
         </div>
       </section>
+
+      <!-- Ecosystem Track mock: KD20 custom fields (ACF-equivalent) — DESIGN Amendment 4 §A4.2 -->
+      <section class="screen" id="fields">
+        <div class="desk">
+          <aside class="tree">
+            <h3>Field groups</h3>
+            <div class="node on" data-fieldgroup="faculty"><span>Institute · Faculty profile</span><span class="pill pub">Synced</span></div>
+            <div class="node" data-fieldgroup="story"><span>Institute · Research story</span><span class="pill draft">Draft schema</span></div>
+            <div class="node" data-fieldgroup="press"><span>Newsroom · Press kit</span><span class="pill">Kit fields.json</span></div>
+          </aside>
+          <div class="editor" id="fields-editor" style="max-width:none">
+            <div class="crumbs">Appearance / Custom fields · KD20</div>
+            <h1 style="font-size:26px">Faculty profile fields</h1>
+            <div class="meta">
+              <span class="pill pub">kit: institute</span>
+              <span>content type · pages.RichTextPage</span>
+              <span class="pill draft">Mock · PR-058+</span>
+            </div>
+            <p style="color:var(--muted);font-size:13px;max-width:40rem;margin:0 0 16px">
+              Kits declare field groups in <code>fields.json</code>. Activation syncs rows into
+              <code>FieldSchema</code>; values live on each Displayable as typed JSON
+              (<code>custom_fields</code>), not an untyped postmeta table.
+            </p>
+            <table>
+              <thead>
+                <tr><th>Name</th><th>Label</th><th>Type</th><th>Required</th><th>Order</th></tr>
+              </thead>
+              <tbody id="field-schema-rows">
+                <tr>
+                  <td><code>faculty_title</code></td>
+                  <td>Faculty title</td>
+                  <td>text</td>
+                  <td>yes</td>
+                  <td>0</td>
+                </tr>
+                <tr>
+                  <td><code>department</code></td>
+                  <td>Department</td>
+                  <td>choice</td>
+                  <td>yes</td>
+                  <td>1</td>
+                </tr>
+                <tr>
+                  <td><code>office_hours</code></td>
+                  <td>Office hours</td>
+                  <td>text</td>
+                  <td>no</td>
+                  <td>2</td>
+                </tr>
+              </tbody>
+            </table>
+            <div style="margin-top:22px;border-top:1px solid var(--line);padding-top:18px">
+              <div class="crumbs">Sample content · Maya Chen</div>
+              <h2 style="font-family:var(--font);font-weight:400;font-size:22px;margin:4px 0 12px">Edit values (HTMX surface — PR-060)</h2>
+              <label class="field">Faculty title</label>
+              <input type="text" value="Associate Professor of Climate Policy" />
+              <label class="field">Department</label>
+              <select>
+                <option selected>Earth &amp; Planetary</option>
+                <option>Public Policy</option>
+                <option>Coastal Engineering</option>
+              </select>
+              <label class="field">Office hours</label>
+              <input type="text" value="Tue / Thu 14:00–16:00 · Hall 214" />
+              <div class="actions">
+                <button class="btn ghost" type="button">Save draft</button>
+                <button class="btn primary" type="button">Save fields</button>
+              </div>
+            </div>
+            <div style="margin-top:18px;border:1px dashed var(--line);border-radius:8px;padding:12px;font-size:13px">
+              <b>fields.json (institute kit sketch)</b>
+              <pre style="margin:8px 0 0;font-family:var(--mono);font-size:11px;overflow:auto">{
+  "kit": "institute",
+  "fields": [
+    {"content_type": "pages.RichTextPage", "name": "faculty_title",
+     "label": "Faculty title", "field_type": "text", "required": true, "order": 0},
+    {"content_type": "pages.RichTextPage", "name": "department",
+     "label": "Department", "field_type": "choice", "required": true, "order": 1,
+     "options": {"choices": ["Earth & Planetary", "Public Policy", "Coastal Engineering"]}},
+    {"content_type": "pages.RichTextPage", "name": "office_hours",
+     "label": "Office hours", "field_type": "text", "required": false, "order": 2}
+  ]
+}</pre>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Ecosystem Track mock: KD21 kit marketplace + signature gate — DESIGN Amendment 4 §A4.3 -->
+      <section class="screen" id="marketplace">
+        <div class="editor" style="max-width:none;flex:1">
+          <div class="crumbs">Appearance / Marketplace · KD21</div>
+          <h1 style="font-size:26px;margin:4px 0 8px">Kit registry</h1>
+          <p style="color:var(--muted);font-size:13px;max-width:48rem;margin:0 0 16px">
+            Curated <code>KitRegistry</code> entries (JSON first, DB later). Activate only through a
+            signature-checked path — generic Settings writes to <code>ACTIVE_THEME</code> no longer
+            bypass verification. Human review before a kit is listed.
+          </p>
+          <table>
+            <thead>
+              <tr><th>Kit</th><th>Version</th><th>Signature</th><th>Plugins</th><th></th></tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong>brochure</strong></td>
+                <td>0.1.0</td>
+                <td><span class="pill pub">ed25519 ok</span></td>
+                <td>—</td>
+                <td><button class="btn ghost" type="button">Active</button></td>
+              </tr>
+              <tr>
+                <td><strong>institute</strong></td>
+                <td>0.1.0</td>
+                <td><span class="pill pub">ed25519 ok</span></td>
+                <td>—</td>
+                <td><button class="btn primary" type="button">Activate</button></td>
+              </tr>
+              <tr>
+                <td><strong>spotify</strong></td>
+                <td>0.3.0</td>
+                <td><span class="pill pub">ed25519 ok</span></td>
+                <td><code>mezzanine.music</code></td>
+                <td><button class="btn ghost" type="button">Activate</button></td>
+              </tr>
+              <tr style="background:#fffbeb">
+                <td><strong>shadow-kit</strong></td>
+                <td>9.9.9</td>
+                <td><span class="pill draft">unsigned</span></td>
+                <td><code>evil.payload</code></td>
+                <td><button class="btn ghost" type="button" disabled title="Blocked">Blocked</button></td>
+              </tr>
+            </tbody>
+          </table>
+          <div class="gate" style="max-width:none">
+            <strong>Activation blocked — unsigned kit</strong>
+            <span style="display:block;margin-top:6px;color:#57534e">
+              <code>shadow-kit</code> is not in the trusted registry (or its ed25519 signature
+              failed). <code>set_active_theme()</code> refuses to call <code>_wire_theme_plugins()</code>.
+              This state is the demo-first requirement for PR-061/062.
+            </span>
+          </div>
+        </div>
+      </section>
     </main>
   </div>
 
   <footer class="legend">
     <div><b>Page tree</b> Hierarchical nav. Blog is not a page.</div>
     <div><b>Draft / preview</b> Opaque token. Staff no longer sees every draft.</div>
-    <div><b>Forms</b> Page-native builder, CSV, site-scoped files.</div>
-    <div><b>Themes (KD12b)</b> WP-like packages: slots, menus, tokens — mock only.</div>
+    <div><b>Custom fields (KD20)</b> FieldSchema + custom_fields JSON — mock for PR-058+.</div>
+    <div><b>Marketplace (KD21)</b> Signed kits only; unsigned activate is blocked.</div>
   </footer>
 
   <script>

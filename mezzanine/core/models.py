@@ -269,6 +269,8 @@ class Displayable(Slugged, MetaData, TimeStamped):
     )
     short_url = models.URLField(blank=True, null=True)
     in_sitemap = models.BooleanField(_("Show in sitemap"), default=True)
+    # KD20 / PR-058: typed custom field values keyed by FieldSchema.name.
+    custom_fields = models.JSONField(_("Custom fields"), default=dict, blank=True)
 
     objects = wrapped_manager(DisplayableManager)
     search_fields = {"keywords": 10, "title": 5}
@@ -284,7 +286,23 @@ class Displayable(Slugged, MetaData, TimeStamped):
         """
         if self.publish_date is None:
             self.publish_date = now()
+        if self.custom_fields is None:
+            self.custom_fields = {}
         super().save(*args, **kwargs)
+
+    def get_custom_field(self, name, default=None):
+        """Return a value from ``custom_fields`` by schema name."""
+        data = self.custom_fields or {}
+        return data.get(name, default)
+
+    def set_custom_field(self, name, value, *, save=False):
+        """Set a custom field value. Optionally persist immediately."""
+        data = dict(self.custom_fields or {})
+        data[name] = value
+        self.custom_fields = data
+        if save:
+            self.save(update_fields=["custom_fields"])
+        return self
 
     def get_admin_url(self):
         return admin_url(self, "change", self.id)
@@ -693,6 +711,109 @@ SITE_ROLE_CHOICES = (
     (ROLE_PUBLISHER, _("Publisher")),
     (ROLE_ADMIN, _("Admin")),
 )
+
+
+# KD20 / PR-058 — generic content model (ACF-equivalent schema rows).
+FIELD_TYPE_TEXT = "text"
+FIELD_TYPE_RICHTEXT = "richtext"
+FIELD_TYPE_NUMBER = "number"
+FIELD_TYPE_BOOLEAN = "boolean"
+FIELD_TYPE_CHOICE = "choice"
+FIELD_TYPE_REFERENCE = "reference"
+FIELD_TYPE_CHOICES = (
+    (FIELD_TYPE_TEXT, _("Text")),
+    (FIELD_TYPE_RICHTEXT, _("RichText")),
+    (FIELD_TYPE_NUMBER, _("Number")),
+    (FIELD_TYPE_BOOLEAN, _("Boolean")),
+    (FIELD_TYPE_CHOICE, _("Choice")),
+    (FIELD_TYPE_REFERENCE, _("Reference")),
+)
+
+
+class FieldSchema(models.Model):
+    """
+    One custom field definition, scoped to a content type (and optionally a kit).
+
+    Values live on each Displayable as ``custom_fields`` JSON keyed by ``name``.
+    Kits declare groups in ``fields.json``; activation syncs rows (PR-059).
+    """
+
+    kit = models.CharField(max_length=64, blank=True, default="")
+    content_type = models.ForeignKey(
+        ContentType,
+        on_delete=models.CASCADE,
+        related_name="field_schemas",
+        verbose_name=_("Content type"),
+    )
+    name = models.CharField(max_length=64)
+    label = models.CharField(max_length=128)
+    field_type = models.CharField(
+        max_length=16, choices=FIELD_TYPE_CHOICES, default=FIELD_TYPE_TEXT
+    )
+    required = models.BooleanField(default=False)
+    order = models.PositiveIntegerField(default=0)
+    options = models.JSONField(default=dict, blank=True)
+
+    class Meta:
+        verbose_name = _("Field schema")
+        verbose_name_plural = _("Field schemas")
+        ordering = ("order", "name")
+        constraints = [
+            models.UniqueConstraint(
+                fields=["content_type", "name"],
+                name="nova_fieldschema_ct_name",
+            ),
+        ]
+
+    def __str__(self):
+        return "%s.%s (%s)" % (self.content_type, self.name, self.field_type)
+
+    def clean_value(self, value):
+        """
+        Coerce / validate a raw value for this field type.
+
+        Returns the cleaned value, or raises ``ValueError``.
+        """
+        if value is None or value == "":
+            if self.required:
+                raise ValueError("%s is required" % self.name)
+            return None if self.field_type == FIELD_TYPE_NUMBER else value
+
+        if self.field_type == FIELD_TYPE_BOOLEAN:
+            if isinstance(value, bool):
+                return value
+            if isinstance(value, str) and value.lower() in ("true", "1", "yes"):
+                return True
+            if isinstance(value, str) and value.lower() in ("false", "0", "no"):
+                return False
+            raise ValueError("%s must be a boolean" % self.name)
+
+        if self.field_type == FIELD_TYPE_NUMBER:
+            try:
+                if isinstance(value, bool):
+                    raise ValueError
+                if isinstance(value, (int, float)):
+                    return value
+                if isinstance(value, str) and "." in value:
+                    return float(value)
+                return int(value)
+            except (TypeError, ValueError) as exc:
+                raise ValueError("%s must be a number" % self.name) from exc
+
+        if self.field_type == FIELD_TYPE_CHOICE:
+            choices = (self.options or {}).get("choices") or []
+            if choices and value not in choices:
+                raise ValueError("%s must be one of %s" % (self.name, choices))
+            return value
+
+        if self.field_type in (
+            FIELD_TYPE_TEXT,
+            FIELD_TYPE_RICHTEXT,
+            FIELD_TYPE_REFERENCE,
+        ):
+            return value if not isinstance(value, str) else value
+
+        return value
 
 
 class SiteRole(models.Model):

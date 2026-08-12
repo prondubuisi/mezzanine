@@ -511,6 +511,7 @@ def demo_theme_activate(request):
     from django.core.management import call_command
     from django.http import HttpResponseRedirect
 
+    from mezzanine.kits.loader import KitError
     from mezzanine.kits.theme import ThemeError, set_active_theme
 
     if not dj_settings.DEBUG:
@@ -519,7 +520,7 @@ def demo_theme_activate(request):
     do_seed = request.POST.get("seed") == "1"
     try:
         meta = set_active_theme(name)
-    except ThemeError as exc:
+    except (ThemeError, KitError) as exc:
         messages.error(request, str(exc))
         return HttpResponseRedirect("/_nova/demo-sites/")
     msg = "ACTIVE_THEME = %s" % name
@@ -615,6 +616,64 @@ def theme_customizer_save(request):
     set_theme_customizer(colors=colors, logo_url=logo)
     messages.success(request, "Theme customizer saved.")
     return HttpResponseRedirect("/_nova/theme-customizer/")
+
+
+@require_GET
+def kit_marketplace(request):
+    """
+    KD21 / PR-062: KitRegistry discovery + activate UI.
+
+    Lists curated registry entries. Activate POSTs to the same staff gate
+    and always routes through ``set_active_theme`` (registry-checked).
+    """
+    from mezzanine.kits.registry import list_registry_entries
+    from mezzanine.kits.theme import get_active_theme_name, list_theme_names
+
+    _require_staff_site(request)
+    active = get_active_theme_name()
+    theme_names = set(list_theme_names())
+    kits = []
+    for entry in list_registry_entries():
+        name = entry.get("name") or ""
+        kits.append(
+            {
+                "name": name,
+                "version": entry.get("version") or "?",
+                "trusted": bool(entry.get("trusted")),
+                "signature": entry.get("signature"),
+                "plugins": entry.get("plugins") or [],
+                "has_theme": name in theme_names,
+                "active": name == active,
+            }
+        )
+    return TemplateResponse(
+        request,
+        "admin/kit_marketplace.html",
+        {
+            "title": "Kit marketplace",
+            "kits": kits,
+            "active_theme": active,
+        },
+    )
+
+
+@require_POST
+def kit_marketplace_activate(request):
+    """Activate a registry kit via the unified set_active_theme path."""
+    from django.contrib import messages
+    from django.http import HttpResponseRedirect
+
+    from mezzanine.kits.loader import KitError
+    from mezzanine.kits.theme import ThemeError, set_active_theme
+
+    _require_staff_site(request)
+    name = (request.POST.get("kit") or "").strip()
+    try:
+        set_active_theme(name)
+        messages.success(request, "Activated kit / ACTIVE_THEME = %s" % name)
+    except (ThemeError, KitError) as exc:
+        messages.error(request, str(exc))
+    return HttpResponseRedirect("/_nova/marketplace/")
 
 
 @require_GET

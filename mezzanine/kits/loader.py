@@ -186,6 +186,140 @@ def kit_seed_command(meta: dict) -> str | None:
     return cmd or None
 
 
+# KD20 / PR-059 — kit fields.json → FieldSchema rows.
+_FIELD_TYPES = frozenset(
+    {"text", "richtext", "number", "boolean", "choice", "reference"}
+)
+_NAME_RE = re.compile(r"^[a-z][a-z0-9_]*$")
+
+
+def fields_json_path(name: str) -> Path:
+    """Path to a kit's fields.json (may not exist)."""
+    return kit_path(name) / "fields.json"
+
+
+def load_fields_json(name: str) -> dict | None:
+    """
+    Load and lightly validate ``fields.json`` for a kit.
+
+    Returns None when the kit has no fields.json (optional). Raises KitError
+    on invalid JSON or shape. Same path containment as theme.json (kit_path).
+    """
+    path = fields_json_path(name)
+    if not path.is_file():
+        return None
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as exc:
+        raise KitError("Invalid fields.json for %r: %s" % (name, exc)) from exc
+    if not isinstance(data, dict):
+        raise KitError("fields.json for %r must be a JSON object" % name)
+    fields = data.get("fields")
+    if fields is None:
+        raise KitError("fields.json for %r missing 'fields' list" % name)
+    if not isinstance(fields, list):
+        raise KitError("fields.json for %r 'fields' must be a list" % name)
+    for i, entry in enumerate(fields):
+        if not isinstance(entry, dict):
+            raise KitError(
+                "fields.json for %r entry %s must be an object" % (name, i)
+            )
+        fname = entry.get("name")
+        if not fname or not _NAME_RE.match(str(fname)):
+            raise KitError(
+                "fields.json for %r entry %s has invalid name %r" % (name, i, fname)
+            )
+        ftype = entry.get("field_type", "text")
+        if ftype not in _FIELD_TYPES:
+            raise KitError(
+                "fields.json for %r field %r has unknown field_type %r"
+                % (name, fname, ftype)
+            )
+        if not entry.get("content_type"):
+            raise KitError(
+                "fields.json for %r field %r missing content_type" % (name, fname)
+            )
+        if not entry.get("label"):
+            raise KitError(
+                "fields.json for %r field %r missing label" % (name, fname)
+            )
+    return data
+
+
+def _resolve_content_type(dotted: str):
+    """
+    Map ``app_label.ModelName`` (or kit type alias) to a ContentType.
+
+    Uses the same type map as kit.json ``types`` where possible.
+    """
+    from django.apps import apps as django_apps
+    from django.contrib.contenttypes.models import ContentType
+
+    dotted = str(dotted).strip()
+    if dotted in _TYPE_IMPORTS:
+        module_path = _TYPE_IMPORTS[dotted]
+        # mezzanine.pages.models.RichTextPage → pages, RichTextPage
+        parts = module_path.split(".")
+        model_name = parts[-1]
+        # app label is the package under mezzanine (pages, blog, …)
+        if parts[0] == "mezzanine" and len(parts) >= 4:
+            app_label = parts[1]
+        else:
+            app_label = parts[0]
+    elif "." in dotted:
+        app_label, model_name = dotted.split(".", 1)
+    else:
+        raise KitError("Invalid content_type %r" % dotted)
+
+    try:
+        model = django_apps.get_model(app_label, model_name)
+    except LookupError as exc:
+        raise KitError(
+            "Unknown content_type %r (app=%s model=%s)"
+            % (dotted, app_label, model_name)
+        ) from exc
+    return ContentType.objects.get_for_model(model)
+
+
+def sync_field_schemas(name: str, *, fields_data: dict | None = None) -> list:
+    """
+    Upsert FieldSchema rows from a kit's fields.json (PR-059 / KD20).
+
+    - Creates or updates schemas by (content_type, name).
+    - Sets kit=name on every synced row.
+    - Does not delete schemas absent from the file (safe re-activate).
+    Returns the list of FieldSchema instances touched.
+    """
+    from mezzanine.core.models import FieldSchema
+
+    if fields_data is None:
+        fields_data = load_fields_json(name)
+    if not fields_data:
+        return []
+
+    kit_name = str(fields_data.get("kit") or name).strip() or name
+    results = []
+    for entry in fields_data.get("fields") or []:
+        ct = _resolve_content_type(entry["content_type"])
+        defaults = {
+            "kit": kit_name,
+            "label": str(entry["label"]),
+            "field_type": str(entry.get("field_type") or "text"),
+            "required": bool(entry.get("required", False)),
+            "order": int(entry.get("order") or 0),
+            "options": entry.get("options")
+            if isinstance(entry.get("options"), dict)
+            else {},
+        }
+        obj, _created = FieldSchema.objects.update_or_create(
+            content_type=ct,
+            name=str(entry["name"]),
+            defaults=defaults,
+        )
+        results.append(obj)
+    return results
+
+
 def apply_kit(name: str, project_dir: str | Path, project_app: str) -> dict:
     """
     Overlay a kit onto a project written by nova-project.
@@ -208,6 +342,10 @@ def apply_kit(name: str, project_dir: str | Path, project_app: str) -> dict:
         plugins=kit_plugins(meta),
     )
     _apply_kit_urls(project_app_dir, meta)
+    # KD20 / PR-059: validate fields.json shape at project create (DB sync needs
+    # a configured Django app registry — operators run sync via activate-theme
+    # or management command after migrate).
+    load_fields_json(name)
 
     templates_dest = project_dir / "templates"
     if templates_dest.exists():

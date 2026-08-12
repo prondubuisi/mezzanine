@@ -1,0 +1,62 @@
+{
+  "version": 1,
+  "description": "First-party KitRegistry (KD21 / PR-061). Y1: trusted in-repo list; ed25519 signatures graduate later (OQ5).",
+  "kits": [
+    {
+      "name": "brochure",
+      "version": "0.1.0",
+      "trusted": true,
+      "signature": null,
+      "plugins": []
+    },
+    {
+      "name": "institute",
+      "version": "0.1.0",
+      "trusted": true,
+      "signature": null,
+      "plugins": []
+    },
+    {
+      "name": "magazine",
+      "version": "0.1.0",
+      "trusted": true,
+      "signature": null,
+      "plugins": []
+    },
+    {
+      "name": "spotify",
+      "version": "0.3.0",
+      "trusted": true,
+      "signature": null,
+      "plugins": ["mezzanine.music"]
+    },
+    {
+      "name": "techcrunch",
+      "version": "0.1.0",
+      "trusted": true,
+      "signature": null,
+      "plugins": []
+    },
+    {
+      "name": "time",
+      "version": "0.1.0",
+      "trusted": true,
+      "signature": null,
+      "plugins": []
+    },
+    {
+      "name": "whitehouse",
+      "version": "0.1.0",
+      "trusted": true,
+      "signature": null,
+      "plugins": []
+    },
+    {
+      "name": "wporg",
+      "version": "0.1.0",
+      "trusted": true,
+      "signature": null,
+      "plugins": []
+    }
+  ]
+}

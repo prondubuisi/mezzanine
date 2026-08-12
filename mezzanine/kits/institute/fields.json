@@ -1,0 +1,36 @@
+{
+  "kit": "institute",
+  "fields": [
+    {
+      "content_type": "pages.RichTextPage",
+      "name": "faculty_title",
+      "label": "Faculty title",
+      "field_type": "text",
+      "required": true,
+      "order": 0
+    },
+    {
+      "content_type": "pages.RichTextPage",
+      "name": "department",
+      "label": "Department",
+      "field_type": "choice",
+      "required": true,
+      "order": 1,
+      "options": {
+        "choices": [
+          "Earth & Planetary",
+          "Public Policy",
+          "Coastal Engineering"
+        ]
+      }
+    },
+    {
+      "content_type": "pages.RichTextPage",
+      "name": "office_hours",
+      "label": "Office hours",
+      "field_type": "text",
+      "required": false,
+      "order": 2
+    }
+  ]
+}

@@ -1,0 +1,94 @@
+{% load i18n %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>{{ title }} | Nova</title>
+  <style>
+    body { font-family: system-ui, sans-serif; margin: 1.5rem; color: #111; max-width: 52rem; }
+    h1 { font-size: 1.35rem; }
+    .hint { color: #555; font-size: 0.9rem; margin-bottom: 1rem; }
+    table { width: 100%; border-collapse: collapse; background: #fff; }
+    th, td { text-align: left; padding: 0.55rem 0.65rem; border-bottom: 1px solid #e5e7eb; font-size: 0.9rem; }
+    th { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.06em; color: #6b7280; }
+    .pill {
+      display: inline-block; font-size: 0.7rem; padding: 0.15rem 0.45rem; border-radius: 999px;
+      background: #f3f4f6; color: #4b5563;
+    }
+    .pill.ok { background: #d1fae5; color: #047857; }
+    .pill.warn { background: #fef3c7; color: #b45309; }
+    button {
+      background: #0f766e; color: #fff; border: 0; border-radius: 4px;
+      padding: 0.35rem 0.7rem; cursor: pointer; font-size: 0.85rem;
+    }
+    button:disabled { background: #94a3b8; cursor: default; }
+    button.ghost { background: #fff; color: #0f766e; border: 1px solid #cbd5e1; }
+    a { color: #1d4ed8; }
+    code { font-size: 0.8rem; }
+  </style>
+</head>
+<body>
+  <h1>{% trans "Kit marketplace" %}</h1>
+  <p class="hint">
+    {% trans "KD21 curated KitRegistry. Activate always goes through set_active_theme (signature / trust gate)." %}
+    {% if active_theme %}
+    <br>{% trans "Active theme:" %} <strong>{{ active_theme }}</strong>
+    {% else %}
+    <br>{% trans "No ACTIVE_THEME set." %}
+    {% endif %}
+  </p>
+  <p class="hint">
+    <a href="/_nova/demo-sites/">{% trans "Theme lab" %}</a> ·
+    <a href="/_nova/theme-customizer/">{% trans "Customizer" %}</a> ·
+    <a href="/">{% trans "View site" %}</a> ·
+    <a href="{% url 'admin:index' %}">{% trans "Admin" %}</a>
+  </p>
+
+  <table>
+    <thead>
+      <tr>
+        <th>{% trans "Kit" %}</th>
+        <th>{% trans "Version" %}</th>
+        <th>{% trans "Trust" %}</th>
+        <th>{% trans "Plugins" %}</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for kit in kits %}
+      <tr>
+        <td><strong>{{ kit.name }}</strong>{% if not kit.has_theme %} <span class="pill">{% trans "no theme.json" %}</span>{% endif %}</td>
+        <td>{{ kit.version }}</td>
+        <td>
+          {% if kit.trusted %}
+          <span class="pill ok">{% if kit.signature %}ed25519{% else %}{% trans "trusted" %}{% endif %}</span>
+          {% else %}
+          <span class="pill warn">{% trans "unsigned" %}</span>
+          {% endif %}
+        </td>
+        <td>
+          {% if kit.plugins %}
+            {% for p in kit.plugins %}<code>{{ p }}</code>{% if not forloop.last %}, {% endif %}{% endfor %}
+          {% else %}—{% endif %}
+        </td>
+        <td>
+          {% if kit.active %}
+          <button type="button" disabled>{% trans "Active" %}</button>
+          {% elif kit.has_theme %}
+          <form method="post" action="{% url 'nova_kit_marketplace_activate' %}" style="display:inline">
+            {% csrf_token %}
+            <input type="hidden" name="kit" value="{{ kit.name }}">
+            <button type="submit">{% trans "Activate" %}</button>
+          </form>
+          {% else %}
+          <button type="button" class="ghost" disabled title="{% trans 'No theme package to activate' %}">{% trans "No theme" %}</button>
+          {% endif %}
+        </td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="5">{% trans "Registry is empty." %}</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</body>
+</html>

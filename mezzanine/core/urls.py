@@ -75,4 +75,14 @@ urlpatterns += [
         core_views.theme_customizer_save,
         name="nova_theme_customizer_save",
     ),
+    path(
+        "_nova/marketplace/",
+        core_views.kit_marketplace,
+        name="nova_kit_marketplace",
+    ),
+    path(
+        "_nova/marketplace/activate/",
+        core_views.kit_marketplace_activate,
+        name="nova_kit_marketplace_activate",
+    ),
 ]
