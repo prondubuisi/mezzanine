@@ -57,6 +57,14 @@ wordpress.org–shaped demo (PoC — IA inspired by wordpress.org)::
 
 See ``docs/demo-wporg.rst``.
 
+Six public-site **IA clones** (TechCrunch, TIME, White House, Harvard
+Gazette, TED Blog, Spotify Newsroom) — structure + original copy only::
+
+    $ python manage.py seed_site_clone --list
+    $ just demo-clone techcrunch
+
+Parity gaps for the dev cycle: ``docs/modernization/demo-clones/PARITY-BACKLOG.md``.
+
 WordPress import prints a migration report (posts/pages/redirects/
 attachments, unmapped types, URL fidelity) and optional JSON via
 ``--report-json``. See ``docs/blog-importing.rst``.

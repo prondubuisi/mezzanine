@@ -48,6 +48,25 @@ up *args:
 	docker compose up "$@"
 
 
+
+# Seed a named IA site clone. Usage: just demo-clone techcrunch
+# Also: just demo-clone -- --list
+demo-clone *args:
+	#!/usr/bin/env bash
+	set -euo pipefail
+	if [ "$#" -lt 1 ]; then
+		echo "usage: just demo-clone <site>|--list [--flush]" >&2
+		just _django seed_site_clone --list
+		exit 2
+	fi
+	if [ "$1" = "--list" ] || [ "$1" = "list" ]; then
+		just _django seed_site_clone --list
+		exit 0
+	fi
+	slug="$1"
+	shift
+	just _django seed_site_clone --site="$slug" "$@"
+
 # Seed a wordpress.org–inspired marketing site (kit wporg project).
 # Usage (from monorepo or generated project with wporg kit):
 #   just demo-wporg
