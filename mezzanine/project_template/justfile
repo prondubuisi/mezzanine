@@ -49,6 +49,16 @@ up *args:
 
 
 
+
+
+# Seed White House–style demo content into the current project.
+# Project should be created with: nova-project whdemo --kit whitehouse
+# Usage: just demo-whitehouse
+demo-whitehouse *args:
+	#!/usr/bin/env bash
+	set -euo pipefail
+	just demo-clone whitehouse --flush "$@"
+
 # Seed a named IA site clone. Usage: just demo-clone techcrunch
 # Also: just demo-clone -- --list
 demo-clone *args:

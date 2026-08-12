@@ -145,7 +145,7 @@ def apply_kit(name: str, project_dir: str | Path, project_app: str) -> dict:
     # Settings first so a rewrite failure does not leave kit templates alone.
     if name == "brochure":
         _apply_kit_settings(project_app_dir, name, with_blog=False)
-    elif name in ("magazine", "institute", "wporg"):
+    elif name in ("magazine", "institute", "wporg", "whitehouse"):
         # Editorial / news kits need blog + forms.
         _apply_kit_settings(project_app_dir, name, with_blog=True)
 
@@ -169,9 +169,16 @@ def apply_kit(name: str, project_dir: str | Path, project_app: str) -> dict:
         for item in templates_src.iterdir():
             target = templates_dest / item.name
             if item.is_dir():
-                if target.exists():
-                    shutil.rmtree(target)
-                shutil.copytree(item, target)
+                # Merge so kit subdirs do not wipe shared includes/pages.
+                target.mkdir(parents=True, exist_ok=True)
+                for sub in item.rglob("*"):
+                    rel = sub.relative_to(item)
+                    dest = target / rel
+                    if sub.is_dir():
+                        dest.mkdir(parents=True, exist_ok=True)
+                    else:
+                        dest.parent.mkdir(parents=True, exist_ok=True)
+                        shutil.copy2(sub, dest)
             else:
                 shutil.copy2(item, target)
 

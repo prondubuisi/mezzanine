@@ -119,6 +119,11 @@ class Command(BaseCommand):
         # First-party kits: load kit demo fixture (and seed blog for magazine).
         kit_apps = (
             (
+                "mezzanine.kits.whitehouse",
+                "White House–style",
+                "Briefing room: releases, briefings, actions (seed_site_clone).",
+            ),
+            (
                 "mezzanine.kits.wporg",
                 "wordpress.org-style",
                 "Features, Learn, Community, News, Get started (seed_wporg_demo).",
@@ -147,7 +152,9 @@ class Command(BaseCommand):
             if install:
                 if self.verbosity >= 1:
                     print(f"\nLoading {label} demo content ...\n")
-                if app_label == "mezzanine.kits.wporg":
+                if app_label == "mezzanine.kits.whitehouse":
+                    call_command("seed_site_clone", site="whitehouse")
+                elif app_label == "mezzanine.kits.wporg":
                     call_command("seed_wporg_demo")
                 else:
                     call_command("loaddata", "demo")

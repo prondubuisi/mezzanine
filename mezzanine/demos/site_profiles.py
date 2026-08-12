@@ -170,39 +170,68 @@ PROFILES: dict[str, dict[str, Any]] = {
         ],
     },
     "whitehouse": {
-        "display_name": "White House-shaped demo",
-        "site_name": "WH Demo",
-        "tagline": "Official-style briefing site (IA demo)",
+        "display_name": "White House–style briefing demo",
+        "site_name": "The Briefing Room",
+        "tagline": "Releases, briefings, and presidential actions (demo)",
         "inspired_by": "https://www.whitehouse.gov/",
         "primary_nav_label": "News",
+        # Page slugs match BlogCategory slugs so section landings list posts.
         "pages": [
             (
-                "Briefings & Statements",
+                "Releases",
+                "releases",
+                "<p>Official statements and press releases. Items below are "
+                "published news posts in the <strong>Releases</strong> category.</p>",
+            ),
+            (
+                "Briefings",
                 "briefings",
-                "<p>Press briefing transcripts and statements would live here. "
-                "Gap: no document-type Displayable for PDF/transcript packages.</p>",
+                "<p>Press briefing notes and remarks. Full live video and "
+                "transcript packages are a later enhancement; this demo lists "
+                "briefing posts for the section.</p>",
             ),
             (
                 "Presidential Actions",
                 "presidential-actions",
-                "<p>Executive orders and memoranda index. Gap: structured legal "
-                "document metadata and filters.</p>",
+                "<p>Summaries of executive orders, memoranda, and proclamations. "
+                "Structured legal metadata is not modeled yet — posts stand in "
+                "for the public index.</p>",
+            ),
+            (
+                "Nominations",
+                "nominations",
+                "<p>Nominations and appointments announced by the administration.</p>",
             ),
             (
                 "Administration",
                 "administration",
-                "<p>Leadership and agency links — static pages for Y1.</p>",
+                "<p>Leadership overview for this demo site. In a production "
+                "build this would link to agency and staff pages.</p>"
+                "<ul><li>Office of the Press Secretary (demo)</li>"
+                "<li>Domestic Policy Council (demo)</li>"
+                "<li>National Security Council (demo)</li></ul>",
             ),
             (
                 "Priorities",
                 "priorities",
-                "<p>Issue area hubs (economy, security, energy).</p>",
+                (
+                    "<p>Issue hubs used on the home grid:</p><ul>"
+                    '<li><a href="/releases/">Economy &amp; infrastructure</a></li>'
+                    '<li><a href="/briefings/">Public health briefings</a></li>'
+                    '<li><a href="/presidential-actions/">Energy permitting</a></li>'
+                    '<li><a href="/nominations/">Personnel nominations</a></li>'
+                    "</ul>"
+                ),
             ),
             (
                 "About",
                 "about",
-                "<p>About this <strong>IA demo</strong> inspired by whitehouse.gov. "
-                "Unofficial. Not a government site.</p>",
+                "<p>This is an <strong>unofficial Nova demo</strong> of an "
+                "official-style communications site. Information architecture "
+                "is inspired by whitehouse.gov. It is not affiliated with the "
+                "U.S. government.</p>"
+                "<p>Recreate it with <code>nova-project … --kit whitehouse</code> "
+                "then <code>seed_site_clone --site whitehouse</code>.</p>",
             ),
         ],
         "categories": [
@@ -216,28 +245,70 @@ PROFILES: dict[str, dict[str, Any]] = {
                 "Statement on infrastructure progress",
                 "statement-infrastructure-progress",
                 "Releases",
-                "<p>Sample press release body.</p>",
+                "<p>The administration today highlighted continued delivery on "
+                "infrastructure projects in ports, rail, and broadband, "
+                "crediting bipartisan legislation and state partners.</p>"
+                "<p><em>Sample release for the Nova White House–style demo.</em></p>",
+            ),
+            (
+                "Fact sheet: manufacturing investment",
+                "fact-sheet-manufacturing-investment",
+                "Releases",
+                "<p>Private-sector manufacturers announced new facilities "
+                "supporting supply-chain resilience. This fact sheet summarizes "
+                "commitments for press use.</p>",
             ),
             (
                 "Press briefing: daily notes",
                 "press-briefing-daily-notes",
                 "Briefings",
-                "<p>Sample briefing summary (not a full transcript UI).</p>",
+                "<p>Summary notes from today’s press briefing covering "
+                "legislative outlook, international calls, and weekend events.</p>"
+                "<p>Transcript and video would attach here in a fuller build.</p>",
+            ),
+            (
+                "Remarks on disaster recovery funding",
+                "remarks-disaster-recovery-funding",
+                "Briefings",
+                "<p>Remarks as prepared for delivery on supplemental recovery "
+                "funding for communities affected by recent storms.</p>",
             ),
             (
                 "Executive action summary: energy permits",
                 "executive-action-energy-permits",
                 "Presidential Actions",
-                "<p>Sample action summary card.</p>",
+                "<p>Summary of an executive action directing agencies to "
+                "accelerate permitting reviews for critical energy "
+                "infrastructure while maintaining environmental standards.</p>",
+            ),
+            (
+                "Memorandum on federal cybersecurity baselines",
+                "memorandum-federal-cybersecurity",
+                "Presidential Actions",
+                "<p>Presidential memorandum establishing baseline cybersecurity "
+                "requirements for federal civilian executive branch agencies.</p>",
+            ),
+            (
+                "Nomination: Deputy Secretary of Transportation",
+                "nomination-deputy-secretary-transportation",
+                "Nominations",
+                "<p>The President announced the nomination of a deputy secretary "
+                "to the Department of Transportation. Biography and ethics "
+                "paperwork would link from a full newsroom package.</p>",
+            ),
+            (
+                "Appointments to the Export Council",
+                "appointments-export-council",
+                "Nominations",
+                "<p>Appointments to the President’s Export Council, representing "
+                "labor, small business, and manufacturing stakeholders.</p>",
             ),
         ],
         "contact": True,
         "notes": [
-            "Needs official document types (EO, proclamation) with filters.",
-            "Needs live/media embeds and video briefing player.",
-            "Needs accessibility-first gov design system (USWDS) not Bootstrap 3.",
-            "Needs multi-language and FOIA-style search.",
-            "Staff workflow: review → publish gates beyond draft/status.",
+            "Document types (EO PDF packages) still lightweight — posts stand in.",
+            "Live video player not included.",
+            "USWDS not vendored; kit tokens approximate official chrome.",
         ],
     },
     "harvard_gazette": {

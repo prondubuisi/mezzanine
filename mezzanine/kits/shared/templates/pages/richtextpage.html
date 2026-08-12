@@ -1,5 +1,4 @@
 {% extends "pages/page.html" %}
-
 {% load i18n mezzanine_tags %}
 
 {% block main %}{{ block.super }}
@@ -8,7 +7,7 @@
 {{ page.richtextpage.content|richtext_filters }}
 {% endeditable %}
 
-{% if section_posts is not None %}
+{% if section_posts %}
 <section class="nova-section-posts" style="margin-top:1.75rem">
   <h2 style="font-size:1.2rem;margin-bottom:0.75rem">
     {% if section_category %}{{ section_category }}{% else %}{% trans "Posts" %}{% endif %}

@@ -1,0 +1,98 @@
+/* Official-style briefing site tokens (inspired by whitehouse.gov; not affiliated). */
+:root {
+  --nova-ink: #0a3161;
+  --nova-muted: #5b6770;
+  --nova-line: #dfe4ea;
+  --nova-paper: #ffffff;
+  --nova-canvas: #f5f7fa;
+  --nova-accent: #0a3161;
+  --nova-accent-ink: #b31942;
+  --nova-font-serif: "Source Serif 4", "Times New Roman", Times, serif;
+  --nova-font-sans: "Source Sans 3", "Helvetica Neue", Arial, system-ui, sans-serif;
+  --nova-measure: 40rem;
+  --nova-space: 1.25rem;
+  --nova-radius: 0;
+}
+
+body {
+  color: #1b1b1b;
+  background: var(--nova-canvas);
+  font-family: var(--nova-font-sans);
+  line-height: 1.55;
+}
+
+h1, h2, h3, .navbar-brand {
+  font-family: var(--nova-font-serif);
+  color: var(--nova-ink);
+  letter-spacing: -0.01em;
+}
+
+a { color: var(--nova-ink); text-decoration: underline; }
+a:hover, a:focus { color: var(--nova-accent-ink); }
+
+.navbar-default {
+  background: var(--nova-ink);
+  border: 0;
+  border-bottom: 4px solid var(--nova-accent-ink);
+  border-radius: 0;
+}
+.navbar-default .navbar-brand,
+.navbar-default .navbar-nav > li > a,
+.navbar-default .navbar-text {
+  color: #fff !important;
+}
+.navbar-default .navbar-nav > li > a:hover,
+.navbar-default .navbar-nav > .active > a {
+  background: rgba(255, 255, 255, 0.08) !important;
+  color: #fff !important;
+}
+
+.btn-primary {
+  background: var(--nova-ink);
+  border-color: var(--nova-ink);
+  border-radius: 0;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-size: 0.85rem;
+}
+.btn-primary:hover { background: #082748; border-color: #082748; }
+
+.wh-banner {
+  background: var(--nova-ink);
+  color: #fff;
+  padding: 1.75rem 1.5rem;
+  margin: 0 0 1.25rem;
+  border-bottom: 4px solid var(--nova-accent-ink);
+}
+.wh-banner h1, .wh-banner h2 {
+  color: #fff;
+  margin: 0 0 0.5rem;
+  font-size: 1.75rem;
+}
+.wh-banner p { margin: 0; color: #d6e4f5; max-width: 40rem; }
+.wh-banner a { color: #fff; font-weight: 600; }
+
+.wh-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(12rem, 1fr));
+  gap: 0.75rem;
+  margin: 1.25rem 0 1.5rem;
+}
+.wh-card {
+  display: block;
+  background: var(--nova-paper);
+  border: 1px solid var(--nova-line);
+  border-top: 3px solid var(--nova-ink);
+  padding: 0.85rem 1rem;
+  text-decoration: none !important;
+  color: var(--nova-ink) !important;
+}
+.wh-card:hover { border-top-color: var(--nova-accent-ink); }
+.wh-card strong { display: block; font-size: 0.95rem; }
+.wh-card span { font-size: 0.8rem; color: var(--nova-muted); }
+
+.nova-river h2, .nova-section-posts h2 {
+  border-bottom: 2px solid var(--nova-ink);
+  padding-bottom: 0.35rem;
+}
