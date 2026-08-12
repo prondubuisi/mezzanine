@@ -256,7 +256,7 @@ def set_active_theme(
     elif hasattr(msettings, "_loaded"):
         msettings._loaded = False
     write_nova_theme_marker(name, project_root=project_root)
-    active_theme_template_dir.cache_clear()
+    _active_theme_template_dir_for_site.cache_clear()
     return meta
 
 
@@ -479,14 +479,44 @@ def set_theme_customizer(
         msettings._loaded = False
 
 
-@lru_cache(maxsize=8)
-def active_theme_template_dir() -> str:
-    """Filesystem path for the active theme templates (empty if none)."""
-    name = get_active_theme_name()
+@lru_cache(maxsize=32)
+def _active_theme_template_dir_for_site(site_id: int) -> str:
+    """
+    Resolve template dir for one site_id (DESIGN.md Amendment 3 S3 / PR-047).
+
+    Looks up ``ACTIVE_THEME`` on that site via the unscoped manager so the
+    process-wide cache never serves site A's theme to site B.
+    """
+    name = ""
+    try:
+        from mezzanine.conf.models import Setting
+
+        raw = (
+            Setting._base_manager.filter(site_id=site_id, name="ACTIVE_THEME")
+            .values_list("value", flat=True)
+            .first()
+        )
+        name = str(raw or "").strip()
+    except Exception:  # noqa: BLE001
+        name = ""
+    if not name:
+        try:
+            from django.conf import settings as dj_settings
+
+            name = str(getattr(dj_settings, "ACTIVE_THEME", "") or "").strip()
+        except Exception:  # noqa: BLE001
+            name = ""
     if not name:
         return ""
     path = theme_template_dir(name)
     return str(path) if path else ""
+
+
+def active_theme_template_dir() -> str:
+    """Filesystem path for the active theme templates (empty if none)."""
+    from mezzanine.utils.sites import current_site_id
+
+    return _active_theme_template_dir_for_site(current_site_id())
 
 
 def profile_theme_map() -> dict[str, str]:
