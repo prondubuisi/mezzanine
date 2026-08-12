@@ -530,6 +530,103 @@ def profile_theme_map() -> dict[str, str]:
     }
 
 
+def theme_tokens_static() -> str:
+    """
+    Static-relative path for the active theme's tokens CSS
+    (``theme.json`` ``tokens`` field, without the ``static/`` prefix).
+    """
+    name = get_active_theme_name()
+    if not name:
+        return ""
+    try:
+        meta = load_theme_meta(name)
+    except ThemeError:
+        return ""
+    tokens = str(meta.get("tokens") or "").strip()
+    if tokens.startswith("static/"):
+        tokens = tokens[len("static/") :]
+    return tokens
+
+
+def _seed_profile_for_active_theme() -> dict[str, Any] | None:
+    """site_profiles entry for the active theme's seed_profile, if any."""
+    name = get_active_theme_name()
+    if not name:
+        return None
+    try:
+        meta = load_theme_meta(name)
+    except ThemeError:
+        return None
+    slug = str(meta.get("seed_profile") or "").strip()
+    if not slug:
+        # Theme folder name may match a profile (whitehouse, techcrunch, …).
+        slug = name
+    try:
+        from mezzanine.demos.site_profiles import get_profile
+
+        return get_profile(slug)
+    except Exception:  # noqa: BLE001 — KeyError / import
+        return None
+
+
+def theme_nav_items(kind: str = "primary") -> list[dict[str, str]]:
+    """
+    Nav links for kit chrome (DESIGN.md Amendment 3 K3/K4 / PR-049).
+
+    Single-sources section URLs from ``site_profiles`` (same data seed uses)
+    when the active theme has a matching profile. ``kind`` is ``primary``
+    or ``footer``.
+    """
+    profile = _seed_profile_for_active_theme()
+    if not profile:
+        return []
+    pages = list(profile.get("pages") or [])
+    categories = [str(c) for c in (profile.get("categories") or [])]
+    cat_set = {c.lower() for c in categories}
+    items: list[dict[str, str]] = []
+
+    def _page_href(slug: str) -> str:
+        slug = (slug or "").strip("/")
+        return "/%s/" % slug if slug else "/"
+
+    if kind == "primary":
+        label = str(profile.get("primary_nav_label") or "Latest")
+        try:
+            from django.urls import reverse
+
+            blog_href = reverse("blog_post_list")
+        except Exception:  # noqa: BLE001
+            blog_href = "/blog/"
+        items.append({"title": label, "href": blog_href})
+        if cat_set:
+            # Prefer category order from the profile.
+            by_title = {str(t).lower(): (str(t), str(s)) for t, s, *_ in pages}
+            for cat in categories:
+                hit = by_title.get(cat.lower())
+                if hit:
+                    title, slug = hit
+                    items.append({"title": title, "href": _page_href(slug)})
+        else:
+            for title, slug, *_ in pages:
+                if str(slug).lower() in ("about", "contact"):
+                    continue
+                items.append({"title": str(title), "href": _page_href(str(slug))})
+        return items
+
+    # footer
+    for title, slug, *_ in pages:
+        items.append({"title": str(title), "href": _page_href(str(slug))})
+    if profile.get("contact"):
+        items.append({"title": "Contact", "href": "/contact/"})
+    try:
+        from django.urls import reverse
+
+        items.append({"title": "All posts", "href": reverse("blog_post_list")})
+    except Exception:  # noqa: BLE001
+        items.append({"title": "All posts", "href": "/blog/"})
+    return items
+
+
 def apps_for_theme(name: str) -> list[str]:
     """Kit package + theme.json plugins for INSTALLED_APPS wiring."""
     apps = []

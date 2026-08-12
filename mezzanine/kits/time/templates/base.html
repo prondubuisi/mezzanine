@@ -1,27 +1,2 @@
 {% extends "kit_base.html" %}
-{% load i18n static %}
-
-{% block kit_tokens %}
-<link rel="stylesheet" href="{% static "time/tokens.css" %}">
-{% endblock %}
-
-{% block kit_primary_nav %}
-<li><a href="{% url 'blog_post_list' %}">{% trans "Latest" %}</a></li>
-<li><a href="/politics/">{% trans "Politics" %}</a></li>
-<li><a href="/world/">{% trans "World" %}</a></li>
-<li><a href="/business/">{% trans "Business" %}</a></li>
-<li><a href="/health/">{% trans "Health" %}</a></li>
-<li><a href="/ideas/">{% trans "Ideas" %}</a></li>
-{% endblock %}
-
-{% block kit_footer_nav %}
-<ul class="footer-links">
-  <li><a href="/politics/">{% trans "Politics" %}</a></li>
-  <li><a href="/world/">{% trans "World" %}</a></li>
-  <li><a href="/business/">{% trans "Business" %}</a></li>
-  <li><a href="/science/">{% trans "Science" %}</a></li>
-  <li><a href="/entertainment/">{% trans "Entertainment" %}</a></li>
-  <li><a href="/contact/">{% trans "Contact" %}</a></li>
-  <li><a href="/about/">{% trans "About this demo" %}</a></li>
-</ul>
-{% endblock %}
+{# Nav + tokens from active theme / site_profiles (PR-049). #}

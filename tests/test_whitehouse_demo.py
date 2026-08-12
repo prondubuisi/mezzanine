@@ -28,9 +28,15 @@ def test_whitehouse_kit_meta():
     validate_kit(meta)
     assert (root / "static/whitehouse/tokens.css").is_file()
     assert (root / "templates/index.html").is_file()
+    # PR-049: base.html is a thin kit_base wrapper; tokens/nav come from
+    # theme.json + site_profiles, not hardcoded section links.
     base = (root / "templates/base.html").read_text(encoding="utf-8")
-    assert "whitehouse/tokens.css" in base
-    assert "/releases/" in base
+    assert 'extends "kit_base.html"' in base
+    from mezzanine.kits.theme import load_theme_meta
+
+    theme = load_theme_meta("whitehouse")
+    assert "whitehouse/tokens" in str(theme.get("tokens") or "")
+    assert theme.get("seed_profile") == "whitehouse"
     idx = (root / "templates/index.html").read_text(encoding="utf-8")
     assert "nova-banner" in idx
     assert "includes/recent_posts.html" in idx
