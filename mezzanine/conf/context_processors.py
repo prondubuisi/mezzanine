@@ -81,7 +81,7 @@ def settings(request=None):
 
 def theme(request=None):
     """
-    Active theme customizer values for templates (colors, logo, CSS).
+    Active theme customizer values + kit nav derived from site_profiles.
     """
     try:
         from mezzanine.kits.theme import (
@@ -89,6 +89,8 @@ def theme(request=None):
             get_theme_colors,
             get_theme_logo_url,
             theme_customizer_css,
+            theme_nav_items,
+            theme_tokens_static,
         )
 
         return {
@@ -96,6 +98,9 @@ def theme(request=None):
             "theme_colors": get_theme_colors(),
             "theme_logo_url": get_theme_logo_url(),
             "theme_customizer_css": theme_customizer_css(),
+            "theme_tokens_static": theme_tokens_static(),
+            "theme_primary_nav": theme_nav_items("primary"),
+            "theme_footer_nav": theme_nav_items("footer"),
         }
     except Exception:  # noqa: BLE001 — never break public pages
         return {
@@ -103,4 +108,7 @@ def theme(request=None):
             "theme_colors": {},
             "theme_logo_url": "",
             "theme_customizer_css": "",
+            "theme_tokens_static": "",
+            "theme_primary_nav": [],
+            "theme_footer_nav": [],
         }

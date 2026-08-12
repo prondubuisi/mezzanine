@@ -16,7 +16,11 @@
 <link rel="stylesheet" href="{% static "css/bootstrap-theme.css" %}">
 <link rel="stylesheet" href="{% static "css/bs3-compat.css" %}">
 <link rel="stylesheet" href="{% static "nova_kits/newsroom.css" %}">
-{% block kit_tokens %}{% endblock %}
+{% block kit_tokens %}
+{% if theme_tokens_static %}
+<link rel="stylesheet" href="{% static theme_tokens_static %}">
+{% endif %}
+{% endblock %}
 {% if LANGUAGE_BIDI %}
 <link rel="stylesheet" href="{% static "css/bootstrap-rtl.css" %}">
 {% endif %}
@@ -55,7 +59,11 @@
 <div class="navbar-collapse">
     {% block navbar_dropdown_menu %}
     <ul class="nav navbar-nav">
-        {% block kit_primary_nav %}{% endblock %}
+        {% block kit_primary_nav %}
+        {% for item in theme_primary_nav %}
+        <li><a href="{{ item.href }}">{{ item.title }}</a></li>
+        {% endfor %}
+        {% endblock %}
     </ul>
     {% page_menu "pages/menus/dropdown.html" %}
     {% endblock %}
@@ -118,7 +126,15 @@
 <footer class="nova-kit-footer">
 <div class="container">
 {% block kit_footer_nav %}
+{% if theme_footer_nav %}
+<ul class="footer-links">
+  {% for item in theme_footer_nav %}
+  <li><a href="{{ item.href }}">{{ item.title }}</a></li>
+  {% endfor %}
+</ul>
+{% else %}
 {% page_menu "pages/menus/footer.html" %}
+{% endif %}
 {% endblock %}
 
 {% block kit_footer_meta %}

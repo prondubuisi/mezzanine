@@ -1,23 +1,2 @@
 {% extends "kit_base.html" %}
-{% load i18n static %}
-
-{% block kit_tokens %}
-<link rel="stylesheet" href="{% static "whitehouse/tokens.css" %}">
-{% endblock %}
-
-{% block kit_primary_nav %}
-<li><a href="{% url 'blog_post_list' %}">{% trans "News" %}</a></li>
-<li><a href="/releases/">{% trans "Releases" %}</a></li>
-<li><a href="/briefings/">{% trans "Briefings" %}</a></li>
-<li><a href="/presidential-actions/">{% trans "Actions" %}</a></li>
-{% endblock %}
-
-{% block kit_footer_nav %}
-<ul class="footer-links">
-  <li><a href="/releases/">{% trans "Releases" %}</a></li>
-  <li><a href="/briefings/">{% trans "Briefings" %}</a></li>
-  <li><a href="/presidential-actions/">{% trans "Actions" %}</a></li>
-  <li><a href="/contact/">{% trans "Contact" %}</a></li>
-  <li><a href="/about/">{% trans "About this demo" %}</a></li>
-</ul>
-{% endblock %}
+{# Nav + tokens from active theme / site_profiles (PR-049). #}
