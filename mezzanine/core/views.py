@@ -550,6 +550,82 @@ def demo_theme_activate(request):
 
 
 @require_GET
+def theme_customizer(request):
+    """
+    Lean WordPress Customizer analogue: colors + logo for ACTIVE_THEME.
+
+    Staff-only (or DEBUG). Saves to conf.Setting; CSS vars inject via context.
+    """
+    from django.conf import settings as dj_settings
+    from django.contrib.auth.views import redirect_to_login
+
+    from mezzanine.kits.theme import (
+        get_active_theme_name,
+        get_theme_colors,
+        get_theme_logo_url,
+        load_theme_meta,
+        theme_customizer_css,
+    )
+
+    if not dj_settings.DEBUG and not (
+        request.user.is_authenticated and request.user.is_staff
+    ):
+        return redirect_to_login(request.get_full_path())
+    name = get_active_theme_name()
+    defaults = {}
+    if name:
+        try:
+            defaults = (load_theme_meta(name).get("colors") or {}) or {}
+        except Exception:  # noqa: BLE001
+            defaults = {}
+    return TemplateResponse(
+        request,
+        "admin/theme_customizer.html",
+        {
+            "title": "Theme customizer",
+            "theme_name": name,
+            "colors": get_theme_colors(),
+            "defaults": defaults,
+            "logo_url": get_theme_logo_url(),
+            "preview_css": theme_customizer_css(),
+            "fields": (
+                ("ink", "Ink / text"),
+                ("accent", "Accent"),
+                ("accent_ink", "Accent secondary"),
+                ("canvas", "Canvas / background"),
+                ("paper", "Paper / surface"),
+            ),
+        },
+    )
+
+
+@require_POST
+def theme_customizer_save(request):
+    from django.conf import settings as dj_settings
+    from django.contrib import messages
+    from django.contrib.auth.views import redirect_to_login
+    from django.http import HttpResponseRedirect
+
+    from mezzanine.kits.theme import set_theme_customizer
+
+    if not dj_settings.DEBUG and not (
+        request.user.is_authenticated and request.user.is_staff
+    ):
+        return redirect_to_login(request.get_full_path())
+    colors = {
+        key: (request.POST.get("color_%s" % key) or "").strip()
+        for key in ("ink", "accent", "accent_ink", "canvas", "paper")
+    }
+    logo = (request.POST.get("logo_url") or "").strip()
+    if request.POST.get("reset") == "1":
+        colors = {k: "" for k in colors}
+        logo = ""
+    set_theme_customizer(colors=colors, logo_url=logo)
+    messages.success(request, "Theme customizer saved.")
+    return HttpResponseRedirect("/_nova/theme-customizer/")
+
+
+@require_GET
 def api_openapi(request):
     """Minimal OpenAPI 3 skeleton for private Nova API (PR-036)."""
     _require_staff_site(request)

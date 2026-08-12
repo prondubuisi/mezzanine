@@ -5,11 +5,15 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{% block title %}{{ site_name }}{% endblock %}</title>
+  {% include "includes/theme_customizer_css.html" %}
   {% block extra_css %}{% endblock %}
 </head>
 <body>
   <header>
-    <strong><a href="{% url 'home' %}">{{ site_name }}</a></strong>
+    <strong><a href="{% url 'home' %}">
+      {% if theme_logo_url %}<img src="{{ theme_logo_url }}" alt="" style="height:1.25rem;vertical-align:middle"> {% endif %}
+      {{ site_name }}
+    </a></strong>
     <nav>
       <a href="{% url 'home' %}">{% trans "Home" %}</a>
       <a href="{% url 'music_search' %}">{% trans "Search" %}</a>

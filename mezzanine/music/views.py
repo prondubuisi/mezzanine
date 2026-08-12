@@ -8,10 +8,15 @@ only loads published model data — WordPress-style “query in template hierarc
 from __future__ import annotations
 
 from django.db.models import Q
-from django.http import Http404
 from django.shortcuts import get_object_or_404, render
 
+from mezzanine.kits.theme import resolve_slot_template
 from mezzanine.music.models import Album, Artist, Playlist, Track
+
+
+def _tpl(slot: str, fallback: str) -> str:
+    """Resolve theme.json slot → template path (WP hierarchy step)."""
+    return resolve_slot_template(slot, fallback)
 
 
 def _preview(request):
@@ -64,7 +69,7 @@ def home(request):
     )
     return render(
         request,
-        "music/home.html",
+        _tpl("home", "music/home.html"),
         _shell(
             request,
             {
@@ -108,7 +113,7 @@ def search(request):
         )  # description is Displayable.description
     return render(
         request,
-        "music/search.html",
+        _tpl("search", "music/search.html"),
         _shell(request, {"page": "search", "q": q, "results": results}),
     )
 
@@ -118,7 +123,7 @@ def library(request):
     pub = dict(for_user=request.user, preview=preview)
     return render(
         request,
-        "music/library.html",
+        _tpl("library", "music/library.html"),
         _shell(
             request,
             {
@@ -147,7 +152,7 @@ def playlist_detail(request, slug):
     now = tracks[0] if tracks else None
     return render(
         request,
-        "music/playlist.html",
+        _tpl("playlist", "music/playlist.html"),
         _shell(
             request,
             {
@@ -176,7 +181,7 @@ def album_detail(request, slug):
     now = tracks[0] if tracks else None
     return render(
         request,
-        "music/album.html",
+        _tpl("album", "music/album.html"),
         _shell(
             request,
             {
@@ -208,7 +213,7 @@ def artist_detail(request, slug):
     now = tracks[0] if tracks else None
     return render(
         request,
-        "music/artist.html",
+        _tpl("artist", "music/artist.html"),
         _shell(
             request,
             {

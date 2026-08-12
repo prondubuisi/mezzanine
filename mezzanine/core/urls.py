@@ -65,4 +65,14 @@ urlpatterns += [
         core_views.demo_theme_activate,
         name="nova_demo_theme_activate",
     ),
+    path(
+        "_nova/theme-customizer/",
+        core_views.theme_customizer,
+        name="nova_theme_customizer",
+    ),
+    path(
+        "_nova/theme-customizer/save/",
+        core_views.theme_customizer_save,
+        name="nova_theme_customizer_save",
+    ),
 ]

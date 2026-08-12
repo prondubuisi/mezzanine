@@ -99,12 +99,13 @@ Theme packages only override tokens + a few layout blocks.
 
 See also `PARITY-BACKLOG.md`. Theme-specific:
 
-1. ~~No installable theme package contract (`theme.json`)~~ **Done** — `kits/*/theme.json` + `mezzanine.kits.theme`  
-2. ~~Kits copy freezes chrome~~ **Mitigated** — `ACTIVE_THEME` + `active_theme.Loader` loads package templates *before* project copy  
-3. Slot map declared in `theme.json` `slots` — not yet a full template hierarchy router  
-4. Section pages ≠ category archives (dual IA) — mitigated for WH/Spotify newsroom seeds  
-5. Featured image default off; no theme supports “post thumbnail” UX  
-6. No full Customizer UI — `colors` live in theme.json; tokens CSS still hand-authored  
+1. ~~theme.json contract~~ **Done**  
+2. ~~Runtime chrome switch~~ **Done** (`ACTIVE_THEME` + loader)  
+3. ~~Slot map router~~ **Done** — `resolve_slot_template(slot, fallback)` used by music views  
+4. Section pages ≠ category archives — mitigated for WH-style seeds  
+5. Featured image default off — still open (editorial)  
+6. ~~Customizer UI~~ **Done** — `/_nova/theme-customizer/` (colors + logo → CSS vars)  
+7. ~~Plugin auto-append~~ **Done** — conf appends importable kit+plugins from `ACTIVE_THEME` / `.nova-theme` / installed kits (restart once if apps changed)  
 
 ### Runtime theme API
 
@@ -112,11 +113,14 @@ See also `PARITY-BACKLOG.md`. Theme-specific:
 python manage.py activate_theme --list
 python manage.py activate_theme whitehouse --seed
 python manage.py activate_theme spotify --seed
-# or DEBUG lab: /_nova/demo-sites/  → Themes → Activate + seed
+# Customizer (staff or DEBUG):
+#   http://127.0.0.1:8002/_nova/theme-customizer/
+# Demo lab: /_nova/demo-sites/  → Themes · Customizer link
 ```
 
 Setting: **ACTIVE_THEME** (editable). Loader order: host_themes → **active_theme** → project filesystem → app_directories.
----
+
+Customizer settings: `THEME_COLOR_*`, `THEME_LOGO_URL` (override theme.json colors).---
 
 ## Sit lab testing protocol
 
@@ -165,7 +169,9 @@ Append observations under **Session notes** below.
 | Runtime data from **DB**, not theme Python | Done |
 | Installable `theme.json` + `ACTIVE_THEME` loader | **Done** |
 | Demo lab theme activate (+ seed) | **Done** |
-| Full Customizer UI for colors/logo | Still gap (JSON + tokens only) |
+| Customizer UI (colors + logo) | **Done** (`/_nova/theme-customizer/`) |
+| Slot template resolution | **Done** (`resolve_slot_template`) |
+| Auto-append theme plugins on boot | **Done** (importable apps + `.nova-theme`) |
 
 **Rule:** kits/themes never own catalog data; plugins own content types.
 

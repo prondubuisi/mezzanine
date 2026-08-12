@@ -22,6 +22,7 @@
 {% endif %}
 {% block extra_css %}{% endblock %}
 {% endcompress %}
+{% include "includes/theme_customizer_css.html" %}
 
 {# Public pages: no jQuery except staff (KD12). Nonces via request.csp_nonce. #}
 {% nevercache %}
@@ -43,7 +44,11 @@
 <div class="container">
 <div class="navbar-header">
     {% block navbar_title %}
-    {% if settings.SITE_TITLE %}<a class="navbar-brand" href="/">{{ settings.SITE_TITLE }}</a>{% endif %}
+    {% if theme_logo_url %}
+    <a class="navbar-brand" href="/" style="padding-top:8px;padding-bottom:8px">
+      <img src="{{ theme_logo_url }}" alt="{{ settings.SITE_TITLE }}" style="max-height:32px;width:auto">
+    </a>
+    {% elif settings.SITE_TITLE %}<a class="navbar-brand" href="/">{{ settings.SITE_TITLE }}</a>{% endif %}
     {% if settings.SITE_TAGLINE %}<p class="navbar-text">{{ settings.SITE_TAGLINE }}</p>{% endif %}
     {% endblock %}
 </div>

@@ -7,13 +7,18 @@
   <title>{% block title %}{{ site_name }}{% endblock %}</title>
   <meta name="description" content="{{ disclaimer }}">
   <link rel="stylesheet" href="{% static 'spotify/player.css' %}">
+  {% include "includes/theme_customizer_css.html" %}
 </head>
 <body class="sp-body">
   <div class="sp-app" id="sp-app">
     <aside class="sp-sidebar" aria-label="{% trans 'Main' %}">
       <div class="sp-brand">
         <a href="{% url 'home' %}" class="sp-logo">
+          {% if theme_logo_url %}
+          <img src="{{ theme_logo_url }}" alt="" class="sp-logo-img" style="height:1.5rem;width:auto;border-radius:4px">
+          {% else %}
           <span class="sp-logo-mark" aria-hidden="true"></span>
+          {% endif %}
           {{ site_name }}
         </a>
       </div>

@@ -70,9 +70,20 @@ class Command(BaseCommand):
         plugins = theme_plugins(meta)
         if plugins:
             self.stdout.write("  plugins: %s" % ", ".join(plugins))
+            if not theme_plugins_installed(meta):
+                self.stdout.write(
+                    self.style.WARNING(
+                        "  Some plugins were not in INSTALLED_APPS; "
+                        "wrote .nova-theme — restart the process so conf can "
+                        "auto-append importable plugins, then migrate if needed."
+                    )
+                )
         slots = meta.get("slots") or {}
         if slots:
             self.stdout.write("  slots: %s" % ", ".join(sorted(slots)))
+        self.stdout.write(
+            "  customizer: /_nova/theme-customizer/ (staff or DEBUG)"
+        )
 
         if options["seed"]:
             seed_cmd = meta.get("seed_command")

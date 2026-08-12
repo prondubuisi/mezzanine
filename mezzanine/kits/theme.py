@@ -162,25 +162,33 @@ def get_active_theme_name() -> str:
     return str(name).strip()
 
 
-def set_active_theme(name: str) -> dict[str, Any]:
+def set_active_theme(name: str, *, project_root: str | Path | None = None) -> dict[str, Any]:
     """
     Persist ACTIVE_THEME via conf.Setting and validate the package.
+    Also writes ``.nova-theme`` so the next process start can auto-load plugins.
     Returns theme metadata.
     """
     if not name:
         raise ThemeError("Theme name is required")
     meta = load_theme_meta(name)
-    if not theme_plugins_installed(meta):
-        missing = [
-            p
-            for p in theme_plugins(meta)
-            if p
-            not in __import__("django.conf", fromlist=["settings"]).settings.INSTALLED_APPS
-        ]
-        raise ThemeError(
-            "Theme %r requires plugins not in INSTALLED_APPS: %s"
-            % (name, ", ".join(missing))
-        )
+    missing = missing_theme_plugins(meta)
+    if missing:
+        # Try importability first (may already be on path but not installed).
+        unimportable = []
+        for p in missing:
+            try:
+                __import__(p)
+            except ImportError:
+                unimportable.append(p)
+        if unimportable:
+            raise ThemeError(
+                "Theme %r requires plugins that are not installed/importable: %s. "
+                "Add them to INSTALLED_APPS (or re-run with kit that includes them) "
+                "and restart."
+                % (name, ", ".join(unimportable))
+            )
+        # Importable but not in INSTALLED_APPS — activate still records theme;
+        # conf will append on next process boot via .nova-theme.
     from mezzanine.conf import settings as msettings
     from mezzanine.conf.models import Setting
 
@@ -192,8 +200,215 @@ def set_active_theme(name: str) -> dict[str, Any]:
         msettings.clear_cache()
     elif hasattr(msettings, "_loaded"):
         msettings._loaded = False
+    write_nova_theme_marker(name, project_root=project_root)
     active_theme_template_dir.cache_clear()
     return meta
+
+
+def missing_theme_plugins(meta: dict[str, Any]) -> list[str]:
+    from django.conf import settings
+
+    installed = set(settings.INSTALLED_APPS)
+    return [p for p in theme_plugins(meta) if p not in installed]
+
+
+def write_nova_theme_marker(
+    name: str, *, project_root: str | Path | None = None
+) -> Path | None:
+    """
+    Persist active theme name for process startup (plugin auto-append).
+
+    Written next to manage.py when project_root is known; also under cwd.
+    """
+    roots: list[Path] = []
+    if project_root:
+        roots.append(Path(project_root))
+    try:
+        from django.conf import settings as dj
+
+        if getattr(dj, "PROJECT_ROOT", None):
+            roots.append(Path(dj.PROJECT_ROOT))
+    except Exception:  # noqa: BLE001
+        pass
+    roots.append(Path.cwd())
+    written = None
+    for root in roots:
+        try:
+            if not root.is_dir():
+                continue
+            path = root / ".nova-theme"
+            path.write_text(name.strip() + "\n", encoding="utf-8")
+            written = path
+            break
+        except OSError:
+            continue
+    return written
+
+
+def read_nova_theme_marker(project_root: str | Path | None = None) -> str:
+    candidates: list[Path] = []
+    if project_root:
+        candidates.append(Path(project_root) / ".nova-theme")
+    try:
+        from django.conf import settings as dj
+
+        if getattr(dj, "PROJECT_ROOT", None):
+            candidates.append(Path(dj.PROJECT_ROOT) / ".nova-theme")
+    except Exception:  # noqa: BLE001
+        pass
+    candidates.append(Path.cwd() / ".nova-theme")
+    for path in candidates:
+        try:
+            if path.is_file():
+                return path.read_text(encoding="utf-8").strip().splitlines()[0].strip()
+        except OSError:
+            continue
+    return ""
+
+
+def resolve_slot_template(slot: str, fallback: str) -> str:
+    """
+    WordPress-style template hierarchy step: active theme slot → fallback.
+
+    ``theme.json`` slots map logical names (home, single, chrome, …) to
+    template paths relative to the theme package templates/ dir.
+    """
+    name = get_active_theme_name()
+    if not name:
+        return fallback
+    try:
+        meta = load_theme_meta(name)
+    except ThemeError:
+        return fallback
+    slots = meta.get("slots") or {}
+    candidate = slots.get(slot)
+    if not candidate:
+        return fallback
+    # Prefer theme package file if it exists; else fall back.
+    tdir = theme_template_dir(name)
+    if tdir and (tdir / candidate).is_file():
+        return str(candidate)
+    return fallback
+
+
+def get_theme_colors() -> dict[str, str]:
+    """
+    Colors for Customizer: theme.json defaults merged with Setting overrides.
+
+    Keys: ink, accent, accent_ink, canvas, paper (subset may be present).
+    """
+    colors: dict[str, str] = {}
+    name = get_active_theme_name()
+    if name:
+        try:
+            meta = load_theme_meta(name)
+            raw = meta.get("colors") or {}
+            if isinstance(raw, dict):
+                colors.update({str(k): str(v) for k, v in raw.items() if v})
+        except ThemeError:
+            pass
+    # Overrides from editable settings
+    try:
+        from mezzanine.conf import settings as msettings
+
+        mapping = {
+            "ink": "THEME_COLOR_INK",
+            "accent": "THEME_COLOR_ACCENT",
+            "accent_ink": "THEME_COLOR_ACCENT_INK",
+            "canvas": "THEME_COLOR_CANVAS",
+            "paper": "THEME_COLOR_PAPER",
+        }
+        for key, setting_name in mapping.items():
+            val = getattr(msettings, setting_name, "") or ""
+            val = str(val).strip()
+            if val:
+                colors[key] = val
+    except Exception:  # noqa: BLE001
+        pass
+    return colors
+
+
+def get_theme_logo_url() -> str:
+    try:
+        from mezzanine.conf import settings as msettings
+
+        return str(getattr(msettings, "THEME_LOGO_URL", "") or "").strip()
+    except Exception:  # noqa: BLE001
+        return ""
+
+
+def theme_customizer_css() -> str:
+    """Inline CSS variable overrides for active theme colors."""
+    colors = get_theme_colors()
+    if not colors:
+        return ""
+    # Map theme.json keys → CSS custom properties used by kits.
+    var_map = {
+        "ink": "--nova-ink",
+        "accent": "--nova-accent",
+        "accent_ink": "--nova-accent-ink",
+        "canvas": "--nova-canvas",
+        "paper": "--nova-paper",
+        # Spotify player tokens
+        "sp_bg": "--sp-bg",
+        "sp_accent": "--sp-accent",
+        "sp_surface": "--sp-surface",
+    }
+    lines = []
+    for key, css_var in var_map.items():
+        if key in colors:
+            lines.append("%s: %s;" % (css_var, colors[key]))
+    # Also mirror accent/ink onto Spotify vars when present.
+    if "accent" in colors and "sp_accent" not in colors:
+        lines.append("--sp-accent: %s;" % colors["accent"])
+    if "ink" in colors and "sp_surface" not in colors:
+        lines.append("--sp-surface: %s;" % colors["ink"])
+    if "canvas" in colors and "sp_bg" not in colors:
+        lines.append("--sp-bg: %s;" % colors["canvas"])
+    if not lines:
+        return ""
+    return ":root {\n  " + "\n  ".join(lines) + "\n}\n"
+
+
+def set_theme_customizer(
+    *,
+    colors: dict[str, str] | None = None,
+    logo_url: str | None = None,
+) -> None:
+    """Persist customizer fields to conf.Setting rows."""
+    from mezzanine.conf import settings as msettings
+    from mezzanine.conf.models import Setting
+
+    color_settings = {
+        "ink": "THEME_COLOR_INK",
+        "accent": "THEME_COLOR_ACCENT",
+        "accent_ink": "THEME_COLOR_ACCENT_INK",
+        "canvas": "THEME_COLOR_CANVAS",
+        "paper": "THEME_COLOR_PAPER",
+    }
+    if colors:
+        for key, setting_name in color_settings.items():
+            if key not in colors:
+                continue
+            val = str(colors[key] or "").strip()
+            if val:
+                Setting.objects.update_or_create(
+                    name=setting_name, defaults={"value": val[:64]}
+                )
+            else:
+                Setting.objects.filter(name=setting_name).delete()
+    if logo_url is not None:
+        logo = str(logo_url).strip()
+        if logo:
+            Setting.objects.update_or_create(
+                name="THEME_LOGO_URL", defaults={"value": logo[:500]}
+            )
+        else:
+            Setting.objects.filter(name="THEME_LOGO_URL").delete()
+    if hasattr(msettings, "clear_cache"):
+        msettings.clear_cache()
+    elif hasattr(msettings, "_loaded"):
+        msettings._loaded = False
 
 
 @lru_cache(maxsize=8)
@@ -213,3 +428,21 @@ def profile_theme_map() -> dict[str, str]:
         # Listening CMS demo uses music seed, not newsroom profile.
         "spotify_listen": "spotify",
     }
+
+
+def apps_for_theme(name: str) -> list[str]:
+    """Kit package + theme.json plugins for INSTALLED_APPS wiring."""
+    apps = []
+    kit = theme_package(name)
+    apps.append(kit)
+    try:
+        meta = load_theme_meta(name)
+        apps.extend(theme_plugins(meta))
+    except ThemeError:
+        pass
+    # de-dupe preserve order
+    out = []
+    for a in apps:
+        if a not in out:
+            out.append(a)
+    return out

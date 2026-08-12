@@ -246,6 +246,7 @@ TEMPLATES = [
                 "django.template.context_processors.request",
                 "django.template.context_processors.tz",
                 "mezzanine.conf.context_processors.settings",
+                "mezzanine.conf.context_processors.theme",
                 "mezzanine.pages.context_processors.page",
             ],
             "loaders": [

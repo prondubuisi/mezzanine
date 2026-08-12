@@ -1,0 +1,93 @@
+{% load i18n %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>{{ title }} | Nova</title>
+  <style>
+    body { font-family: system-ui, sans-serif; margin: 1.5rem; color: #111; max-width: 40rem; }
+    h1 { font-size: 1.35rem; }
+    .hint { color: #555; font-size: 0.9rem; margin-bottom: 1rem; }
+    label { display: block; font-weight: 600; margin: 0.75rem 0 0.25rem; font-size: 0.9rem; }
+    input[type=text], input[type=url] {
+      width: 100%; max-width: 22rem; padding: 0.4rem 0.5rem; border: 1px solid #d1d5db; border-radius: 4px;
+    }
+    .row { display: flex; gap: 0.5rem; align-items: center; max-width: 24rem; }
+    .row input[type=color] { width: 3rem; height: 2.1rem; padding: 0; border: 1px solid #d1d5db; }
+    .def { font-size: 0.8rem; color: #6b7280; }
+    button {
+      background: #0f766e; color: #fff; border: 0; border-radius: 4px;
+      padding: 0.5rem 0.9rem; cursor: pointer; margin-right: 0.5rem; margin-top: 1rem;
+    }
+    button.secondary { background: #64748b; }
+    .preview {
+      margin-top: 1.5rem; padding: 1rem; border-radius: 8px; border: 1px solid #e5e7eb;
+      background: var(--nova-canvas, #f9fafb); color: var(--nova-ink, #111);
+    }
+    .preview a { color: var(--nova-accent, #0f766e); font-weight: 600; }
+    a { color: #1d4ed8; }
+  </style>
+  {% if preview_css %}<style>{{ preview_css|safe }}</style>{% endif %}
+</head>
+<body>
+  <h1>{% trans "Theme customizer" %}</h1>
+  <p class="hint">
+    {% trans "WordPress Customizer analogue: override ACTIVE_THEME colors and logo without editing CSS." %}
+    {% if theme_name %}
+    <br>{% trans "Active theme:" %} <strong>{{ theme_name }}</strong>
+    {% else %}
+    <br>{% trans "No ACTIVE_THEME — activate a theme first." %}
+    {% endif %}
+  </p>
+  <p class="hint">
+    <a href="/_nova/demo-sites/">{% trans "Theme lab" %}</a> ·
+    <a href="/">{% trans "View site" %}</a> ·
+    <a href="{% url 'admin:index' %}">{% trans "Admin" %}</a>
+  </p>
+
+  <form method="post" action="{% url 'nova_theme_customizer_save' %}">
+    {% csrf_token %}
+    {% for key, label in fields %}
+    <label for="id_{{ key }}">{{ label }}</label>
+    <div class="row">
+      <input type="color" id="pick_{{ key }}" data-target="id_{{ key }}" value="#888888">
+      <input type="text" name="color_{{ key }}" id="id_{{ key }}"
+        value="{% for k,v in colors.items %}{% if k == key %}{{ v }}{% endif %}{% endfor %}"
+        placeholder="{% for k,v in defaults.items %}{% if k == key %}{{ v }}{% endif %}{% endfor %}"
+        autocomplete="off">
+    </div>
+    {% endfor %}
+
+    <label for="id_logo">{% trans "Logo URL" %}</label>
+    <input type="url" name="logo_url" id="id_logo" value="{{ logo_url }}"
+      placeholder="https://example.com/logo.png">
+
+    <div>
+      <button type="submit">{% trans "Save" %}</button>
+      <button type="submit" name="reset" value="1" class="secondary">{% trans "Reset overrides" %}</button>
+    </div>
+  </form>
+
+  <div class="preview">
+    <strong>{% trans "Live token preview" %}</strong>
+    <p style="margin:0.5rem 0 0">
+      {% trans "Body text uses ink." %}
+      <a href="#">{% trans "Accent link" %}</a>
+    </p>
+  </div>
+
+  <script>
+  document.querySelectorAll("input[type=color][data-target]").forEach(function (picker) {
+    var target = document.getElementById(picker.getAttribute("data-target"));
+    if (!target) return;
+    function syncPicker() {
+      var v = (target.value || "").trim();
+      if (/^#[0-9A-Fa-f]{6}$/.test(v)) picker.value = v;
+    }
+    syncPicker();
+    picker.addEventListener("input", function () { target.value = picker.value; });
+    target.addEventListener("input", syncPicker);
+  });
+  </script>
+</body>
+</html>
