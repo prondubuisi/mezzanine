@@ -31,12 +31,9 @@
 {% block extra_css %}{% endblock %}
 {% endcompress %}
 
-{# Public pages load no jQuery (KD12 / PR-031). Staff sessions only.
-   Inside nevercache (when cache is on) the fragment is re-parsed without
-   the parent ``{% load static %}``, so use STATIC_URL, not the static tag. #}
+{# Public pages: no jQuery except staff (KD12). Prefer STATIC_URL in nevercache. #}
 {% nevercache %}
 {% if user.is_authenticated and user.is_staff %}
-{# nevercache re-parses without templatetag loads — use request.csp_nonce. #}
 <script{% if request.csp_nonce %} nonce="{{ request.csp_nonce }}"{% endif %} src="{{ STATIC_URL }}mezzanine/js/{{ settings.JQUERY_FILENAME }}"></script>
 <script{% if request.csp_nonce %} nonce="{{ request.csp_nonce }}"{% endif %} src="{{ STATIC_URL }}js/bootstrap.js"></script>
 <script{% if request.csp_nonce %} nonce="{{ request.csp_nonce }}"{% endif %} src="{{ STATIC_URL }}js/bootstrap-extras.js"></script>

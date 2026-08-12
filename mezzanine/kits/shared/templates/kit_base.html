@@ -22,8 +22,7 @@
 {% block extra_css %}{% endblock %}
 {% endcompress %}
 
-{# Public pages load no jQuery (KD12). Staff sessions only.
-   nevercache re-parses without templatetag loads — use request.csp_nonce. #}
+{# Public pages: no jQuery except staff (KD12). Nonces via request.csp_nonce. #}
 {% nevercache %}
 {% if user.is_authenticated and user.is_staff %}
 <script{% if request.csp_nonce %} nonce="{{ request.csp_nonce }}"{% endif %} src="{{ STATIC_URL }}mezzanine/js/{{ settings.JQUERY_FILENAME }}"></script>
