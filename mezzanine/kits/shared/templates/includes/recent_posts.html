@@ -4,13 +4,13 @@
 {% blog_recent_posts 8 as recent_posts %}
 {% if recent_posts %}
 <section class="nova-river" style="margin-top:1.5rem">
-  <h2 style="font-size:1.15rem;margin-bottom:0.75rem">{% trans "Latest" %}</h2>
-  <ul style="list-style:none;padding:0;margin:0">
+  <h2>{% trans "Latest" %}</h2>
+  <ul>
   {% for post in recent_posts %}
-    <li style="padding:0.65rem 0;border-bottom:1px solid #e5e7eb">
+    <li>
       <a href="{{ post.get_absolute_url }}"><strong>{{ post.title }}</strong></a>
       {% if post.publish_date %}
-      <div class="meta" style="font-size:0.8rem;color:#6b7280">{{ post.publish_date }}</div>
+      <div class="meta">{{ post.publish_date }}</div>
       {% endif %}
     </li>
   {% endfor %}

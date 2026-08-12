@@ -19,15 +19,22 @@ REPO = Path(mezzanine.__file__).resolve().parent.parent
 
 
 def test_whitehouse_kit_meta():
+    from mezzanine.kits.loader import kit_seed_profile, kit_wants_blog
+
     root, meta = load_kit_meta("whitehouse")
     assert meta["name"] == "whitehouse"
     assert "blog.BlogPost" in meta["types"]
+    assert kit_wants_blog(meta) is True
+    assert kit_seed_profile(meta) == "whitehouse"
     validate_kit(meta)
     assert (root / "static/whitehouse/tokens.css").is_file()
     assert (root / "templates/index.html").is_file()
     base = (root / "templates/base.html").read_text(encoding="utf-8")
     assert "whitehouse/tokens.css" in base
     assert "/releases/" in base
+    idx = (root / "templates/index.html").read_text(encoding="utf-8")
+    assert "nova-banner" in idx
+    assert "includes/recent_posts.html" in idx
 
 
 def test_apply_whitehouse_kit(tmp_path):

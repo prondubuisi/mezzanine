@@ -9,5 +9,6 @@
     "blog.BlogPost"
   ],
   "tokens": "static/whitehouse/tokens.css",
+  "seed_profile": "whitehouse",
   "description": "Official-style briefing/newsroom demo (IA inspired by whitehouse.gov)."
 }

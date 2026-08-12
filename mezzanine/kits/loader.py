@@ -129,13 +129,28 @@ def validate_kit(meta: dict, *, version: str | None = None) -> None:
             )
 
 
+def kit_wants_blog(meta: dict) -> bool:
+    """True when kit.json types include blog (editorial / newsroom kits)."""
+    types = meta.get("types") or []
+    return any(str(t).startswith("blog.") for t in types)
+
+
+def kit_seed_profile(meta: dict) -> str | None:
+    """Optional seed_site_clone profile slug from kit.json."""
+    seed = meta.get("seed_profile")
+    if seed is None:
+        return None
+    seed = str(seed).strip()
+    return seed or None
+
+
 def apply_kit(name: str, project_dir: str | Path, project_app: str) -> dict:
     """
     Overlay a kit onto a project written by nova-project.
 
     - validates kit.json
-    - copies templates/ and static/ into the project
-    - rewrites INSTALLED_APPS for brochure (no blog/galleries)
+    - copies shared + kit templates/static into the project
+    - rewrites INSTALLED_APPS from kit types (blog optional)
     """
     root, meta = load_kit_meta(name)
     validate_kit(meta)
@@ -143,19 +158,17 @@ def apply_kit(name: str, project_dir: str | Path, project_app: str) -> dict:
     project_app_dir = project_dir / project_app
 
     # Settings first so a rewrite failure does not leave kit templates alone.
-    if name == "brochure":
-        _apply_kit_settings(project_app_dir, name, with_blog=False)
-    elif name in ("magazine", "institute", "wporg", "whitehouse"):
-        # Editorial / news kits need blog + forms.
-        _apply_kit_settings(project_app_dir, name, with_blog=True)
+    # First-party kits always rewrite apps; blog is derived from kit.json types.
+    _apply_kit_settings(project_app_dir, name, with_blog=kit_wants_blog(meta))
 
     templates_dest = project_dir / "templates"
     if templates_dest.exists():
         shutil.rmtree(templates_dest)
     templates_dest.mkdir(parents=True, exist_ok=True)
 
+    kits_root = Path(mezzanine.__path__[0]) / "kits"
     # Shared kit chrome first (kit_base.html), then kit-specific overlay.
-    shared_templates = Path(mezzanine.__path__[0]) / "kits" / "shared" / "templates"
+    shared_templates = kits_root / "shared" / "templates"
     if shared_templates.is_dir():
         for item in shared_templates.iterdir():
             target = templates_dest / item.name
@@ -182,12 +195,29 @@ def apply_kit(name: str, project_dir: str | Path, project_app: str) -> dict:
             else:
                 shutil.copy2(item, target)
 
+    # Shared static (layout utilities) then kit tokens/static overlay.
+    static_dest = project_dir / "static"
+    if static_dest.exists():
+        shutil.rmtree(static_dest)
+    static_dest.mkdir(parents=True, exist_ok=True)
+    shared_static = kits_root / "shared" / "static"
+    if shared_static.is_dir():
+        for item in shared_static.iterdir():
+            target = static_dest / item.name
+            if item.is_dir():
+                shutil.copytree(item, target)
+            else:
+                shutil.copy2(item, target)
     static_src = root / "static"
     if static_src.is_dir():
-        dest = project_dir / "static"
-        if dest.exists():
-            shutil.rmtree(dest)
-        shutil.copytree(static_src, dest)
+        for item in static_src.iterdir():
+            target = static_dest / item.name
+            if item.is_dir():
+                if target.exists():
+                    shutil.rmtree(target)
+                shutil.copytree(item, target)
+            else:
+                shutil.copy2(item, target)
 
     (project_dir / ".nova-kit").write_text(name + "\n", encoding="utf-8")
     return meta
@@ -196,7 +226,7 @@ def apply_kit(name: str, project_dir: str | Path, project_app: str) -> dict:
 def _apply_kit_settings(
     project_app_dir: Path, kit_name: str, *, with_blog: bool
 ) -> None:
-    """Rewrite INSTALLED_APPS for a first-party kit (brochure / magazine)."""
+    """Rewrite INSTALLED_APPS for a first-party kit from its feature flags."""
     settings_path = project_app_dir / "settings.py"
     text = settings_path.read_text(encoding="utf-8")
     apps = [
@@ -239,7 +269,7 @@ def _apply_kit_settings(
             "STATICFILES_DIRS = [os.path.join(PROJECT_ROOT, \"static\")]",
             1,
         )
-    # Magazine / Institute: comments stay off for marketing parity.
+    # Editorial kits: comments stay off for marketing / newsroom parity.
     if with_blog and "COMMENTS_DEFAULT_APPROVED" not in new_text:
         new_text += (
             f"\n# {kit_name.capitalize()} kit: comments off by default.\n"

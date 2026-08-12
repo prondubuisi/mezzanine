@@ -134,10 +134,26 @@ Append observations under **Session notes** below.
 
 ---
 
+## Implemented slice (2026-08-12)
+
+After White House IA parity, common surface was extracted before the Spotify kit:
+
+| Piece | Status |
+|-------|--------|
+| `kit_base.html` + tokens block | Done (all first-party kits) |
+| Shared `nova_kits/newsroom.css` (banner/grid/card/river) | Done |
+| `kit_wants_blog(meta)` from kit.json types | Done (no kit-name allowlist) |
+| `seed_profile` on kit.json → createdb | Done (whitehouse, spotify) |
+| Section slug ↔ category listing | Done (page processor) |
+| Installable theme.json / Customizer | Still gap (see above) |
+
+White House and Spotify kits are **thin**: tokens + nav + home copy only.
+
 ## Session notes
 
 _(fill while testing)_
 
 | Site | Time | Observation | Theme implication |
 |------|------|-------------|-------------------|
-| | | | |
+| whitehouse | 2026-08-12 | IA demo good; shared classes replace wh-* | Tokens-only kit works |
+| spotify_newsroom | 2026-08-12 | Kit + slug-aligned sections | Same shell, dark tokens |

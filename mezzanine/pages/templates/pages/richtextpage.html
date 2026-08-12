@@ -10,7 +10,7 @@
 
 {% if section_posts is not None %}
 <section class="nova-section-posts" style="margin-top:1.75rem">
-  <h2 style="font-size:1.2rem;margin-bottom:0.75rem">
+  <h2>
     {% if section_category %}{{ section_category }}{% else %}{% trans "Posts" %}{% endif %}
   </h2>
   <ul style="list-style:none;padding:0;margin:0">
@@ -18,14 +18,14 @@
     <li style="padding:0.75rem 0;border-bottom:1px solid #e5e7eb">
       <a href="{{ post.get_absolute_url }}"><strong>{{ post.title }}</strong></a>
       {% if post.publish_date %}
-      <div style="font-size:0.8rem;color:#6b7280">{{ post.publish_date }}</div>
+      <div class="meta" style="font-size:0.8rem;color:#6b7280">{{ post.publish_date }}</div>
       {% endif %}
       {% if post.description %}
       <p style="margin:0.35rem 0 0;color:#374151">{{ post.description|striptags|truncatewords:40 }}</p>
       {% endif %}
     </li>
   {% empty %}
-    <li style="color:#6b7280">{% trans "No published items in this section yet." %}</li>
+    <li class="meta" style="color:#6b7280">{% trans "No published items in this section yet." %}</li>
   {% endfor %}
   </ul>
   {% if section_category %}

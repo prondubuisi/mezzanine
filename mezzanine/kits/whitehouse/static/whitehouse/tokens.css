@@ -58,41 +58,22 @@ a:hover, a:focus { color: var(--nova-accent-ink); }
 }
 .btn-primary:hover { background: #082748; border-color: #082748; }
 
-.wh-banner {
-  background: var(--nova-ink);
-  color: #fff;
-  padding: 1.75rem 1.5rem;
-  margin: 0 0 1.25rem;
+/* Official chrome: solid navy banner + red rule (extends shared .nova-banner). */
+.nova-banner {
   border-bottom: 4px solid var(--nova-accent-ink);
+  border-radius: 0;
 }
-.wh-banner h1, .wh-banner h2 {
-  color: #fff;
-  margin: 0 0 0.5rem;
-  font-size: 1.75rem;
+.nova-banner h1, .nova-banner h2 {
+  font-family: var(--nova-font-serif);
 }
-.wh-banner p { margin: 0; color: #d6e4f5; max-width: 40rem; }
-.wh-banner a { color: #fff; font-weight: 600; }
+.nova-banner p { color: #d6e4f5; }
 
-.wh-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(12rem, 1fr));
-  gap: 0.75rem;
-  margin: 1.25rem 0 1.5rem;
+.nova-card {
+  border-radius: 0;
+  border-top-color: var(--nova-ink);
 }
-.wh-card {
-  display: block;
-  background: var(--nova-paper);
-  border: 1px solid var(--nova-line);
-  border-top: 3px solid var(--nova-ink);
-  padding: 0.85rem 1rem;
-  text-decoration: none !important;
-  color: var(--nova-ink) !important;
-}
-.wh-card:hover { border-top-color: var(--nova-accent-ink); }
-.wh-card strong { display: block; font-size: 0.95rem; }
-.wh-card span { font-size: 0.8rem; color: var(--nova-muted); }
+.nova-card:hover { border-top-color: var(--nova-accent-ink); box-shadow: none; }
 
 .nova-river h2, .nova-section-posts h2 {
-  border-bottom: 2px solid var(--nova-ink);
-  padding-bottom: 0.35rem;
+  border-bottom-color: var(--nova-ink);
 }

@@ -22,11 +22,20 @@ def test_shared_recent_posts_include_exists():
 
 
 def test_kit_indexes_include_river():
-    for name in ("wporg", "magazine", "institute"):
+    for name in ("wporg", "magazine", "institute", "whitehouse", "spotify"):
         idx = (REPO / "kits" / name / "templates/index.html").read_text(
             encoding="utf-8"
         )
-        assert "includes/recent_posts.html" in idx
+        assert "includes/recent_posts.html" in idx, name
+
+
+def test_shared_newsroom_css_exists():
+    path = REPO / "kits/shared/static/nova_kits/newsroom.css"
+    assert path.is_file()
+    text = path.read_text(encoding="utf-8")
+    assert ".nova-banner" in text
+    assert ".nova-grid" in text
+    assert ".nova-card" in text
 
 
 @pytest.mark.django_db
