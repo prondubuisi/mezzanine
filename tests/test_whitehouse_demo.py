@@ -114,6 +114,7 @@ def test_kit_help_lists_whitehouse():
     assert "whitehouse" in help_text
 
 
-def test_recreate_recipe_in_justfile():
+def test_demo_whitehouse_recipe_in_justfile():
     text = (REPO / "justfile").read_text(encoding="utf-8")
-    assert "recreate-whitehouse" in text
+    assert "demo-whitehouse" in text
+    assert "whitehouse" in text
