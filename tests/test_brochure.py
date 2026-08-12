@@ -173,7 +173,8 @@ def _render_base(user):
 @pytest.mark.django_db
 def test_base_html_jquery_absent_for_anonymous():
     html = _render_base(AnonymousUser())
-    assert "jquery" not in html.lower()
+    # Comment text may mention "jQuery"; assert no script payloads.
+    assert "jquery-" not in html.lower()
     assert "bootstrap.js" not in html
 
 
@@ -183,7 +184,7 @@ def test_base_html_jquery_present_for_staff():
         "staffer", "s@example.com", "passwordpassword", is_staff=True
     )
     html = _render_base(staff)
-    assert "jquery" in html.lower()
+    assert "jquery-" in html.lower()
     assert "bootstrap.js" in html
 
 
