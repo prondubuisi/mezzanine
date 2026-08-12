@@ -323,6 +323,32 @@ def media_list(request):
 
 
 @require_GET
+def media_chooser(request):
+    """
+    Popup media picker (WP media-modal parity without filebrowser).
+
+    Staff only. Used by TinyMCE file_picker_callback and optional field fills.
+    """
+    from django.db.models import Q
+
+    from mezzanine.core.models import Media
+    from mezzanine.utils.sites import current_site_id
+
+    _require_staff_site(request)
+    q = (request.GET.get("q") or "").strip()
+    qs = Media.objects.filter(site_id=current_site_id()).order_by("-created")
+    if q:
+        qs = qs.filter(
+            Q(title__icontains=q) | Q(alt__icontains=q) | Q(file__icontains=q)
+        )
+    return TemplateResponse(
+        request,
+        "admin/media_chooser.html",
+        {"assets": list(qs[:100]), "q": q},
+    )
+
+
+@require_GET
 def media_detail(request, pk):
     """
     Staff-only media metadata endpoint (PR-026).
@@ -387,6 +413,12 @@ def api_openapi(request):
                 "get": {
                     "summary": "List media for current site",
                     "responses": {"200": {"description": "Media list"}},
+                }
+            },
+            "/_nova/media/chooser/": {
+                "get": {
+                    "summary": "HTML media chooser popup",
+                    "responses": {"200": {"description": "Chooser UI"}},
                 }
             },
             "/_nova/media/{pk}/": {

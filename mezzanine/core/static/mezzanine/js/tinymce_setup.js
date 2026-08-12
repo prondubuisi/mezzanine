@@ -43,21 +43,56 @@
         'zh-hans': 'zh_CN'
     };
 
+    function mediaChooserUrl(type) {
+        var base = window.__nova_media_chooser_url || window.__filebrowser_url || '';
+        if (!base) {
+            return '';
+        }
+        var sep = base.indexOf('?') >= 0 ? '&' : '?';
+        return base + sep + 'type=' + encodeURIComponent(type || 'file');
+    }
+
+    // TinyMCE 4-style callback (legacy).
     function custom_file_browser(field_name, url, type, win) {
-        tinyMCE.activeEditor.windowManager.open({
-            title: 'Select ' + type + ' to insert',
-            file: window.__filebrowser_url + '?pop=5&type=' + type,
-            width: 800,
-            height: 500,
-            resizable: 'yes',
-            scrollbars: 'yes',
-            inline: 'yes',
-            close_previous: 'no'
-        }, {
-            window: win,
-            input: field_name
-        });
+        var src = mediaChooserUrl(type);
+        if (!src) {
+            return false;
+        }
+        // Prefer filebrowser popup protocol when URL still points at fb_browse.
+        if (src.indexOf('fb_browse') !== -1 || src.indexOf('filebrowser') !== -1) {
+            tinyMCE.activeEditor.windowManager.open({
+                title: 'Select ' + type + ' to insert',
+                file: src + (src.indexOf('pop=') === -1 ? '&pop=5' : ''),
+                width: 800,
+                height: 500,
+                resizable: 'yes',
+                scrollbars: 'yes',
+                inline: 'yes',
+                close_previous: 'no'
+            }, {
+                window: win,
+                input: field_name
+            });
+            return false;
+        }
+        window.open(src + '&field=' + encodeURIComponent(field_name), 'novaMedia',
+            'width=840,height=560,resizable=yes,scrollbars=yes');
         return false;
+    }
+
+    // TinyMCE 7 file_picker_callback → Nova Media chooser.
+    function nova_file_picker(callback, value, meta) {
+        var src = mediaChooserUrl(meta.filetype || 'file');
+        if (!src) {
+            callback(value || '');
+            return;
+        }
+        window.novaMediaPickerCallback = function (url, metaOut) {
+            callback(url, metaOut || {});
+            window.novaMediaPickerCallback = null;
+        };
+        window.open(src, 'novaMedia',
+            'width=840,height=560,resizable=yes,scrollbars=yes');
     }
 
     var tinymce_config = {
@@ -79,6 +114,8 @@
                   "bullist numlist outdent indent | link image table | " +
                   "code fullscreen"),
         file_browser_callback: custom_file_browser,
+        file_picker_callback: nova_file_picker,
+        file_picker_types: 'image file media',
         content_css: window.__tinymce_css,
         valid_elements: "*[*]"  // Don't strip anything since this is handled by bleach.
     };
