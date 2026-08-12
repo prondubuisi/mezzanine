@@ -228,11 +228,25 @@ gh pr view 14 --json statusCheckRollup --jq '.statusCheckRollup | length'
 
 | Item | Owner | Notes |
 |---|---|---|
-| Wait for run conclusions on PR #14 | Human / next session | Registration FIXED; matrix may still fail — treat product failures honestly |
-| `workflow_dispatch` on default branch | Optional bootstrap PR | Master YAML lacks dispatch; feature has it |
-| `publish.yml` only on feature | Optional | Registers when present on default branch or after first successful path index |
+| **lint job FAILURE** | Product follow-up | External CI ran and reported honestly: full living matrix **success**, `pip-audit` **success**, `lint` **failure** — ruff `I001` import sort (11 errors, 7 auto-fixable). Example: `tests/test_sanitize.py`, preview tests. **Not** a registration issue. |
+| `workflow_dispatch` on default branch | Optional bootstrap PR | Master YAML lacks dispatch; feature has it — `POST .../dispatches` → 422 until master YAML gains the trigger |
+| `publish.yml` only on feature | Optional | Registers when present on default branch |
 | Replace master legacy dj22 matrix with Nova matrix | Platform reboot PR | Separate from cold-start; avoid running EOL matrix for fun |
 | Prior session false-green | Process | Repudiated by C4 |
+
+### Post-fix verification (runs completed)
+
+```text
+workflows.total_count = 1  (id 332672233, active)
+workflow_runs.total_count = 4+
+PR #14 statusCheckRollup length = 27 (non-empty)
+Run 31589048926 (PR, 995e14e7): conclusion=failure
+  test py312–314 × dj52/60/61: all success
+  pip-audit: success
+  lint: failure (ruff I001)
+  release/docs: skipped (expected on fork / non-stable)
+Run 31589148171 (PR, d7cbe23d consensus commit): same shape — lint fail only
+```
 
 ---
 
@@ -241,11 +255,11 @@ gh pr view 14 --json statusCheckRollup --jq '.statusCheckRollup | length'
 | Layer | Status |
 |---|---|
 | **Actions registration** | **FIXED** (`total_count: 1`, workflow active) |
-| **Runs exist for PR branch** | **FIXED** (push + pull_request run IDs above) |
+| **Runs exist for PR branch** | **FIXED** (push + pull_request run IDs; conclusions recorded) |
 | **PR #14 checks visible** | **FIXED** (non-empty rollup, modern job names) |
-| **All jobs conclusion=success** | **PENDING** (runs in progress / may fail for product reasons — not “no CI”) |
+| **All jobs conclusion=success** | **NO** — lint fails (ruff I001); matrix + audit green |
 | **Overall incident (never registered)** | **FIXED** |
-| **Overall “CI green for merge”** | **PARTIAL** until conclusions are success; do **not** auto-complete merge gate |
+| **Overall “CI green for merge”** | **PARTIAL** — real external red on lint; do **not** claim merge-green |
 
 ---
 
