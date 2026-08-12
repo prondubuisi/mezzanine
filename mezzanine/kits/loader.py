@@ -145,7 +145,8 @@ def apply_kit(name: str, project_dir: str | Path, project_app: str) -> dict:
     # Settings first so a rewrite failure does not leave kit templates alone.
     if name == "brochure":
         _apply_kit_settings(project_app_dir, name, with_blog=False)
-    elif name == "magazine":
+    elif name in ("magazine", "institute"):
+        # Magazine + Institute both need blog + forms for editorial/news.
         _apply_kit_settings(project_app_dir, name, with_blog=True)
 
     templates_src = root / "templates"
@@ -212,10 +213,10 @@ def _apply_kit_settings(
             "STATICFILES_DIRS = [os.path.join(PROJECT_ROOT, \"static\")]",
             1,
         )
-    # Magazine: comments stay off for WP marketing parity without plugin hell.
+    # Magazine / Institute: comments stay off for marketing parity.
     if with_blog and "COMMENTS_DEFAULT_APPROVED" not in new_text:
         new_text += (
-            "\n# Magazine kit: comments off by default (design Y1).\n"
+            f"\n# {kit_name.capitalize()} kit: comments off by default.\n"
             "COMMENTS_DEFAULT_APPROVED = False\n"
             "COMMENTS_ACCOUNT_REQUIRED = True\n"
         )

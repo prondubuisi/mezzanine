@@ -22,7 +22,7 @@ from django.template.defaulttags import IfNode
 from django.template.loader import get_template
 from django.urls import NoReverseMatch, resolve, reverse
 from django.utils import translation
-from django.utils.html import strip_tags
+from django.utils.html import format_html, strip_tags
 from django.utils.safestring import SafeText
 from django.utils.text import capfirst
 
@@ -102,6 +102,21 @@ def initialize_nevercache():
 
 
 initialize_nevercache()
+
+
+@register.simple_tag(takes_context=True)
+def csp_nonce(context):
+    """
+    Emit ``nonce="…"`` for CSP-strict script/style tags (Y1.5).
+
+    Uses ``request.csp_nonce`` from ContentSecurityPolicyMiddleware.
+    Empty string when no request/nonce (e.g. offline template render).
+    """
+    request = context.get("request")
+    nonce = getattr(request, "csp_nonce", None) if request is not None else None
+    if not nonce:
+        return ""
+    return format_html('nonce="{}"', nonce)
 
 
 @register.simple_tag(takes_context=True)

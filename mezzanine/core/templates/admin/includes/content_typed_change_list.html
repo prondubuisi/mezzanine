@@ -1,6 +1,6 @@
-{% load pages_tags i18n %}
+{% load pages_tags i18n mezzanine_tags %}
 
-<script type="text/javascript">
+<script type="text/javascript" {% csp_nonce %}>
 jQuery(function($) {
     $('.addlist').change(function() {
         var addUrl = this[this.selectedIndex].value;

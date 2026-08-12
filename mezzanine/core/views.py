@@ -308,6 +308,7 @@ def _media_payload(asset):
         "title": asset.title,
         "alt": asset.alt,
         "file": asset.file.url if asset.file else "",
+        "is_public": bool(getattr(asset, "is_public", False)),
     }
 
 
@@ -361,6 +362,25 @@ def media_detail(request, pk):
     _require_staff_site(request)
     try:
         asset = Media.objects.get(pk=pk, site_id=current_site_id())
+    except Media.DoesNotExist:
+        raise Http404 from None
+    return JsonResponse(_media_payload(asset))
+
+
+@require_GET
+def media_public(request, pk):
+    """
+    Public metadata for Media rows marked ``is_public`` (KD11 promotion path).
+
+    Not Displayable: no sitemap/search. File bytes remain on the storage URL.
+    """
+    from mezzanine.core.models import Media
+    from mezzanine.utils.sites import current_site_id
+
+    try:
+        asset = Media.objects.get(
+            pk=pk, site_id=current_site_id(), is_public=True
+        )
     except Media.DoesNotExist:
         raise Http404 from None
     return JsonResponse(_media_payload(asset))
@@ -423,7 +443,7 @@ def api_openapi(request):
             },
             "/_nova/media/{pk}/": {
                 "get": {
-                    "summary": "Media metadata",
+                    "summary": "Media metadata (staff)",
                     "parameters": [
                         {
                             "name": "pk",
@@ -433,6 +453,23 @@ def api_openapi(request):
                         }
                     ],
                     "responses": {"200": {"description": "Media row"}},
+                }
+            },
+            "/_nova/media/{pk}/public/": {
+                "get": {
+                    "summary": "Public media metadata (is_public only)",
+                    "parameters": [
+                        {
+                            "name": "pk",
+                            "in": "path",
+                            "required": True,
+                            "schema": {"type": "integer"},
+                        }
+                    ],
+                    "responses": {
+                        "200": {"description": "Public media row"},
+                        "404": {"description": "Not public or missing"},
+                    },
                 }
             },
         },

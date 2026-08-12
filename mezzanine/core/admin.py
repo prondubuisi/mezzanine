@@ -558,10 +558,12 @@ if "django.contrib.redirects" in settings.INSTALLED_APPS:
 
 @admin.register(Media)
 class MediaAdmin(admin.ModelAdmin):
-    """Site-scoped media library (PR-026). ``alt`` is required."""
+    """Site-scoped media library (PR-026 / KD11). ``alt`` is required."""
 
-    list_display = ("title", "alt", "file", "created")
+    list_display = ("title", "alt", "is_public", "file", "created")
+    list_filter = ("is_public", "created")
+    list_editable = ("is_public",)
     search_fields = ("title", "alt", "file")
     readonly_fields = ("created", "updated")
-    fields = ("title", "file", "alt", "created", "updated")
+    fields = ("title", "file", "alt", "is_public", "created", "updated")
     change_list_template = "admin/core/media/change_list.html"

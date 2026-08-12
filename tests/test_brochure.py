@@ -156,8 +156,9 @@ def test_core_base_html_staff_only_jquery():
     assert "user.is_staff" in text
     assert "JQUERY_FILENAME" in text
     # jQuery script tag must sit inside the staff guard, not load for public.
-    guard = text.split("user.is_staff", 1)[1]
-    assert "JQUERY_FILENAME" in guard.split("{% endif %}", 1)[0]
+    staff_block = text.split("user.is_authenticated and user.is_staff", 1)[1]
+    staff_block = staff_block.split("{% endnevercache %}", 1)[0]
+    assert "JQUERY_FILENAME" in staff_block
 
 
 def _render_base(user):
@@ -267,8 +268,9 @@ def test_nova_project_kit_brochure(tmp_path):
     assert "bs3-compat.css" in base
     assert "user.is_staff" in base
     # No public jQuery on brochure base either.
-    guard = base.split("user.is_staff", 1)[1]
-    assert "JQUERY_FILENAME" in guard.split("{% endif %}", 1)[0]
+    staff_block = base.split("user.is_authenticated and user.is_staff", 1)[1]
+    staff_block = staff_block.split("{% endnevercache %}", 1)[0]
+    assert "JQUERY_FILENAME" in staff_block
 
 
 def test_nova_project_without_kit_keeps_blog(tmp_path):
@@ -281,10 +283,10 @@ def test_nova_project_without_kit_keeps_blog(tmp_path):
 
 
 def test_nova_project_unknown_kit_fails(tmp_path):
-    result = _run_nova_project(tmp_path, "--kit", "institute")
+    result = _run_nova_project(tmp_path, "--kit", "not-a-real-kit-xyz")
     assert result.returncode != 0
     combined = (result.stderr or "") + (result.stdout or "")
-    assert "Unknown kit" in combined or "institute" in combined
+    assert "Unknown kit" in combined or "not-a-real-kit" in combined
 
 
 def test_apply_kit_overwrites_templates(tmp_path):

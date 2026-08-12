@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% load i18n %}
+
+{% block meta_title %}{% trans "Home" %}{% endblock %}
+{% block title %}{% if settings.SITE_TITLE %}{{ settings.SITE_TITLE }}{% else %}{% trans "Home" %}{% endif %}{% endblock %}
+
+{% block breadcrumb_menu %}
+<li class="active">{% trans "Home" %}</li>
+{% endblock %}
+
+{% block main %}
+{% blocktrans %}
+<p>Welcome to an Institute site — pages for programs and admissions, a news
+blog, and forms for inquiries. Scaffold for higher-ed marketing (Y2 kit).</p>
+{% endblocktrans %}
+<p>
+  <a class="btn btn-primary" href="{% url 'blog_post_list' %}">{% trans "News" %}</a>
+</p>
+{% endblock %}

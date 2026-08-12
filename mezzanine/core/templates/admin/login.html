@@ -1,12 +1,12 @@
 {% extends "admin/base_site.html" %}
-{% load i18n static %}
+{% load i18n static mezzanine_tags %}
 
 {% block extrahead %}
 <link rel="stylesheet" type="text/css" href="{% static settings.MEZZANINE_ADMIN_PREFIX|add:"css/login.css" %}">
 {{ block.super }}
 <link rel="stylesheet" href="{% static "mezzanine/chosen/chosen.css" %}">
-<script src="{% static "mezzanine/chosen/chosen-0.9.12.jquery.js" %}"></script>
-<script> jQuery(function($) {$('select').chosen();}); </script>
+<script {% csp_nonce %} src="{% static "mezzanine/chosen/chosen-0.9.12.jquery.js" %}"></script>
+<script {% csp_nonce %}> jQuery(function($) {$('select').chosen();}); </script>
 {% endblock %}
 
 {% block bodyclass %}login{% endblock %}

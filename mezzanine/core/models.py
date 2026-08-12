@@ -454,6 +454,17 @@ class Media(SiteRelated):
         max_length=255,
         help_text=_("Required accessible description of the file."),
     )
+    # KD11: still SiteRelated (not Displayable). When True, metadata is
+    # readable without staff auth at /_nova/media/<pk>/public/ — file bytes
+    # remain on the storage URL. Not in sitemaps/search.
+    is_public = models.BooleanField(
+        _("Public"),
+        default=False,
+        help_text=_(
+            "Allow unauthenticated clients to read metadata for this asset. "
+            "Does not put the file in the page tree or sitemap."
+        ),
+    )
     created = models.DateTimeField(_("Created"), auto_now_add=True)
     updated = models.DateTimeField(_("Updated"), auto_now=True)
 
@@ -466,9 +477,11 @@ class Media(SiteRelated):
         return self.title or self.alt or str(self.pk)
 
     def get_absolute_url(self):
-        # Private asset path under /_nova/media/<pk>/ — not the storage URL.
+        # Staff private path under /_nova/media/<pk>/ — not the storage URL.
         from django.urls import reverse
 
+        if self.is_public:
+            return reverse("nova_media_public", kwargs={"pk": self.pk})
         return reverse("nova_media_detail", kwargs={"pk": self.pk})
 
 
