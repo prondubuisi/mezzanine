@@ -16,6 +16,7 @@ from mezzanine.generic.models import Keyword, ThreadedComment
 from mezzanine.migrate.report import MigrationReport
 from mezzanine.pages.models import RichTextPage
 from mezzanine.utils.html import decode_entities
+from mezzanine.utils.sites import current_site_id
 
 User = get_user_model()
 
@@ -194,7 +195,7 @@ class BaseImporterCommand(BaseCommand):
 
     def handle(self, *args, **options):
         mezzanine_user = options.get("mezzanine_user")
-        site = Site.objects.get_current()
+        site = Site.objects.get(pk=current_site_id())
         verbosity = int(options.get("verbosity", 1))
         prompt = options.get("interactive")
 
@@ -355,7 +356,7 @@ class BaseImporterCommand(BaseCommand):
             if not old_path.strip("/"):
                 return
             redirect = self.trunc(Redirect, prompt, old_path=old_path)
-            redirect["site"] = Site.objects.get_current()
+            redirect["site"] = Site.objects.get(pk=current_site_id())
             redirect, created = Redirect.objects.get_or_create(**redirect)
             redirect.new_path = obj.get_absolute_url()
             redirect.save()

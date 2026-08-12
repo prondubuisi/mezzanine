@@ -151,5 +151,7 @@ def rating(request):
             ratings = set(rating_form.previous) ^ {rating_form.current}
         else:
             ratings = rating_form.previous + [rating_form.current]
-        set_cookie(response, "mezzanine-rating", ",".join(ratings))
+        from mezzanine.generic.models import RATING_COOKIE_NAME
+
+        set_cookie(response, RATING_COOKIE_NAME, ",".join(ratings))
     return response

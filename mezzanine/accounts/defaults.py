@@ -13,6 +13,7 @@ from django.conf import settings
 from django.utils.translation import gettext_lazy as _
 
 from mezzanine.conf import register_setting
+from mezzanine.utils.seed import ACCOUNTS_MIN_PASSWORD_LENGTH as _MIN_PASSWORD_LENGTH
 
 profile_model_default = getattr(settings, "AUTH_PROFILE_MODULE", None)
 if profile_model_default:
@@ -37,7 +38,7 @@ register_setting(
     name="ACCOUNTS_MIN_PASSWORD_LENGTH",
     description=_("Minimum length for passwords"),
     editable=False,
-    default=12,
+    default=_MIN_PASSWORD_LENGTH,
 )
 
 register_setting(

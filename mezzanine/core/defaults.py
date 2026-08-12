@@ -640,6 +640,50 @@ register_setting(
 )
 
 register_setting(
+    name="MEDIA_CHOOSER_PAGE_SIZE",
+    label=_("Media chooser page size"),
+    description=_(
+        "Maximum Media rows returned by the staff media list JSON "
+        "endpoint and the media chooser popup."
+    ),
+    editable=False,
+    default=100,
+)
+
+register_setting(
+    name="MEDIA_LIST_PAGE_SIZE",
+    label=_("Media list page size"),
+    description=_(
+        "Maximum Media rows returned by the staff media library JSON "
+        "listing (``media_list`` view)."
+    ),
+    editable=False,
+    default=200,
+)
+
+register_setting(
+    name="RIVER_POST_LIMIT",
+    label=_("Section river post limit"),
+    description=_(
+        "Maximum BlogPosts listed on a section landing page when the "
+        "page slug matches a blog category."
+    ),
+    editable=True,
+    default=30,
+)
+
+register_setting(
+    name="NOVA_COOKIE_DEFAULT_EXPIRY_DAYS",
+    label=_("Default cookie lifetime (days)"),
+    description=_(
+        "Default expiry for cookies set via ``mezzanine.utils.views.set_cookie`` "
+        "when no explicit ``expiry_seconds`` is passed (comments, ratings)."
+    ),
+    editable=False,
+    default=90,
+)
+
+register_setting(
     name="SEARCH_USE_POSTGRES_FTS",
     description=_(
         "When True and the database is PostgreSQL, searchable querysets "

@@ -13,6 +13,9 @@ from mezzanine.generic.managers import CommentManager, KeywordManager
 from mezzanine.utils.models import get_user_model_name
 from mezzanine.utils.sites import current_site_id
 
+# Cookie that tracks which objects an anonymous visitor has rated (H6).
+RATING_COOKIE_NAME = "mezzanine-rating"
+
 
 class ThreadedComment(Comment):
     """

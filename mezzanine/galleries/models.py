@@ -50,13 +50,10 @@ class BaseGallery(models.Model):
     )
 
     def _zip_limits(self):
-        max_files = int(getattr(settings, "GALLERIES_ZIP_MAX_FILES", 200))
-        max_total = int(
-            getattr(settings, "GALLERIES_ZIP_MAX_UNCOMPRESSED_BYTES", 50 * 1024 * 1024)
-        )
-        max_entry = int(
-            getattr(settings, "GALLERIES_ZIP_MAX_ENTRY_BYTES", 10 * 1024 * 1024)
-        )
+        # Registered in galleries/defaults.py — no getattr fallbacks (H3).
+        max_files = int(settings.GALLERIES_ZIP_MAX_FILES)
+        max_total = int(settings.GALLERIES_ZIP_MAX_UNCOMPRESSED_BYTES)
+        max_entry = int(settings.GALLERIES_ZIP_MAX_ENTRY_BYTES)
         return max_files, max_total, max_entry
 
     @staticmethod

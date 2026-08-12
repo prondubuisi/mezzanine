@@ -19,6 +19,7 @@ from mezzanine.core.capabilities import user_can_issue_preview
 from mezzanine.core.forms import DynamicInlineAdminForm
 from mezzanine.core.models import (
     CONTENT_STATUS_PUBLISHED,
+    PREVIEW_TOKEN_PARAM,
     ContentTyped,
     Media,
     Orderable,
@@ -213,7 +214,7 @@ class DisplayableAdmin(BaseTranslationModelAdmin):
         raw = PreviewToken.issue(obj, created_by=request.user)
         url = obj.get_absolute_url()
         sep = "&" if "?" in url else "?"
-        return HttpResponseRedirect("%s%spreview=%s" % (url, sep, raw))
+        return HttpResponseRedirect("%s%s%s=%s" % (url, sep, PREVIEW_TOKEN_PARAM, raw))
 
     def view_draft_link(self, obj):
         if not obj.pk:

@@ -46,41 +46,49 @@ def AuthorFactory(*, password=DEFAULT_PASSWORD, site_id=None, **kwargs):
     Non-superuser staff user with a ``SiteRole`` of ``author`` on
     the current site.
     """
+    from mezzanine.core.models import ROLE_AUTHOR
+
     kwargs.setdefault("is_staff", True)
     kwargs.setdefault("is_superuser", False)
     kwargs.setdefault("username", f"author-{next(_user_seq)}")
     user = UserFactory(password=password, **kwargs)
-    grant_site_permission(user, site_id=site_id, role="author")
+    grant_site_permission(user, site_id=site_id, role=ROLE_AUTHOR)
     return user
 
 
 def EditorFactory(*, password=DEFAULT_PASSWORD, site_id=None, **kwargs):
     """Staff user with an ``editor`` SiteRole."""
+    from mezzanine.core.models import ROLE_EDITOR
+
     kwargs.setdefault("is_staff", True)
     kwargs.setdefault("is_superuser", False)
     kwargs.setdefault("username", f"editor-{next(_user_seq)}")
     user = UserFactory(password=password, **kwargs)
-    grant_site_permission(user, site_id=site_id, role="editor")
+    grant_site_permission(user, site_id=site_id, role=ROLE_EDITOR)
     return user
 
 
 def PublisherFactory(*, password=DEFAULT_PASSWORD, site_id=None, **kwargs):
     """Staff user with a ``publisher`` SiteRole (can issue preview tokens)."""
+    from mezzanine.core.models import ROLE_PUBLISHER
+
     kwargs.setdefault("is_staff", True)
     kwargs.setdefault("is_superuser", False)
     kwargs.setdefault("username", f"publisher-{next(_user_seq)}")
     user = UserFactory(password=password, **kwargs)
-    grant_site_permission(user, site_id=site_id, role="publisher")
+    grant_site_permission(user, site_id=site_id, role=ROLE_PUBLISHER)
     return user
 
 
-def grant_site_permission(user, site_id=None, role="editor"):
+def grant_site_permission(user, site_id=None, role=None):
     """Attach a ``SiteRole`` for ``site_id`` (default: current site)."""
     from django.contrib.sites.models import Site
 
-    from mezzanine.core.models import SiteRole
+    from mezzanine.core.models import ROLE_EDITOR, SiteRole
     from mezzanine.utils.sites import current_site_id
 
+    if role is None:
+        role = ROLE_EDITOR
     if site_id is None:
         site_id = current_site_id()
     site = Site.objects.get(pk=site_id)

@@ -59,7 +59,14 @@ def collision_groups(model):
 
 
 def _collect_descendant_rewrites(model, page, old_prefix, new_prefix):
-    """Parent-FK descendants whose slug is prefixed by ``old_prefix``."""
+    """
+    Parent-FK descendants whose slug is prefixed by ``old_prefix``.
+
+    Caveat (N4): walks children recursively with one query per node. Fine
+    for operator-run one-off dedupe on typical trees; on very large page
+    trees this can issue many queries — batch per level if it becomes a
+    real pain point.
+    """
     planned = []
     children = unscoped_qs(model).filter(parent_id=page.pk).order_by("id")
     for child in children:

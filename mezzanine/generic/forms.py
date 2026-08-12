@@ -219,7 +219,9 @@ class RatingForm(CommentSecurityForm):
         bits = (self.data["content_type"], self.data["object_pk"])
         request = self.request
         self.current = "%s.%s" % bits
-        self.previous = request.COOKIES.get("mezzanine-rating", "").split(",")
+        from mezzanine.generic.models import RATING_COOKIE_NAME
+
+        self.previous = request.COOKIES.get(RATING_COOKIE_NAME, "").split(",")
         already_rated = self.current in self.previous
         if already_rated and not is_authenticated(self.request.user):
             raise forms.ValidationError(gettext("Already rated."))

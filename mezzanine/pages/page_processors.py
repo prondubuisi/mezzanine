@@ -96,11 +96,14 @@ def _register_builtin_processors():
             cat = BlogCategory.objects.filter(title__iexact=page.title).first()
         if cat is None:
             return {}
+        from mezzanine.conf import settings as mezz_settings
+
         preview = getattr(request, "preview", None)
+        river_limit = int(mezz_settings.RIVER_POST_LIMIT)
         posts = (
             BlogPost.objects.published(for_user=request.user, preview=preview)
             .filter(categories=cat)
-            .select_related("user")[:30]
+            .select_related("user")[:river_limit]
         )
         return {
             "section_category": cat,

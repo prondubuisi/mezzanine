@@ -125,6 +125,10 @@ USE_I18N = False
 
 AUTHENTICATION_BACKENDS = ("mezzanine.core.auth_backends.MezzanineBackend",)
 
+# Floor matches mezzanine.utils.seed.ACCOUNTS_MIN_PASSWORD_LENGTH (and the
+# registered ACCOUNTS_MIN_PASSWORD_LENGTH setting) — one literal only (H4).
+from mezzanine.utils.seed import ACCOUNTS_MIN_PASSWORD_LENGTH  # noqa: E402
+
 AUTH_PASSWORD_VALIDATORS = [
     {
         "NAME": (
@@ -134,7 +138,7 @@ AUTH_PASSWORD_VALIDATORS = [
     },
     {
         "NAME": "django.contrib.auth.password_validation.MinimumLengthValidator",
-        "OPTIONS": {"min_length": 12},
+        "OPTIONS": {"min_length": ACCOUNTS_MIN_PASSWORD_LENGTH},
     },
     {
         "NAME": "django.contrib.auth.password_validation.CommonPasswordValidator",

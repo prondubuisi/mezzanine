@@ -181,7 +181,8 @@ def set_cookie(response, name, value, expiry_seconds=None, secure=False):
     expiry time, and ensures values are correctly encoded.
     """
     if expiry_seconds is None:
-        expiry_seconds = 90 * 24 * 60 * 60  # Default to 90 days.
+        days = int(settings.NOVA_COOKIE_DEFAULT_EXPIRY_DAYS)
+        expiry_seconds = days * 24 * 60 * 60
     expires = datetime.strftime(
         datetime.utcnow() + timedelta(seconds=expiry_seconds),
         "%a, %d-%b-%Y %H:%M:%S GMT",
