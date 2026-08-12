@@ -16,8 +16,7 @@ from pathlib import Path
 from typing import Any
 
 import mezzanine
-from mezzanine.kits.loader import KitError, kit_path, load_kit_meta
-
+from mezzanine.kits.loader import KitError, kit_path
 
 # Required / optional keys for theme.json (lean WP theme.json analogue).
 _REQUIRED = ("name", "version")
@@ -162,7 +161,9 @@ def get_active_theme_name() -> str:
     return str(name).strip()
 
 
-def set_active_theme(name: str, *, project_root: str | Path | None = None) -> dict[str, Any]:
+def set_active_theme(
+    name: str, *, project_root: str | Path | None = None
+) -> dict[str, Any]:
     """
     Persist ACTIVE_THEME via conf.Setting and validate the package.
     Also writes ``.nova-theme`` so the next process start can auto-load plugins.

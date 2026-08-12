@@ -509,7 +509,7 @@ def demo_theme_activate(request):
     from django.core.management import call_command
     from django.http import HttpResponseRedirect
 
-    from mezzanine.kits.theme import ThemeError, load_theme_meta, set_active_theme
+    from mezzanine.kits.theme import ThemeError, set_active_theme
 
     if not dj_settings.DEBUG:
         raise Http404

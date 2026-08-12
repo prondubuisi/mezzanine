@@ -1,7 +1,6 @@
 from copy import deepcopy
 
 from django.contrib import admin
-from django.utils.translation import gettext_lazy as _
 
 from mezzanine.core.admin import DisplayableAdmin
 from mezzanine.music.models import Album, Artist, Playlist, PlaylistTrack, Track

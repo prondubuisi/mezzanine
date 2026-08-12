@@ -40,8 +40,9 @@ def _shell(request, extra=None):
         "library_playlists": playlists,
         "now_playing": now,
         "disclaimer": (
-            "CMS demo: artists, albums, tracks, and playlists are Nova content "
-            "types (plugin). This kit is presentation only. Not affiliated with Spotify."
+            "CMS demo: artists, albums, tracks, and playlists are Nova "
+            "content types (plugin). This kit is presentation only. "
+            "Not affiliated with Spotify."
         ),
     }
     if extra:

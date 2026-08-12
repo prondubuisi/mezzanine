@@ -300,7 +300,10 @@ def home_context() -> dict[str, Any]:
         "greeting": greeting,
         "playlists": playlists,
         "albums": albums,
-        "recent": [hydrate_track(TRACKS[i]) for i in ("ss-01", "nb-01", "gh-01", "pl-01")],
+        "recent": [
+            hydrate_track(TRACKS[i])
+            for i in ("ss-01", "nb-01", "gh-01", "pl-01")
+        ],
     }
 
 

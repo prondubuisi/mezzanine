@@ -103,7 +103,7 @@ def test_music_cms_seed_and_public_flow(music_client):
     assert Playlist.objects.filter(featured=True).exists()
 
     client = music_client
-    for path in (
+    for url in (
         "/",
         "/search/?q=Luna",
         "/library/",
@@ -111,8 +111,8 @@ def test_music_cms_seed_and_public_flow(music_client):
         "/album/night-bus/",
         "/artist/luna-park/",
     ):
-        resp = client.get(path)
-        assert resp.status_code == 200, path
+        resp = client.get(url)
+        assert resp.status_code == 200, url
 
     home = client.get("/").content.decode("utf-8")
     assert "Daily Mix 1" in home

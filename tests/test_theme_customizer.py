@@ -9,12 +9,12 @@ import mezzanine
 from mezzanine.kits.theme import (
     apps_for_theme,
     get_theme_colors,
+    read_nova_theme_marker,
     resolve_slot_template,
     set_active_theme,
     set_theme_customizer,
     theme_customizer_css,
     write_nova_theme_marker,
-    read_nova_theme_marker,
 )
 
 REPO = Path(mezzanine.__file__).resolve().parent.parent
@@ -56,7 +56,10 @@ def test_customizer_reset_clears_overrides():
 def test_resolve_slot_template_uses_theme_json():
     set_active_theme("spotify")
     assert resolve_slot_template("home", "music/home.html") == "music/home.html"
-    assert resolve_slot_template("playlist", "music/playlist.html") == "music/playlist.html"
+    assert (
+        resolve_slot_template("playlist", "music/playlist.html")
+        == "music/playlist.html"
+    )
     # Unknown slot → fallback
     assert resolve_slot_template("nope", "fallback.html") == "fallback.html"
 
