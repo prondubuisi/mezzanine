@@ -114,7 +114,17 @@ class Command(BaseCommand):
 
         order = 0
         now = timezone.now()
+        from django.utils.text import slugify
+
+        cat_by_title = {c.lower(): c for c in profile.get("categories", [])}
         for title, page_slug, html in profile["pages"]:
+            # When section title matches a blog category, link to its archive (X2).
+            if title.lower() in cat_by_title:
+                cat_slug = slugify(cat_by_title[title.lower()])
+                html = (
+                    "%s<p><a href=\"/blog/category/%s/\">Browse %s posts →</a></p>"
+                    % (html, cat_slug, title)
+                )
             # Sync body JSON so re-seed without --flush updates content (B7).
             body = body_from_html(html)
             page, created = RichTextPage.objects.get_or_create(

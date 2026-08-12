@@ -22,8 +22,5 @@
     <a class="btn btn-default" href="{% url 'blog_post_list' %}">{% trans "Read the news" %}</a>
   </p>
 </div>
-{% blocktrans %}
-<p>Built with Nova: hierarchical pages, scheduled publish, Media library,
-WordPress WXR import, and Friday-path install. No Gutenberg dual stack.</p>
-{% endblocktrans %}
+{% include "includes/recent_posts.html" %}
 {% endblock %}

@@ -398,13 +398,14 @@ def _require_staff_site(request):
 @require_GET
 def demo_sites_index(request):
     """
-    Local IA site-clone lab (no auth while pre-public).
-
-    Switch content via POST to ``demo_sites_switch`` or CLI
-    ``seed_site_clone --site=… --flush``. Gate this before any public deploy.
+    Local IA site-clone lab. Only available when DEBUG=True.
     """
+    from django.conf import settings as dj_settings
+
     from mezzanine.demos.site_profiles import PROFILES
 
+    if not dj_settings.DEBUG:
+        raise Http404
     current = request.session.get("nova_demo_site", "")
     sites = [
         {
@@ -432,13 +433,16 @@ def demo_sites_index(request):
 
 @require_POST
 def demo_sites_switch(request):
-    """Load a named IA clone (no auth while pre-public). Gate before deploy."""
+    """Load a named IA clone. Only when DEBUG=True."""
+    from django.conf import settings as dj_settings
     from django.contrib import messages
     from django.core.management import call_command
     from django.http import HttpResponseRedirect
 
     from mezzanine.demos.site_profiles import get_profile
 
+    if not dj_settings.DEBUG:
+        raise Http404
     slug = (request.POST.get("site") or "").strip()
     try:
         get_profile(slug)
