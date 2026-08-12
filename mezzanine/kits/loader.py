@@ -25,7 +25,13 @@ class KitError(Exception):
 
 
 def kit_path(name: str) -> Path:
-    return Path(mezzanine.__path__[0]) / "kits" / name
+    if not re.fullmatch(r"[\w-]+", name or ""):
+        raise KitError("Invalid kit name %r" % name)
+    root = Path(mezzanine.__path__[0]) / "kits" / name
+    kits_root = (Path(mezzanine.__path__[0]) / "kits").resolve()
+    if not root.resolve().is_relative_to(kits_root):
+        raise KitError("Invalid kit name %r" % name)
+    return root
 
 
 def load_kit_meta(name: str) -> tuple[Path, dict]:
@@ -135,6 +141,10 @@ def apply_kit(name: str, project_dir: str | Path, project_app: str) -> dict:
     project_dir = Path(project_dir)
     project_app_dir = project_dir / project_app
 
+    # Settings first so a rewrite failure does not leave kit templates alone.
+    if name == "brochure":
+        _apply_brochure_settings(project_app_dir)
+
     templates_src = root / "templates"
     if templates_src.is_dir():
         dest = project_dir / "templates"
@@ -148,9 +158,6 @@ def apply_kit(name: str, project_dir: str | Path, project_app: str) -> dict:
         if dest.exists():
             shutil.rmtree(dest)
         shutil.copytree(static_src, dest)
-
-    if name == "brochure":
-        _apply_brochure_settings(project_app_dir)
 
     (project_dir / ".nova-kit").write_text(name + "\n", encoding="utf-8")
     return meta

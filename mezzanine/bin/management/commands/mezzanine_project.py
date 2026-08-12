@@ -43,6 +43,15 @@ class Command(BaseCommand):
         options["files"].append("local_settings.py.template")
 
         kit = options.pop("kit", None)
+        # Fail closed on unknown kits before startproject writes a tree.
+        if kit:
+            try:
+                from mezzanine.kits.loader import load_kit_meta, validate_kit
+
+                _, meta = load_kit_meta(kit)
+                validate_kit(meta)
+            except KitError as exc:
+                raise CommandError(str(exc)) from exc
 
         super().handle(*args, **options)
 
@@ -84,7 +93,9 @@ class Command(BaseCommand):
             try:
                 apply_kit(kit, project_dir, name)
             except KitError as exc:
-                raise CommandError(str(exc)) from exc
+                raise CommandError(
+                    "%s (project directory may be incomplete: %s)" % (exc, project_dir)
+                ) from exc
 
     def get_project_directory(self, name, target):
         """

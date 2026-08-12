@@ -130,24 +130,30 @@ class Command(BaseCommand):
                 call_command("loaddata", "demo")
             return
 
+        # Required fixture is pages-only. Optional dump spans pages + forms +
+        # galleries fixtures of the same name; only load when all three apps
+        # are installed so gallery/form MTI rows resolve.
         call_command("loaddata", "mezzanine_required.json")
+        optional_apps = ("mezzanine.forms", "mezzanine.galleries")
+        if not set(optional_apps).issubset(settings.INSTALLED_APPS):
+            return
         install_optional = not self.no_data and self.confirm(
             "\nWould you like to install some initial "
             "demo pages?\nEg: About us, Contact form, "
             "Gallery. (yes/no): "
         )
-        if install_optional:
-            if self.verbosity >= 1:
-                print("\nCreating demo pages: About us, Contact form, " "Gallery ...\n")
-            call_command("loaddata", "mezzanine_optional.json")
-            if "mezzanine.galleries" in settings.INSTALLED_APPS:
-                from mezzanine.galleries.models import Gallery
+        if not install_optional:
+            return
+        if self.verbosity >= 1:
+            print("\nCreating demo pages: About us, Contact form, " "Gallery ...\n")
+        call_command("loaddata", "mezzanine_optional.json")
+        from mezzanine.galleries.models import Gallery
 
-                zip_name = "gallery.zip"
-                copy_test_to_media("mezzanine.core", zip_name)
-                gallery = Gallery.objects.get()
-                gallery.zip_import = zip_name
-                gallery.save()
+        zip_name = "gallery.zip"
+        copy_test_to_media("mezzanine.core", zip_name)
+        gallery = Gallery.objects.get()
+        gallery.zip_import = zip_name
+        gallery.save()
 
     def create_shop(self):
         call_command("loaddata", "cartridge_required.json")
