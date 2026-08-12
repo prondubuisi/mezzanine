@@ -1,14 +1,21 @@
-"""Media chooser popup and Magazine nav (WP media-modal / primary-nav parity)."""
+"""Media chooser popup, FileField widget, Magazine nav."""
 
 from pathlib import Path
 
 import pytest
 from django.contrib.auth import get_user_model
+from django.core.files.storage import default_storage
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import Client
 from django.urls import reverse
 
 import mezzanine
+from mezzanine.core.fields import FileField
+from mezzanine.core.forms import (
+    MediaChooserFileWidget,
+    MediaChooserFormField,
+    _normalize_media_path,
+)
 from mezzanine.core.models import Media
 
 User = get_user_model()
@@ -35,6 +42,8 @@ def test_media_chooser_popup_lists_assets():
     body = resp.content.decode("utf-8")
     assert "Pick me" in body
     assert "novaMediaPickerCallback" in body
+    assert "novaMediaFieldSelected" in body
+    assert "data-path=" in body
     assert "Select" in body
 
     # Search filter
@@ -50,6 +59,51 @@ def test_tinymce_setup_wires_nova_picker():
     assert "nova_file_picker" in js
     assert "file_picker_callback" in js
     assert "__nova_media_chooser_url" in js or "nova_media_chooser" in js
+
+
+def test_filefield_uses_media_chooser_formfield():
+    field = FileField(upload_to="tests", blank=True)
+    formfield = field.formfield()
+    assert isinstance(formfield, MediaChooserFormField)
+    assert isinstance(formfield.widget, MediaChooserFileWidget)
+
+
+def test_normalize_media_path_strips_media_url(settings):
+    settings.MEDIA_URL = "/media/"
+    assert _normalize_media_path("/media/site-1/a.jpg") == "site-1/a.jpg"
+    assert _normalize_media_path("site-1/a.jpg") == "site-1/a.jpg"
+
+
+@pytest.mark.django_db
+def test_media_chooser_formfield_accepts_storage_path():
+    name = default_storage.save(
+        "media/site-1/chooser-test.jpg",
+        SimpleUploadedFile("chooser-test.jpg", b"\xff\xd8\xff\xd9"),
+    )
+    try:
+        field = MediaChooserFormField(required=False)
+        cleaned = field.clean(name)
+        assert cleaned == name
+        with pytest.raises(Exception):
+            field.clean("media/site-1/does-not-exist-xyz.jpg")
+    finally:
+        default_storage.delete(name)
+
+
+def test_media_chooser_field_assets_exist():
+    js = (
+        REPO / "core/static/mezzanine/js/admin/media_chooser_field.js"
+    ).read_text(encoding="utf-8")
+    assert "novaMediaFieldSelected" in js
+    assert "nova-media-browse" in js
+    css = (
+        REPO / "core/static/mezzanine/css/admin/media_chooser_field.css"
+    ).read_text(encoding="utf-8")
+    assert "nova-media-chooser-widget" in css
+    tmpl = (
+        REPO / "core/templates/admin/widgets/media_chooser_file.html"
+    ).read_text(encoding="utf-8")
+    assert "Choose from media library" in tmpl
 
 
 def test_magazine_nav_includes_blog_link():

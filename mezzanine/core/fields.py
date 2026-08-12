@@ -1,4 +1,3 @@
-from django.conf import settings
 from django.contrib.admin.widgets import AdminTextareaWidget
 from django.core.exceptions import ImproperlyConfigured, ValidationError
 from django.db import models
@@ -98,24 +97,27 @@ class MultiChoiceField(models.CharField):
         return ",".join(value)
 
 
-# Define a ``FileField`` that maps to filebrowser's ``FileBrowseField``
-# if available, falling back to Django's ``FileField`` otherwise.
-try:
-    FileBrowseField = import_dotted_path(
-        "%s.fields.FileBrowseField" % settings.PACKAGE_NAME_FILEBROWSER
-    )
-except ImportError:
+# Historically ``FileField`` subclassed filebrowser's ``FileBrowseField``
+# when that package was importable. Filebrowser is now an optional admin
+# extra (PR-030); Nova ships a media chooser at ``/_nova/media/chooser/``.
+# Always use Django's FileField + ``MediaChooserFormField`` so brochure
+# installs work without filebrowser_safe. FileBrowseField kwargs
+# (format / extensions / directory) are accepted and ignored for
+# migration/call-site compatibility.
+class FileField(models.FileField):
+    """Django FileField with Nova media-library chooser in admin forms."""
 
-    class FileField(models.FileField):
-        def __init__(self, *args, **kwargs):
-            for fb_arg in ("format", "extensions"):
-                kwargs.pop(fb_arg, None)
-            super().__init__(*args, **kwargs)
+    def __init__(self, *args, **kwargs):
+        for fb_arg in ("format", "extensions", "directory"):
+            kwargs.pop(fb_arg, None)
+        # FileBrowseField used directory= in place of upload_to; keep a
+        # sensible default when callers only passed directory=.
+        kwargs.setdefault("max_length", 255)
+        super().__init__(*args, **kwargs)
 
-else:
+    def formfield(self, **kwargs):
+        from mezzanine.core.forms import MediaChooserFormField
 
-    class FileField(FileBrowseField):
-        def __init__(self, *args, **kwargs):
-            kwargs.setdefault("directory", kwargs.pop("upload_to", None))
-            kwargs.setdefault("max_length", 255)
-            super().__init__(*args, **kwargs)
+        defaults = {"form_class": MediaChooserFormField}
+        defaults.update(kwargs)
+        return super().formfield(**defaults)

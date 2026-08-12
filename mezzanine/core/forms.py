@@ -2,9 +2,12 @@ from datetime import datetime
 from uuid import uuid4
 
 from django import forms
+from django.core.exceptions import ValidationError
+from django.core.files.storage import default_storage
 from django.forms.utils import to_current_timezone
 from django.forms.widgets import SelectDateWidget
 from django.utils.safestring import mark_safe
+from django.utils.translation import gettext_lazy as _
 
 from mezzanine.conf import settings
 from mezzanine.utils.static import static_lazy as static
@@ -88,6 +91,107 @@ class OrderWidget(forms.HiddenInput):
         ]
         arrows = "<span class='ordering'>%s</span>" % "".join(arrows)
         return rendered + mark_safe(arrows)
+
+
+def _normalize_media_path(value: str) -> str:
+    """Turn a chooser URL or storage path into a storage-relative name."""
+    value = (value or "").strip()
+    if not value:
+        return ""
+    media_url = settings.MEDIA_URL or "/media/"
+    if value.startswith(media_url):
+        value = value[len(media_url) :]
+    # Absolute site URL that ends with MEDIA_URL path
+    if "://" in value:
+        from urllib.parse import urlparse
+
+        path = urlparse(value).path or ""
+        if media_url and media_url in path:
+            value = path.split(media_url, 1)[-1]
+        else:
+            value = path.lstrip("/")
+    return value.lstrip("/")
+
+
+class MediaChooserFileWidget(forms.ClearableFileInput):
+    """
+    File input plus a Nova media-library browse button (no filebrowser).
+
+    Selecting a library asset fills a companion hidden path field; the
+    form field accepts that path when no new upload is present.
+    """
+
+    template_name = "admin/widgets/media_chooser_file.html"
+
+    class Media:
+        js = (static("mezzanine/js/admin/media_chooser_field.js"),)
+        css = {"all": (static("mezzanine/css/admin/media_chooser_field.css"),)}
+
+    def value_from_datadict(self, data, files, name):
+        upload = super().value_from_datadict(data, files, name)
+        if upload:
+            return upload
+        # ClearableFileInput returns False when the clear checkbox is set.
+        if upload is False:
+            return False
+        path = data.get(f"{name}_nova_path") or data.get(f"{name}_nova_url")
+        if path:
+            return _normalize_media_path(path)
+        return upload
+
+    def get_context(self, name, value, attrs):
+        context = super().get_context(name, value, attrs)
+        path = ""
+        url = ""
+        if value and hasattr(value, "url"):
+            try:
+                url = value.url
+            except ValueError:
+                url = ""
+            path = getattr(value, "name", "") or ""
+        elif isinstance(value, str):
+            path = value
+            if value:
+                try:
+                    url = default_storage.url(value)
+                except Exception:  # noqa: BLE001 — storage backends vary
+                    url = settings.MEDIA_URL + value
+        context["widget"]["nova_path"] = path
+        context["widget"]["nova_url"] = url
+        context["widget"]["nova_path_name"] = f"{name}_nova_path"
+        return context
+
+
+class MediaChooserFormField(forms.FileField):
+    """
+    FileField that also accepts an existing MEDIA_ROOT-relative path from
+    the Nova media chooser (see ``MediaChooserFileWidget``).
+    """
+
+    widget = MediaChooserFileWidget
+
+    def to_python(self, data):
+        if isinstance(data, str):
+            path = _normalize_media_path(data)
+            if not path:
+                return None
+            if not default_storage.exists(path):
+                raise ValidationError(
+                    _("Selected media file was not found in storage: %s") % path,
+                    code="missing_media",
+                )
+            return path
+        return super().to_python(data)
+
+    def clean(self, data, initial=None):
+        # Mirror FileField: False means "clear".
+        if data is False:
+            if not self.required:
+                return False
+            data = None
+        if isinstance(data, str):
+            return self.to_python(data)
+        return super().clean(data, initial=initial)
 
 
 class DynamicInlineAdminForm(forms.ModelForm):

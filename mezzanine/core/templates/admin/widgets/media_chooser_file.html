@@ -1,0 +1,23 @@
+{% load i18n %}
+<div class="nova-media-chooser-widget" data-field-name="{{ widget.name }}">
+  {% include "django/forms/widgets/clearable_file_input.html" %}
+  <input type="hidden"
+         name="{{ widget.nova_path_name }}"
+         id="id_{{ widget.nova_path_name }}"
+         value="{{ widget.nova_path|default:'' }}"
+         class="nova-media-path">
+  <div class="nova-media-chooser-actions">
+    <button type="button" class="button nova-media-browse">
+      {% trans "Choose from media library" %}
+    </button>
+    <button type="button" class="button nova-media-clear-library"{% if not widget.nova_path %} style="display:none"{% endif %}>
+      {% trans "Clear library selection" %}
+    </button>
+  </div>
+  <div class="nova-media-preview"{% if not widget.nova_url %} style="display:none"{% endif %}>
+    {% if widget.nova_url %}
+    <img src="{{ widget.nova_url }}" alt="" class="nova-media-thumb">
+    <span class="nova-media-path-label">{{ widget.nova_path }}</span>
+    {% endif %}
+  </div>
+</div>

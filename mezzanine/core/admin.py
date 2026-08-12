@@ -86,10 +86,17 @@ class DisplayableAdmin(BaseTranslationModelAdmin):
     Admin class for subclasses of the abstract ``Displayable`` model.
     """
 
-    list_display = ("title", "status", "admin_link", "view_draft_link")
+    list_display = (
+        "title",
+        "status",
+        "publish_date",
+        "expiry_date",
+        "admin_link",
+        "view_draft_link",
+    )
     list_display_links = ("title",)
     list_editable = ("status",)
-    list_filter = ("status", "keywords__keyword")
+    list_filter = ("status", "publish_date", "expiry_date", "keywords__keyword")
     change_form_template = "admin/displayable/change_form.html"
     # modeltranslation breaks date hierarchy links, see:
     # https://github.com/deschler/django-modeltranslation/issues/324
@@ -100,7 +107,18 @@ class DisplayableAdmin(BaseTranslationModelAdmin):
         (
             None,
             {
-                "fields": ["title", "status", ("publish_date", "expiry_date")],
+                "fields": ["title", "status"],
+            },
+        ),
+        (
+            _("Schedule"),
+            {
+                "fields": [("publish_date", "expiry_date")],
+                "description": _(
+                    "Set a future publish date to schedule. Leave blank to "
+                    "use the current time when status is Published. Expiry "
+                    "hides the content after that date (optional)."
+                ),
             },
         ),
         (

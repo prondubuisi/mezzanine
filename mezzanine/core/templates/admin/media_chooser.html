@@ -52,6 +52,7 @@
         <td>
           <button type="button" class="select"
             data-url="{% if asset.file %}{{ asset.file.url }}{% endif %}"
+            data-path="{% if asset.file %}{{ asset.file.name }}{% endif %}"
             data-alt="{{ asset.alt|escape }}">
             {% trans "Select" %}
           </button>
@@ -67,28 +68,34 @@
   {% endif %}
   <script>
   (function () {
-    function choose(url, alt) {
+    function choose(url, path, alt) {
+      var params = new URLSearchParams(window.location.search);
+      var fieldId = params.get("field") || "";
+      var mode = params.get("mode") || "";
       // TinyMCE 7 file_picker_callback path
       if (window.opener && typeof window.opener.novaMediaPickerCallback === "function") {
         window.opener.novaMediaPickerCallback(url, { alt: alt || "" });
         window.close();
         return;
       }
-      // Classic TinyMCE / filebrowser-style field fill
-      if (window.opener && window.opener.tinymce) {
-        try {
-          var ed = window.opener.tinymce.activeEditor;
-          if (ed && ed.windowManager) {
-            // Best-effort close of dialog after setting value via callback already handled
-          }
-        } catch (e) {}
+      // Admin FileField widget (storage path + optional preview URL)
+      if (
+        window.opener &&
+        typeof window.opener.novaMediaFieldSelected === "function" &&
+        fieldId
+      ) {
+        window.opener.novaMediaFieldSelected(fieldId, path || "", url || "", alt || "");
+        window.close();
+        return;
       }
-      if (window.opener && window.opener.document) {
-        var field = window.opener.document.getElementById(
-          new URLSearchParams(window.location.search).get("field") || ""
-        );
+      // Classic field fill by id (text inputs / hidden path fields)
+      if (window.opener && window.opener.document && fieldId) {
+        var field = window.opener.document.getElementById(fieldId);
         if (field) {
-          field.value = url;
+          field.value = mode === "path" ? (path || url) : (url || path);
+          if (typeof field.dispatchEvent === "function") {
+            field.dispatchEvent(new Event("change", { bubbles: true }));
+          }
           window.close();
           return;
         }
@@ -97,7 +104,11 @@
     }
     document.querySelectorAll("button.select").forEach(function (btn) {
       btn.addEventListener("click", function () {
-        choose(btn.getAttribute("data-url") || "", btn.getAttribute("data-alt") || "");
+        choose(
+          btn.getAttribute("data-url") || "",
+          btn.getAttribute("data-path") || "",
+          btn.getAttribute("data-alt") || ""
+        );
       });
     });
   })();
