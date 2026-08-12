@@ -268,3 +268,34 @@ Run 31589148171 (PR, d7cbe23d consensus commit): same shape — lint fail only
 - **M1 C / platform reboot:** living matrix only matters if it runs externally.
 - **M4 B kits + Friday wedge; WP migrate as ability:** PR #14 is that ability; it needs real checks.
 - **Unanimous refusals:** no category error; no false product claims — extended here to **no false CI claims**.
+
+
+---
+
+## Postscript — parent session completion (2026-08-12)
+
+After senior council registration fix, ruff I001/E501/F401 blockers were cleared and pushed as `4c9222aa`.
+
+| Signal | Evidence |
+|---|---|
+| Workflows registered | `total_count: 1`, id `332672233`, `Test and release` active |
+| PR #14 run | https://github.com/prondubuisi/mezzanine/actions/runs/31589513226 |
+| Conclusion | **success** |
+| Matrix | all 9 living cells pass |
+| lint | pass |
+| pip-audit | pass |
+| release / docs | skipped (expected on fork / non-stable) |
+
+**Honest `pr-14:ci-green`:** allowed **only** with the run URL above (or a later green successor). Prior local-only green remains repudiated.
+
+**Recovery spell (if registry empties again):**
+
+```bash
+gh api -X PUT repos/prondubuisi/mezzanine/actions/permissions --input - <<'EOF'
+{"enabled": false}
+EOF
+gh api -X PUT repos/prondubuisi/mezzanine/actions/permissions --input - <<'EOF'
+{"enabled": true, "allowed_actions": "all"}
+EOF
+# then push (or empty commit) on the PR branch
+```
