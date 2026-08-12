@@ -91,7 +91,8 @@ _django *args:
 	dst="$tmpl/project_name/local_settings.py"
 	src="$tmpl/project_name/local_settings.py.template"
 	if [ ! -f "$dst" ]; then
-		# Heredoc lines must stay recipe-indented or just 1.x misparses them.
+		# just 1.x strips one leading tab from recipe lines; use <<- so the
+		# closing delimiter may stay tab-indented and still terminate.
 		python3 - "$src" "$dst" <<-'PY'
 		import pathlib, re, secrets, string, sys
 		src, dst = pathlib.Path(sys.argv[1]), pathlib.Path(sys.argv[2])
