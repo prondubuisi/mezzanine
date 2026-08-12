@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% load i18n blog_tags %}
+
+{% block meta_title %}{% trans "Home" %}{% endblock %}
+{% block title %}{% if settings.SITE_TITLE %}{{ settings.SITE_TITLE }}{% else %}{% trans "Home" %}{% endif %}{% endblock %}
+
+{% block breadcrumb_menu %}
+<li class="active">{% trans "Home" %}</li>
+{% endblock %}
+
+{% block main %}
+{% blocktrans %}
+<p>Welcome to a Magazine site — editorial posts, pages, and a contact form.
+Built for shops leaving a WordPress marketing + blog stack.</p>
+{% endblocktrans %}
+<p><a class="btn btn-primary" href="{% url 'blog_post_list' %}">{% trans "Read the blog" %}</a></p>
+{% endblock %}

@@ -75,6 +75,12 @@ def test_media_requires_alt_and_site_prefix(settings):
     assert data["alt"] == "A photo"
     assert data["id"] == asset.pk
 
+    listing = client.get(reverse("nova_media_list"))
+    assert listing.status_code == 200
+    body = listing.json()
+    assert body["ok"] is True
+    assert any(item["id"] == asset.pk for item in body["results"])
+
 
 @pytest.mark.django_db
 def test_healthz_ok(client):

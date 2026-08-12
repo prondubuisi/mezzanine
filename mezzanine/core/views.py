@@ -302,6 +302,26 @@ def healthz(request):
     return JsonResponse(payload, status=200 if db_ok else 503)
 
 
+def _media_payload(asset):
+    return {
+        "id": asset.pk,
+        "title": asset.title,
+        "alt": asset.alt,
+        "file": asset.file.url if asset.file else "",
+    }
+
+
+@require_GET
+def media_list(request):
+    """Staff media library listing for current site (WP media-library parity)."""
+    from mezzanine.core.models import Media
+    from mezzanine.utils.sites import current_site_id
+
+    _require_staff_site(request)
+    qs = Media.objects.filter(site_id=current_site_id()).order_by("-created")[:200]
+    return JsonResponse({"ok": True, "results": [_media_payload(a) for a in qs]})
+
+
 @require_GET
 def media_detail(request, pk):
     """
@@ -312,22 +332,12 @@ def media_detail(request, pk):
     from mezzanine.core.models import Media
     from mezzanine.utils.sites import current_site_id
 
-    if not request.user.is_authenticated or not (
-        request.user.is_staff or request.user.is_superuser
-    ):
-        raise Http404
+    _require_staff_site(request)
     try:
         asset = Media.objects.get(pk=pk, site_id=current_site_id())
     except Media.DoesNotExist:
         raise Http404 from None
-    return JsonResponse(
-        {
-            "id": asset.pk,
-            "title": asset.title,
-            "alt": asset.alt,
-            "file": asset.file.url if asset.file else "",
-        }
-    )
+    return JsonResponse(_media_payload(asset))
 
 
 def _require_staff_site(request):
@@ -371,6 +381,12 @@ def api_openapi(request):
                         "200": {"description": "Resolved object"},
                         "404": {"description": "Not found"},
                     },
+                }
+            },
+            "/_nova/media/": {
+                "get": {
+                    "summary": "List media for current site",
+                    "responses": {"200": {"description": "Media list"}},
                 }
             },
             "/_nova/media/{pk}/": {
