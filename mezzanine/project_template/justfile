@@ -92,7 +92,7 @@ _django *args:
 	src="$tmpl/project_name/local_settings.py.template"
 	if [ ! -f "$dst" ]; then
 		# Heredoc lines must stay recipe-indented or just 1.x misparses them.
-		python3 - "$src" "$dst" <<'PY'
+		python3 - "$src" "$dst" <<-'PY'
 		import pathlib, re, secrets, string, sys
 		src, dst = pathlib.Path(sys.argv[1]), pathlib.Path(sys.argv[2])
 		alphabet = string.ascii_letters + string.digits + "!@#$%^&*(-_=+)"
