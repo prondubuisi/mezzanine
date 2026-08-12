@@ -50,6 +50,13 @@ mounted so the container can ``pip install -e`` it::
     $ just import-wp ./export.xml --report-json=./migration-report.json
     $ just test
 
+wordpress.org–shaped demo (PoC — IA inspired by wordpress.org)::
+
+    $ uvx nova-project openpublish --kit wporg
+    $ cd openpublish && just bootstrap && just demo-wporg && just up
+
+See ``docs/demo-wporg.rst``.
+
 WordPress import prints a migration report (posts/pages/redirects/
 attachments, unmapped types, URL fidelity) and optional JSON via
 ``--report-json``. See ``docs/blog-importing.rst``.

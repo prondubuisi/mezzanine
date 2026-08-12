@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% load i18n %}
+
+{% block meta_title %}{% trans "Home" %}{% endblock %}
+{% block title %}{% endblock %}
+
+{% block breadcrumb_menu %}
+<li class="active">{% trans "Home" %}</li>
+{% endblock %}
+
+{% block main %}
+<div class="wporg-hero">
+  <h2>{% trans "Publish without the plugin tax" %}</h2>
+  {% blocktrans %}
+  <p>This demo recreates the <strong>information architecture</strong> of a
+  popular open-source CMS marketing site (inspired by wordpress.org):
+  Features, Learn, Community, News, Get started — as typed Django pages
+  and a blog, not a plugin zoo.</p>
+  {% endblocktrans %}
+  <p>
+    <a class="btn btn-primary" href="/get-started/">{% trans "Get started" %}</a>
+    <a class="btn btn-default" href="{% url 'blog_post_list' %}">{% trans "Read the news" %}</a>
+  </p>
+</div>
+{% blocktrans %}
+<p>Built with Nova: hierarchical pages, scheduled publish, Media library,
+WordPress WXR import, and Friday-path install. No Gutenberg dual stack.</p>
+{% endblocktrans %}
+{% endblock %}

@@ -1,0 +1,61 @@
+/* wporg kit tokens — palette inspired by wordpress.org blues (not a clone). */
+:root {
+  --nova-ink: #1d2327;
+  --nova-muted: #646970;
+  --nova-line: #dcdcde;
+  --nova-paper: #ffffff;
+  --nova-canvas: #f6f7f7;
+  --nova-accent: #3858e9;
+  --nova-accent-ink: #1d35b4;
+  --nova-font-serif: "Source Serif 4", Georgia, serif;
+  --nova-font-sans: "Source Sans 3", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --nova-measure: 40rem;
+  --nova-space: 1.25rem;
+  --nova-radius: 2px;
+}
+
+body {
+  color: var(--nova-ink);
+  background: var(--nova-canvas);
+  font-family: var(--nova-font-sans);
+  line-height: 1.6;
+}
+
+h1, h2, h3, .navbar-brand {
+  font-family: var(--nova-font-serif);
+  color: var(--nova-ink);
+  letter-spacing: -0.02em;
+}
+
+a { color: var(--nova-accent); }
+a:hover, a:focus { color: var(--nova-accent-ink); }
+
+.navbar-default {
+  background: var(--nova-paper);
+  border-color: var(--nova-line);
+  box-shadow: 0 1px 0 var(--nova-line);
+}
+
+.navbar-default .navbar-brand {
+  color: var(--nova-accent);
+  font-weight: 700;
+}
+
+.btn-primary {
+  background: var(--nova-accent);
+  border-color: var(--nova-accent-ink);
+  font-weight: 600;
+}
+
+.wporg-hero {
+  background: var(--nova-paper);
+  border: 1px solid var(--nova-line);
+  border-radius: var(--nova-radius);
+  padding: 1.5rem 1.75rem;
+  margin-bottom: 1.5rem;
+}
+
+.wporg-hero h2 {
+  margin-top: 0;
+  color: var(--nova-accent-ink);
+}
