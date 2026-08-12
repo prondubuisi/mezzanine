@@ -29,3 +29,6 @@ mezzanine/project_template/static/
 /mysite/
 /novademo/
 uv.lock
+
+# Local design contract — do not upload (maintainer working copy)
+docs/modernization/DESIGN.md
