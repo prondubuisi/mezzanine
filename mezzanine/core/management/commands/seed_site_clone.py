@@ -27,6 +27,13 @@ from mezzanine.utils.seed import DEFAULT_SUPERUSER_USERNAME
 from mezzanine.utils.sites import current_site_id
 
 
+def _default_in_menus():
+    """All PAGE_MENU_TEMPLATES IDs (same pattern as WP importer)."""
+    from mezzanine.conf import settings as msettings
+
+    return [m[0] for m in msettings.PAGE_MENU_TEMPLATES]
+
+
 class Command(BaseCommand):
     help = "Seed pages/posts for a named site IA clone (TechCrunch, TIME, …)."
 
@@ -147,7 +154,7 @@ class Command(BaseCommand):
                     "status": CONTENT_STATUS_PUBLISHED,
                     "content": html,
                     "body": body,
-                    "in_menus": [1, 2, 3],
+                    "in_menus": _default_in_menus(),
                     "_order": order,
                     "publish_date": now,
                 },
@@ -157,7 +164,7 @@ class Command(BaseCommand):
                 page.body = body
                 page.content = html
                 page.status = CONTENT_STATUS_PUBLISHED
-                page.in_menus = [1, 2, 3]
+                page.in_menus = _default_in_menus()
                 page._order = order
                 page.save()
             order += 1
@@ -172,7 +179,7 @@ class Command(BaseCommand):
                     "content": "<p>Press and general contact for this demo.</p>",
                     "button_text": "Send",
                     "response": "<p>Thanks — message received.</p>",
-                    "in_menus": [1, 2, 3],
+                    "in_menus": _default_in_menus(),
                     "_order": order,
                     "publish_date": timezone.now(),
                 },

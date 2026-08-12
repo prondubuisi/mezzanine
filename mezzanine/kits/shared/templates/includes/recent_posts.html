@@ -1,7 +1,7 @@
 {% load i18n blog_tags mezzanine_tags %}
 {# Shared latest-posts river for kit homepages (parity X1). #}
 {% ifinstalled "mezzanine.blog" %}
-{% blog_recent_posts 8 as recent_posts %}
+{% blog_recent_posts settings.RIVER_POST_LIMIT as recent_posts %}
 {% if recent_posts %}
 <section class="nova-river" style="margin-top:1.5rem">
   <h2>{% trans "Latest" %}</h2>

@@ -1114,6 +1114,7 @@ register_setting(
         "SITE_TAGLINE",
         "ACTIVE_THEME",
         "THEME_LOGO_URL",
+        "RIVER_POST_LIMIT",
         "USE_L10N",
         "USE_MODELTRANSLATION",
     ),
