@@ -116,6 +116,7 @@ def test_magazine_and_institute_bases_are_thin_wrappers():
         "wporg",
         "whitehouse",
         "techcrunch",
+        "time",
     ):
         text = (root / name / "templates/base.html").read_text(encoding="utf-8")
         assert "kit_base.html" in text, name

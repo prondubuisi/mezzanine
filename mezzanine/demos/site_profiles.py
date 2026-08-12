@@ -136,42 +136,58 @@ PROFILES: dict[str, dict[str, Any]] = {
         ],
     },
     "time": {
-        "display_name": "TIME-shaped demo",
-        "site_name": "Time Demo",
-        "tagline": "News and ideas (IA demo)",
+        "display_name": "Magazine-shaped demo",
+        "site_name": "Horizon",
+        "tagline": "News, culture, and ideas (IA demo)",
         "inspired_by": "https://time.com/",
         "primary_nav_label": "Magazine",
+        # Page slugs match BlogCategory slugs so section landings list posts.
         "pages": [
             (
                 "Politics",
                 "politics",
-                "<p>Section landing for politics coverage.</p>",
+                "<p>National politics, elections, and policy packages. Posts "
+                "below are published in the <strong>Politics</strong> "
+                "section.</p>",
             ),
             (
                 "World",
                 "world",
-                "<p>Section landing for world news.</p>",
+                "<p>International affairs, diplomacy, and conflict coverage.</p>",
             ),
             (
                 "Business",
                 "business",
-                "<p>Section landing for business and markets.</p>",
+                "<p>Markets, labor, and the companies reshaping industry.</p>",
             ),
             (
                 "Health",
                 "health",
-                "<p>Section landing for health and science-adjacent coverage.</p>",
+                "<p>Medicine, public health, and science-adjacent reporting.</p>",
+            ),
+            (
+                "Science",
+                "science",
+                "<p>Discovery, climate research, and technology that changes "
+                "daily life.</p>",
             ),
             (
                 "Ideas",
                 "ideas",
-                "<p>Essays and opinion-style section landing.</p>",
+                "<p>Essays and arguments — longer reads from the Ideas desk.</p>",
+            ),
+            (
+                "Entertainment",
+                "entertainment",
+                "<p>Culture, film, music, and the people who make them.</p>",
             ),
             (
                 "About",
                 "about",
-                "<p>About this <strong>IA demo</strong> inspired by TIME. "
-                "Not affiliated with TIME USA, LLC.</p>",
+                "<p>About this <strong>unofficial magazine IA demo</strong> "
+                "inspired by TIME. Not affiliated with TIME USA, LLC.</p>"
+                "<p>Recreate with <code>nova-project … --kit time</code> "
+                "then <code>seed_site_clone --site time</code>.</p>",
             ),
         ],
         "categories": [
@@ -188,30 +204,74 @@ PROFILES: dict[str, dict[str, Any]] = {
                 "What leaders are watching this week",
                 "leaders-watching-this-week",
                 "Politics",
-                "<p>Sample politics package lede.</p>",
+                "<p>A sample politics package: the bills, court cases, and "
+                "campaign stops defining the news cycle.</p>",
+            ),
+            (
+                "Inside the coalition talks that almost weren't",
+                "coalition-talks-almost-werent",
+                "Politics",
+                "<p>Sample political process story with placeholders for "
+                "sourcing and pull-quotes.</p>",
             ),
             (
                 "Climate finance after the summit",
                 "climate-finance-after-summit",
                 "World",
-                "<p>Sample world desk analysis.</p>",
+                "<p>Sample world desk analysis on pledges, private capital, "
+                "and the gap that remains.</p>",
+            ),
+            (
+                "Border towns and the new trade maps",
+                "border-towns-new-trade-maps",
+                "World",
+                "<p>Sample international feature on logistics corridors and "
+                "local economies.</p>",
             ),
             (
                 "Markets digest: rates, jobs, and housing",
                 "markets-digest-rates-jobs",
                 "Business",
-                "<p>Sample business brief.</p>",
+                "<p>Sample business brief for a weekly markets package.</p>",
+            ),
+            (
+                "The factory shift that rewrote a supply chain",
+                "factory-shift-rewrote-supply-chain",
+                "Business",
+                "<p>Sample enterprise story on reshoring and automation.</p>",
+            ),
+            (
+                "What the new guidelines change for clinics",
+                "new-guidelines-change-clinics",
+                "Health",
+                "<p>Sample health desk explainer for practitioners and "
+                "patients.</p>",
+            ),
+            (
+                "A lab result that reframes an old disease map",
+                "lab-result-disease-map",
+                "Science",
+                "<p>Sample science package lede with room for expert "
+                "bylines.</p>",
             ),
             (
                 "An idea worth arguing about",
                 "idea-worth-arguing",
                 "Ideas",
-                "<p>Sample ideas essay stub.</p>",
+                "<p>Sample ideas essay: a claim, a counterclaim, and why it "
+                "matters this week.</p>",
+            ),
+            (
+                "The season premiere that rewrote the awards race",
+                "season-premiere-awards-race",
+                "Entertainment",
+                "<p>Sample culture desk note on television and streaming "
+                "releases.</p>",
             ),
         ],
         "contact": True,
         "notes": [
-            "Section landings need post listings filtered by category URL.",
+            "Section listings via page processor when slugs match categories.",
             "Magazine cover / Person of the Year style packages not modeled.",
             "Paywall / subscriber gate not in kernel.",
             "Multimedia (video, photo essays) not first-class.",

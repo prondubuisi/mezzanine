@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% load i18n %}
+
+{% block meta_title %}{% trans "Home" %}{% endblock %}
+{% block title %}{% endblock %}
+
+{% block breadcrumb_menu %}
+<li class="active">{% trans "Home" %}</li>
+{% endblock %}
+
+{% block main %}
+<div class="nova-banner">
+  <h1>{% trans "Horizon" %}</h1>
+  {% blocktrans %}
+  <p>A magazine-shaped demo: politics, world, business, health, science,
+  ideas, and culture — original packages on Nova pages and posts.
+  Unofficial IA inspired by TIME. Not affiliated with TIME USA, LLC.</p>
+  {% endblocktrans %}
+  <p style="margin-top:0.85rem">
+    <a href="/politics/">{% trans "Politics" %}</a>
+    ·
+    <a href="/ideas/">{% trans "Ideas" %}</a>
+    ·
+    <a href="{% url 'blog_post_list' %}">{% trans "All stories" %}</a>
+  </p>
+</div>
+
+<nav class="nova-grid" aria-label="{% trans 'Sections' %}">
+  <a class="nova-card" href="/politics/">
+    <strong>{% trans "Politics" %}</strong>
+    <span>{% trans "Power & policy" %}</span>
+  </a>
+  <a class="nova-card" href="/world/">
+    <strong>{% trans "World" %}</strong>
+    <span>{% trans "Global affairs" %}</span>
+  </a>
+  <a class="nova-card" href="/business/">
+    <strong>{% trans "Business" %}</strong>
+    <span>{% trans "Markets & labor" %}</span>
+  </a>
+  <a class="nova-card" href="/health/">
+    <strong>{% trans "Health" %}</strong>
+    <span>{% trans "Medicine & care" %}</span>
+  </a>
+  <a class="nova-card" href="/science/">
+    <strong>{% trans "Science" %}</strong>
+    <span>{% trans "Discovery" %}</span>
+  </a>
+  <a class="nova-card" href="/ideas/">
+    <strong>{% trans "Ideas" %}</strong>
+    <span>{% trans "Essays" %}</span>
+  </a>
+  <a class="nova-card" href="/entertainment/">
+    <strong>{% trans "Entertainment" %}</strong>
+    <span>{% trans "Culture" %}</span>
+  </a>
+  <a class="nova-card" href="/about/">
+    <strong>{% trans "About" %}</strong>
+    <span>{% trans "This demo" %}</span>
+  </a>
+</nav>
+
+{% include "includes/recent_posts.html" %}
+{% endblock %}
