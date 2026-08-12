@@ -556,11 +556,9 @@ def theme_customizer(request):
     """
     Lean WordPress Customizer analogue: colors + logo for ACTIVE_THEME.
 
-    Staff-only (or DEBUG). Saves to conf.Setting; CSS vars inject via context.
+    Staff with site permission only (same gate as other ``/_nova/`` admin
+    views). DEBUG no longer opens this surface to anonymous clients (S2).
     """
-    from django.conf import settings as dj_settings
-    from django.contrib.auth.views import redirect_to_login
-
     from mezzanine.kits.theme import (
         get_active_theme_name,
         get_theme_colors,
@@ -569,10 +567,7 @@ def theme_customizer(request):
         theme_customizer_css,
     )
 
-    if not dj_settings.DEBUG and not (
-        request.user.is_authenticated and request.user.is_staff
-    ):
-        return redirect_to_login(request.get_full_path())
+    _require_staff_site(request)
     name = get_active_theme_name()
     defaults = {}
     if name:
@@ -603,17 +598,12 @@ def theme_customizer(request):
 
 @require_POST
 def theme_customizer_save(request):
-    from django.conf import settings as dj_settings
     from django.contrib import messages
-    from django.contrib.auth.views import redirect_to_login
     from django.http import HttpResponseRedirect
 
     from mezzanine.kits.theme import set_theme_customizer
 
-    if not dj_settings.DEBUG and not (
-        request.user.is_authenticated and request.user.is_staff
-    ):
-        return redirect_to_login(request.get_full_path())
+    _require_staff_site(request)
     colors = {
         key: (request.POST.get("color_%s" % key) or "").strip()
         for key in ("ink", "accent", "accent_ink", "canvas", "paper")
