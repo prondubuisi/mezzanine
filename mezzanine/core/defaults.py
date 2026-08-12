@@ -628,6 +628,18 @@ register_setting(
 )
 
 register_setting(
+    name="PREVIEW_TOKEN_TTL_SECONDS",
+    label=_("Preview token lifetime (seconds)"),
+    description=_(
+        "Default lifetime for preview tokens issued when no explicit "
+        "expires_at is supplied. Matches the previous 24-hour hardcoded "
+        "default (86400 seconds)."
+    ),
+    editable=False,
+    default=86400,
+)
+
+register_setting(
     name="SEARCH_USE_POSTGRES_FTS",
     description=_(
         "When True and the database is PostgreSQL, searchable querysets "
