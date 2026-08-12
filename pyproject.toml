@@ -63,6 +63,10 @@ accounts = []
 migrate = [
     "feedparser>=6",
 ]
+# Optional TinyMCE 7 via CDN is configured in settings (TINYMCE_CDN /
+# RICHTEXT_WIDGET_CLASS). This extra is a packaging marker for operators
+# who opt into the admin rich editor (PR-028).
+tinymce = []
 testing = [
     "pytest-django>=4,<5",
     "pytest-cov>=2",

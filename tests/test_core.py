@@ -2,7 +2,6 @@ import re
 import subprocess
 from importlib.metadata import requires
 from unittest import skipUnless
-from urllib.parse import urlencode
 
 import pytest
 import pytz
@@ -18,7 +17,6 @@ from django.forms.models import modelform_factory
 from django.http import HttpResponse
 from django.template import RequestContext, Template
 from django.template.context import Context
-from django.templatetags.static import static
 from django.test.utils import override_settings
 from django.urls import re_path, reverse
 from django.utils.encoding import force_str
@@ -348,28 +346,12 @@ class CoreTests(TestCase):
         site1.delete()
         site2.delete()
 
-    def _static_proxy(self, querystring):
-        self.client.login(username=self._username, password=self._password)
-        proxy_url = "{}?{}".format(reverse("static_proxy"), querystring)
-        response = self.client.get(proxy_url)
-        self.assertEqual(response.status_code, 200)
+    def test_static_proxy_removed(self):
+        """PR-028: TinyMCE 4 asset_proxy URL is gone."""
+        from django.urls import NoReverseMatch
 
-    @override_settings(STATIC_URL="/static/")
-    def test_static_proxy(self):
-        querystring = urlencode([("u", static("test/image.jpg"))])
-        self._static_proxy(querystring)
-
-    @override_settings(STATIC_URL="http://testserver/static/")
-    def test_static_proxy_with_host(self):
-        querystring = urlencode([("u", static("test/image.jpg"))])
-        self._static_proxy(querystring)
-
-    @override_settings(STATIC_URL="http://testserver:8000/static/")
-    def test_static_proxy_with_static_url_with_full_host(self):
-        from django.templatetags.static import static
-
-        querystring = urlencode([("u", static("test/image.jpg"))])
-        self._static_proxy(querystring)
+        with self.assertRaises(NoReverseMatch):
+            reverse("static_proxy")
 
     def test_displayable_links_js_anonymous_denied(self):
         """

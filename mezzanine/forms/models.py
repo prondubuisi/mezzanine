@@ -3,14 +3,14 @@ from django.utils.translation import gettext_lazy as _
 
 from mezzanine.conf import settings
 from mezzanine.core.fields import RichTextField
-from mezzanine.core.models import Orderable, RichText, wrapped_manager
+from mezzanine.core.models import DocumentBody, Orderable, RichText, wrapped_manager
 from mezzanine.forms import fields
 from mezzanine.pages.models import Page
 
 
-class Form(Page, RichText):
+class Form(Page, DocumentBody, RichText):
     """
-    A user-built form.
+    A user-built form with Y1.5 JSON ``body``.
     """
 
     button_text = models.CharField(_("Button text"), max_length=50, blank=True)

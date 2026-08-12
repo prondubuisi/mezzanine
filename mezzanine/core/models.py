@@ -411,6 +411,67 @@ class RichText(models.Model):
         abstract = True
 
 
+class DocumentBody(models.Model):
+    """
+    Y1.5 JSON document body (PR-025 / KD7).
+
+    Concrete RichText models also inherit this. ``content`` is the HTML
+    projection of ``body`` (version N: wrap on first save).
+    """
+
+    body = models.JSONField(_("Body"), default=dict, blank=True)
+
+    class Meta:
+        abstract = True
+
+    def save(self, *args, **kwargs):
+        from mezzanine.core.document import sync_content_from_body
+
+        sync_content_from_body(self)
+        super().save(*args, **kwargs)
+
+
+def _media_upload_to(instance, filename):
+    """Site-prefixed storage path (PR-026)."""
+    site_id = getattr(instance, "site_id", None) or current_site_id()
+    # Keep basename only to avoid path traversal.
+    base = filename.replace("\\", "/").rsplit("/", 1)[-1] or "file.bin"
+    return "media/site-%s/%s" % (site_id, base)
+
+
+class Media(SiteRelated):
+    """
+    Site-scoped media asset (PR-026 / KD11).
+
+    Not Displayable in Y1.5: no public URL tree, not in sitemaps/search.
+    ``alt`` is required. File path is site-prefixed under MEDIA_ROOT.
+    """
+
+    title = models.CharField(_("Title"), max_length=500, blank=True)
+    file = models.FileField(_("File"), upload_to=_media_upload_to, max_length=255)
+    alt = models.CharField(
+        _("Alt text"),
+        max_length=255,
+        help_text=_("Required accessible description of the file."),
+    )
+    created = models.DateTimeField(_("Created"), auto_now_add=True)
+    updated = models.DateTimeField(_("Updated"), auto_now=True)
+
+    class Meta:
+        verbose_name = _("Media")
+        verbose_name_plural = _("Media")
+        ordering = ("-created",)
+
+    def __str__(self):
+        return self.title or self.alt or str(self.pk)
+
+    def get_absolute_url(self):
+        # Private asset path under /_nova/media/<pk>/ — not the storage URL.
+        from django.urls import reverse
+
+        return reverse("nova_media_detail", kwargs={"pk": self.pk})
+
+
 class OrderableBase(ModelBase):
     """
     Checks for ``order_with_respect_to`` on the model's inner ``Meta``

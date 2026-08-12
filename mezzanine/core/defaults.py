@@ -260,10 +260,22 @@ register_setting(
     name="RICHTEXT_WIDGET_CLASS",
     description=_(
         "Dotted package path and class name of the widget to use "
-        "for the ``RichTextField``."
+        "for the ``RichTextField``. Y1.5 default is a plain admin "
+        "textarea; set to ``mezzanine.core.forms.TinyMceWidget`` and "
+        "enable ``TINYMCE_CDN`` for optional TinyMCE 7."
     ),
     editable=False,
-    default="mezzanine.core.forms.TinyMceWidget",
+    default="django.contrib.admin.widgets.AdminTextareaWidget",
+)
+
+register_setting(
+    name="TINYMCE_CDN",
+    description=_(
+        "When using ``mezzanine.core.forms.TinyMceWidget``, load TinyMCE 7 "
+        "from this CDN URL (PR-028). Empty disables the editor scripts."
+    ),
+    editable=False,
+    default="https://cdn.jsdelivr.net/npm/tinymce@7/tinymce.min.js",
 )
 
 register_setting(

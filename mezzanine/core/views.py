@@ -1,13 +1,11 @@
-import mimetypes
-import os
-from urllib.parse import urljoin, urlparse
+import logging
 
 from django.apps import apps
 from django.contrib import admin
 from django.contrib.admin.options import ModelAdmin
 from django.contrib.admin.views.decorators import staff_member_required
-from django.contrib.staticfiles import finders
 from django.core.exceptions import PermissionDenied
+from django.db import connection
 from django.http import (
     Http404,
     HttpResponse,
@@ -24,17 +22,18 @@ from django.utils.http import urlencode
 from django.utils.safestring import mark_safe
 from django.utils.translation import gettext as _
 from django.views.decorators.csrf import requires_csrf_token
-from django.views.decorators.http import require_http_methods, require_POST
+from django.views.decorators.http import require_GET, require_http_methods, require_POST
 
 from mezzanine.conf import settings
 from mezzanine.core.capabilities import user_can_edit
 from mezzanine.core.forms import get_edit_form
+from mezzanine.core.logging import structured_log
 from mezzanine.core.models import Displayable, SiteRole
 from mezzanine.utils.sites import has_site_permission
 from mezzanine.utils.urls import next_url
 from mezzanine.utils.views import paginate
 
-mimetypes.init()
+_health_logger = logging.getLogger("nova.health")
 
 
 @staff_member_required
@@ -221,50 +220,6 @@ def search(request, template="search_results.html", extra_context=None):
 
 
 @staff_member_required
-def static_proxy(request):
-    """
-    Serves TinyMCE plugins inside the inline popups and the uploadify
-    SWF, as these are normally static files, and will break with
-    cross-domain JavaScript errors if ``STATIC_URL`` is an external
-    host. URL for the file is passed in via querystring in the inline
-    popup plugin template, and we then attempt to pull out the relative
-    path to the file, so that we can serve it locally via Django.
-    """
-    normalize = lambda u: ("//" + u.split("://")[-1]) if "://" in u else u
-    url = normalize(request.GET["u"])
-    host = "//" + request.get_host()
-    static_url = normalize(settings.STATIC_URL)
-    for prefix in (host, static_url, "/"):
-        if url.startswith(prefix):
-            url = url.replace(prefix, "", 1)
-    response = ""
-    (content_type, encoding) = mimetypes.guess_type(url)
-    if content_type is None:
-        content_type = "application/octet-stream"
-    path = finders.find(url)
-    if path:
-        if isinstance(path, (list, tuple)):
-            path = path[0]
-        if url.endswith(".htm"):
-            # Inject <base href="{{ STATIC_URL }}"> into TinyMCE
-            # plugins, since the path static files in these won't be
-            # on the same domain.
-            static_url = settings.STATIC_URL + os.path.split(url)[0] + "/"
-            if not urlparse(static_url).scheme:
-                static_url = urljoin(host, static_url)
-            base_tag = "<base href='%s'>" % static_url
-            with open(path) as f:
-                response = f.read().replace("<head>", "<head>" + base_tag)
-        else:
-            try:
-                with open(path, "rb") as f:
-                    response = f.read()
-            except OSError:
-                return HttpResponseNotFound()
-    return HttpResponse(response, content_type=content_type)
-
-
-@staff_member_required
 def displayable_links_js(request):
     """
     Renders a list of url/title pairs for all ``Displayable`` subclass
@@ -317,3 +272,59 @@ def server_error(request, template_name="errors/500.html"):
     context = {"STATIC_URL": settings.STATIC_URL}
     t = get_template(template_name)
     return HttpResponseServerError(t.render(context, request))
+
+
+@require_GET
+def healthz(request):
+    """Liveness/readiness JSON for ops (PR-036b). No auth."""
+    db_ok = False
+    try:
+        connection.ensure_connection()
+        db_ok = True
+    except Exception as exc:  # noqa: BLE001 — surface as degraded
+        structured_log(
+            _health_logger,
+            logging.ERROR,
+            "healthz.db_error",
+            error=str(exc),
+        )
+    payload = {
+        "status": "ok" if db_ok else "degraded",
+        "db": db_ok,
+        "service": "nova-cms",
+    }
+    structured_log(
+        _health_logger,
+        logging.INFO if db_ok else logging.WARNING,
+        "healthz.check",
+        **payload,
+    )
+    return JsonResponse(payload, status=200 if db_ok else 503)
+
+
+@require_GET
+def media_detail(request, pk):
+    """
+    Staff-only media metadata endpoint (PR-026).
+
+    Returns JSON for the site-scoped Media row — not a public CDN path.
+    """
+    from mezzanine.core.models import Media
+    from mezzanine.utils.sites import current_site_id
+
+    if not request.user.is_authenticated or not (
+        request.user.is_staff or request.user.is_superuser
+    ):
+        raise Http404
+    try:
+        asset = Media.objects.get(pk=pk, site_id=current_site_id())
+    except Media.DoesNotExist:
+        raise Http404 from None
+    return JsonResponse(
+        {
+            "id": asset.pk,
+            "title": asset.title,
+            "alt": asset.alt,
+            "file": asset.file.url if asset.file else "",
+        }
+    )

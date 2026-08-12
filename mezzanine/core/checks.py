@@ -136,3 +136,38 @@ def check_nevercache_key(app_configs, **kwargs):
             id="mezzanine.core.W08",
         )
     ]
+
+
+DOCUMENT_BODY_WARNING = (
+    "Model %(label)s subclasses RichText but has no ``body`` JSONField. "
+    "Y1.5 (PR-025) requires each concrete RichText model to inherit "
+    "DocumentBody or declare an equivalent body field."
+)
+
+
+@register()
+def check_richtext_document_body(app_configs, **kwargs):
+    """Warn on out-of-tree RichText models missing body (PR-025)."""
+    from django.apps import apps as django_apps
+
+    from mezzanine.core.models import DocumentBody, RichText
+
+    issues = []
+    for model in django_apps.get_models():
+        if model._meta.abstract or model._meta.proxy:
+            continue
+        if not issubclass(model, RichText):
+            continue
+        if issubclass(model, DocumentBody):
+            continue
+        if any(f.name == "body" for f in model._meta.local_fields):
+            continue
+        issues.append(
+            Warning(
+                DOCUMENT_BODY_WARNING
+                % {"label": f"{model._meta.app_label}.{model.__name__}"},
+                id="mezzanine.core.W09",
+                obj=model,
+            )
+        )
+    return issues

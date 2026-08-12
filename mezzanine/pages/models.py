@@ -9,6 +9,7 @@ from mezzanine.conf import settings
 from mezzanine.core.models import (
     ContentTyped,
     Displayable,
+    DocumentBody,
     Orderable,
     RichText,
     wrapped_manager,
@@ -287,10 +288,10 @@ class Page(BasePage, ContentTyped):
         return None
 
 
-class RichTextPage(Page, RichText):
+class RichTextPage(Page, DocumentBody, RichText):
     """
     Implements the default type of page with a single Rich Text
-    content field.
+    content field plus Y1.5 JSON ``body``.
     """
 
     class Meta:

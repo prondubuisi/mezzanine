@@ -12,7 +12,7 @@ from django.utils.translation import gettext_lazy as _
 
 from mezzanine.conf import settings
 from mezzanine.core.fields import FileField
-from mezzanine.core.models import Orderable, RichText
+from mezzanine.core.models import DocumentBody, Orderable, RichText
 from mezzanine.pages.models import Page
 from mezzanine.utils.importing import import_dotted_path
 from mezzanine.utils.models import upload_to
@@ -115,15 +115,14 @@ class BaseGallery(models.Model):
                 self.zip_import.delete(save=True)
 
 
-class Gallery(Page, RichText, BaseGallery):
+class Gallery(Page, DocumentBody, RichText, BaseGallery):
     """
-    Page bucket for gallery photos.
+    Page bucket for gallery photos with Y1.5 JSON ``body``.
     """
 
     class Meta:
         verbose_name = _("Gallery")
         verbose_name_plural = _("Galleries")
-
 
 class GalleryImage(Orderable):
 

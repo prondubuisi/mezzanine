@@ -20,6 +20,7 @@ from mezzanine.core.forms import DynamicInlineAdminForm
 from mezzanine.core.models import (
     CONTENT_STATUS_PUBLISHED,
     ContentTyped,
+    Media,
     Orderable,
     PreviewToken,
     SiteRole,
@@ -535,3 +536,13 @@ if "django.contrib.redirects" in settings.INSTALLED_APPS:
     if Redirect in admin.site._registry:
         admin.site.unregister(Redirect)
     admin.site.register(Redirect, SiteRedirectAdmin)
+
+
+@admin.register(Media)
+class MediaAdmin(admin.ModelAdmin):
+    """Site-scoped media library (PR-026). ``alt`` is required."""
+
+    list_display = ("title", "alt", "file", "created")
+    search_fields = ("title", "alt", "file")
+    readonly_fields = ("created", "updated")
+    fields = ("title", "file", "alt", "created", "updated")

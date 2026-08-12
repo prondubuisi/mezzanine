@@ -4,14 +4,14 @@ from django.utils.translation import gettext_lazy as _
 
 from mezzanine.conf import settings
 from mezzanine.core.fields import FileField
-from mezzanine.core.models import Displayable, Ownable, RichText, Slugged
+from mezzanine.core.models import Displayable, DocumentBody, Ownable, RichText, Slugged
 from mezzanine.generic.fields import CommentsField, RatingField
 from mezzanine.utils.models import AdminThumbMixin, upload_to
 
 
-class BlogPost(Displayable, Ownable, RichText, AdminThumbMixin):
+class BlogPost(Displayable, Ownable, DocumentBody, RichText, AdminThumbMixin):
     """
-    A blog post.
+    A blog post with Y1.5 JSON ``body``.
     """
 
     categories = models.ManyToManyField(

@@ -34,4 +34,11 @@ urlpatterns += [
     path("edit/", core_views.edit, name="edit"),
     path("search/", core_views.search, name="search"),
     path("set_site/", core_views.set_site, name="set_site"),
+    # Y1.5 ops / media (PR-036b, PR-026)
+    path("_nova/healthz", core_views.healthz, name="nova_healthz"),
+    path(
+        "_nova/media/<int:pk>/",
+        core_views.media_detail,
+        name="nova_media_detail",
+    ),
 ]

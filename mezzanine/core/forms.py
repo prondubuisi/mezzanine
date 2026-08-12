@@ -38,19 +38,26 @@ class Html5Mixin:
 
 class TinyMceWidget(forms.Textarea):
     """
-    Setup the JS files and targetting CSS class for a textarea to
-    use TinyMCE.
+    Optional TinyMCE 7 widget (PR-028).
+
+    Vendored TinyMCE 4 was removed. When ``TINYMCE_CDN`` is set, scripts
+    load from that URL; otherwise this is a plain textarea.
     """
 
     @property
     def media(self):
-        js = [
-            static("mezzanine/tinymce/tinymce.min.js"),
-            static("mezzanine/tinymce/jquery.tinymce.min.js"),
-            static(settings.TINYMCE_SETUP_JS),
-        ]
-        css = {"all": [static("mezzanine/tinymce/tinymce.css")]}
-        return forms.Media(js=js, css=css)
+        cdn = getattr(settings, "TINYMCE_CDN", "") or ""
+        js = []
+        if cdn:
+            js.append(cdn)
+            # Optional project setup if present under STATIC.
+            setup = getattr(settings, "TINYMCE_SETUP_JS", "") or ""
+            if setup:
+                try:
+                    js.append(static(setup))
+                except Exception:  # noqa: BLE001 — setup is best-effort
+                    pass
+        return forms.Media(js=js)
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
