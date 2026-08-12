@@ -31,22 +31,34 @@ Originally created by `Stephen McDonald`_ as `Mezzanine`_.
 Installation
 ============
 
-::
+Friday path (Brochure kit — the Year‑1 install)::
 
-    $ pip install nova-cms
-    $ python -c "import mezzanine; print(mezzanine.__version__)"
+    $ uvx nova-project mysite --kit brochure
+    $ cd mysite
+    $ just bootstrap    # Postgres + Redis via compose, migrate, superuser
+    $ just up
 
-``uv add nova-cms`` is equivalent. Then::
+``just bootstrap`` does not take a kit argument; the kit is chosen when
+``nova-project`` writes the project. Optionally::
 
-    $ nova-project project_name
-    $ cd project_name
+    $ just import-wp ./export.xml   # requires nova-cms[migrate] (feedparser)
+    $ just test
+
+Without compose/just::
+
+    $ pip install 'nova-cms[migrate]'
+    $ nova-project mysite --kit brochure
+    $ cd mysite
     $ python manage.py createdb --noinput
     $ python manage.py runserver
 
-``mezzanine-project`` remains a deprecated alias of ``nova-project``
-for one minor. Browse to http://127.0.0.1:8000/admin/ and log in with
-the default account (``username: admin``, ``password: default``) if
-you passed ``--noinput``. Omit ``--noinput`` to choose credentials.
+Omit ``--kit brochure`` for the full template (blog + galleries still
+on). ``mezzanine-project`` remains a deprecated alias of ``nova-project``
+for one minor.
+
+With ``DEBUG=True`` and ``createdb --noinput``, the default account is
+``admin`` / ``default``. With ``DEBUG=False``, ``createdb`` refuses that
+account — use interactive createsuperuser.
 
 Requires **Python 3.12+** and **Django 5.2, 6.0, or 6.1**. See the
 documentation overview for dependencies and adding Nova to an existing
@@ -60,23 +72,26 @@ In addition to Django itself (ORM, templates, cache, admin), the tree
 still ships:
 
 * Hierarchical page navigation
-* Save as draft and preview on site
+* Draft by default, opaque preview tokens (staff URL-guessing drafts is gone)
+* Per-(user, site) roles for on-site edit and preview issue
 * Scheduled publishing
 * Drag-and-drop page ordering
-* WYSIWYG editing
-* `In-line page editing`_
+* WYSIWYG editing in admin (TinyMCE 4 until Y1.5)
+* `In-line page editing`_ via HTMX textarea islands (no public jQuery)
+* Brochure site kit for Friday install of a marketing site
+* Adult WordPress WXR import (permalinks, Yoast meta, redirect report)
 * Drag-and-drop HTML5 forms builder with CSV export
 * SEO friendly URLs and meta data
 * Configurable `dashboard`_ widgets
-* Blog engine
+* Optional blog / galleries / accounts extras
 * Tagging
 * User accounts and profiles with email verification
 * Translated to over 35 languages
 * `Multi-lingual sites`_
 * `Custom templates`_ per page or blog post
-* Bootstrap-based default templates
+* Bootstrap-based default templates + Brochure design tokens
 * API for `custom content types`_
-* `Search engine and API`_
+* `Search engine and API`_ (materialization capped in Y1)
 * Seamless integration with third-party Django apps
 * WordPress and RSS importers
 * Built-in threaded comments
