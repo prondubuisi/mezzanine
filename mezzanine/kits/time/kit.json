@@ -1,0 +1,14 @@
+{
+  "name": "time",
+  "version": "0.1.0",
+  "nova_compat": ">=0.1,<2",
+  "types": [
+    "pages.RichTextPage",
+    "pages.Link",
+    "forms.Form",
+    "blog.BlogPost"
+  ],
+  "tokens": "static/time/tokens.css",
+  "seed_profile": "time",
+  "description": "Magazine-shaped news demo (IA inspired by TIME; not affiliated)."
+}

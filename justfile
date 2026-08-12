@@ -66,6 +66,13 @@ demo-techcrunch *args:
 	set -euo pipefail
 	just demo-clone techcrunch --flush "$@"
 
+# Seed magazine-shaped demo. Project: nova-project timedemo --kit time
+# Usage: just demo-time
+demo-time *args:
+	#!/usr/bin/env bash
+	set -euo pipefail
+	just demo-clone time --flush "$@"
+
 # Activate a theme package (ACTIVE_THEME). Usage: just activate-theme spotify
 # Optional: just activate-theme spotify --seed
 activate-theme *args:

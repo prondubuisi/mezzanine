@@ -119,6 +119,11 @@ class Command(BaseCommand):
         # First-party kits: seed_profile (kit.json), special commands, or fixtures.
         kit_apps = (
             (
+                "mezzanine.kits.time",
+                "Magazine-shaped demo",
+                "Politics/world/ideas sections (seed_site_clone time).",
+            ),
+            (
                 "mezzanine.kits.techcrunch",
                 "Tech news desk",
                 "Startups/venture/AI river (seed_site_clone techcrunch).",

@@ -427,6 +427,7 @@ def profile_theme_map() -> dict[str, str]:
     return {
         "whitehouse": "whitehouse",
         "techcrunch": "techcrunch",
+        "time": "time",
         # Listening CMS demo uses music seed, not newsroom profile.
         "spotify_listen": "spotify",
     }
