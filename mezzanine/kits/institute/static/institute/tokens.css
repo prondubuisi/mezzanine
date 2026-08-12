@@ -1,0 +1,48 @@
+/* Institute design tokens (Y2 scaffold): higher-ed marketing site. */
+:root {
+  --nova-ink: #0f172a;
+  --nova-muted: #64748b;
+  --nova-line: #cbd5e1;
+  --nova-paper: #ffffff;
+  --nova-canvas: #f1f5f9;
+  --nova-accent: #1d4ed8;
+  --nova-accent-ink: #1e3a8a;
+  --nova-font-serif: "Source Serif 4", "Palatino Linotype", Palatino, Georgia, serif;
+  --nova-font-sans: "Source Sans 3", "Helvetica Neue", system-ui, sans-serif;
+  --nova-measure: 40rem;
+  --nova-space: 1.25rem;
+  --nova-radius: 2px;
+}
+
+body {
+  color: var(--nova-ink);
+  background: var(--nova-canvas);
+  font-family: var(--nova-font-sans);
+  line-height: 1.6;
+}
+
+h1, h2, h3, .navbar-brand {
+  font-family: var(--nova-font-serif);
+  letter-spacing: -0.015em;
+  color: var(--nova-accent-ink);
+}
+
+a { color: var(--nova-accent); }
+a:hover, a:focus { color: var(--nova-accent-ink); }
+
+.navbar-default {
+  background: var(--nova-paper);
+  border-color: var(--nova-line);
+  border-bottom-width: 3px;
+  border-bottom-color: var(--nova-accent);
+}
+
+.navbar-default .navbar-brand {
+  color: var(--nova-accent-ink);
+  font-weight: 700;
+}
+
+.btn-primary {
+  background: var(--nova-accent);
+  border-color: var(--nova-accent-ink);
+}

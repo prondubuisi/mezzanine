@@ -47,6 +47,11 @@ urlpatterns += [
         core_views.media_detail,
         name="nova_media_detail",
     ),
+    path(
+        "_nova/media/<int:pk>/public/",
+        core_views.media_public,
+        name="nova_media_public",
+    ),
     path("_nova/api/openapi.json", core_views.api_openapi, name="nova_api_openapi"),
     path("_nova/api/resolve", core_views.api_resolve, name="nova_api_resolve"),
 ]

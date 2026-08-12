@@ -1,9 +1,9 @@
-{% load i18n static %}
+{% load i18n static mezzanine_tags %}
 
 {% if has_site_permission %}
 <link rel="stylesheet" href="{% static "mezzanine/css/editable.css" %}">
 {{ toolbar }}
-<script src="{% static "mezzanine/js/htmx.min.js" %}"></script>
-<script src="{% static "mezzanine/js/editable.js" %}"></script>
+<script {% csp_nonce %} src="{% static "mezzanine/js/htmx.min.js" %}"></script>
+<script {% csp_nonce %} src="{% static "mezzanine/js/editable.js" %}"></script>
 {% endif %}
 

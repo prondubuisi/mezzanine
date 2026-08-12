@@ -66,7 +66,7 @@
     {% trans "No media yet. Upload files under Core → Media in the admin." %}
   </p>
   {% endif %}
-  <script>
+  <script{% if request.csp_nonce %} nonce="{{ request.csp_nonce }}"{% endif %}>
   (function () {
     function choose(url, path, alt) {
       var params = new URLSearchParams(window.location.search);

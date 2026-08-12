@@ -36,9 +36,10 @@
    the parent ``{% load static %}``, so use STATIC_URL, not the static tag. #}
 {% nevercache %}
 {% if user.is_authenticated and user.is_staff %}
-<script src="{{ STATIC_URL }}mezzanine/js/{{ settings.JQUERY_FILENAME }}"></script>
-<script src="{{ STATIC_URL }}js/bootstrap.js"></script>
-<script src="{{ STATIC_URL }}js/bootstrap-extras.js"></script>
+{# nevercache re-parses without templatetag loads — use request.csp_nonce. #}
+<script{% if request.csp_nonce %} nonce="{{ request.csp_nonce }}"{% endif %} src="{{ STATIC_URL }}mezzanine/js/{{ settings.JQUERY_FILENAME }}"></script>
+<script{% if request.csp_nonce %} nonce="{{ request.csp_nonce }}"{% endif %} src="{{ STATIC_URL }}js/bootstrap.js"></script>
+<script{% if request.csp_nonce %} nonce="{{ request.csp_nonce }}"{% endif %} src="{{ STATIC_URL }}js/bootstrap-extras.js"></script>
 {% endif %}
 {% endnevercache %}
 {% block extra_js %}{% endblock %}

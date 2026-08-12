@@ -6,10 +6,10 @@
 {% block extrahead %}
 {% comment %}Issue the csrftoken cookie without assigning it to window.{% endcomment %}
 {% if csrf_token %}{% endif %}
-{% if user.is_staff %}<script src="{% url 'admin:jsi18n' %}"></script>{% endif %}
-<script src="{% static "mezzanine/js/"|add:settings.JQUERY_FILENAME %}"></script>
+{% if user.is_staff %}<script {% csp_nonce %} src="{% url 'admin:jsi18n' %}"></script>{% endif %}
+<script {% csp_nonce %} src="{% static "mezzanine/js/"|add:settings.JQUERY_FILENAME %}"></script>
 
-<script>
+<script {% csp_nonce %}>
     {% url "fb_browse" as fb_browse_url %}
     {% url "nova_media_chooser" as nova_media_chooser_url %}
     {% url "displayable_links_js" as link_list_url %}
@@ -55,19 +55,19 @@
 
 {% block footer %}
 {% if form.this_is_the_login_form %}
-    <script src="{% static "mezzanine/js/admin/login.js" %}"></script>
+    <script {% csp_nonce %} src="{% static "mezzanine/js/admin/login.js" %}"></script>
 {% else %}
     {% if user.is_staff %}
         {% if not is_popup and not request.GET.pop %}
         <link rel="stylesheet" href="{% static "mezzanine/chosen/chosen.css" %}">
-        <script src="{% static "mezzanine/chosen/chosen-0.9.12.jquery.js" %}"></script>
-        <script src="{% static "mezzanine/js/admin/navigation.js" %}"></script>
+        <script {% csp_nonce %} src="{% static "mezzanine/chosen/chosen-0.9.12.jquery.js" %}"></script>
+        <script {% csp_nonce %} src="{% static "mezzanine/js/admin/navigation.js" %}"></script>
         {% endif %}
 
-        <script src="{% static "mezzanine/js/admin/ajax_csrf.js" %}"></script>
+        <script {% csp_nonce %} src="{% static "mezzanine/js/admin/ajax_csrf.js" %}"></script>
     {% endif %}
 {% endif %}
-<script>
+<script {% csp_nonce %}>
     $('.admin-title').on('click', () => location = '{% url "admin:index" %}')
 
     // Set the Description field as readonly if the "Generate description" box is checked

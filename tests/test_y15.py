@@ -63,23 +63,39 @@ def test_media_requires_alt_and_site_prefix(settings):
     asset = Media.objects.create(title="Shot", file=upload, alt="A photo")
     assert asset.alt == "A photo"
     assert f"site-{asset.site_id}" in asset.file.name
+    assert asset.is_public is False
     url = reverse("nova_media_detail", kwargs={"pk": asset.pk})
     assert asset.get_absolute_url() == url
 
     client = Client()
     assert client.get(url).status_code in (302, 404)
+    # Private by default — public endpoint 404s for anonymous.
+    pub = reverse("nova_media_public", kwargs={"pk": asset.pk})
+    assert client.get(pub).status_code == 404
+
     client.force_login(user)
     resp = client.get(url)
     assert resp.status_code == 200
     data = resp.json()
     assert data["alt"] == "A photo"
     assert data["id"] == asset.pk
+    assert data["is_public"] is False
 
     listing = client.get(reverse("nova_media_list"))
     assert listing.status_code == 200
     body = listing.json()
     assert body["ok"] is True
     assert any(item["id"] == asset.pk for item in body["results"])
+
+    # Promote to public metadata (still not Displayable / sitemap).
+    asset.is_public = True
+    asset.save()
+    assert asset.get_absolute_url() == pub
+    anon = Client()
+    public_resp = anon.get(pub)
+    assert public_resp.status_code == 200
+    assert public_resp.json()["is_public"] is True
+    assert public_resp.json()["alt"] == "A photo"
 
 
 @pytest.mark.django_db
