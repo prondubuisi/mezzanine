@@ -328,3 +328,109 @@ def media_detail(request, pk):
             "file": asset.file.url if asset.file else "",
         }
     )
+
+
+def _require_staff_site(request):
+    if not request.user.is_authenticated or not (
+        request.user.is_staff or request.user.is_superuser
+    ):
+        raise Http404
+    if not request.user.is_superuser and not has_site_permission(request.user):
+        raise PermissionDenied
+
+
+@require_GET
+def api_openapi(request):
+    """Minimal OpenAPI 3 skeleton for private Nova API (PR-036)."""
+    _require_staff_site(request)
+    spec = {
+        "openapi": "3.0.3",
+        "info": {
+            "title": "Nova private API",
+            "version": "0.1.0",
+            "description": "Staff-only endpoints under /_nova/.",
+        },
+        "paths": {
+            "/_nova/healthz": {
+                "get": {
+                    "summary": "Health check",
+                    "responses": {"200": {"description": "OK"}},
+                }
+            },
+            "/_nova/api/resolve": {
+                "get": {
+                    "summary": "Resolve a path or URL to a Displayable",
+                    "parameters": [
+                        {
+                            "name": "path",
+                            "in": "query",
+                            "schema": {"type": "string"},
+                        }
+                    ],
+                    "responses": {
+                        "200": {"description": "Resolved object"},
+                        "404": {"description": "Not found"},
+                    },
+                }
+            },
+            "/_nova/media/{pk}/": {
+                "get": {
+                    "summary": "Media metadata",
+                    "parameters": [
+                        {
+                            "name": "pk",
+                            "in": "path",
+                            "required": True,
+                            "schema": {"type": "integer"},
+                        }
+                    ],
+                    "responses": {"200": {"description": "Media row"}},
+                }
+            },
+        },
+    }
+    return JsonResponse(spec)
+
+
+@require_GET
+def api_resolve(request):
+    """
+    Resolve a site path to a published Displayable (PR-036).
+
+    Staff-only. Query ``?path=/about/`` (absolute path on current site).
+    """
+    _require_staff_site(request)
+    raw = (request.GET.get("path") or request.GET.get("url") or "").strip()
+    if not raw:
+        return JsonResponse(
+            {"ok": False, "error": "path required"}, status=400
+        )
+    # Accept absolute URLs; use path component only.
+    if "://" in raw:
+        from urllib.parse import urlparse
+
+        raw = urlparse(raw).path or "/"
+    if not raw.startswith("/"):
+        raw = "/" + raw
+    url_map = Displayable.objects.url_map(for_user=request.user)
+    # url_map keys are typically absolute paths or full paths.
+    obj = url_map.get(raw)
+    if obj is None:
+        # Try with/without trailing slash.
+        alt = raw.rstrip("/") or "/"
+        if alt != raw:
+            obj = url_map.get(alt)
+        if obj is None and not raw.endswith("/"):
+            obj = url_map.get(raw + "/")
+    if obj is None or not hasattr(obj, "id"):
+        raise Http404
+    return JsonResponse(
+        {
+            "ok": True,
+            "id": obj.pk,
+            "title": str(getattr(obj, "titles", None) or obj.title),
+            "model": f"{obj._meta.app_label}.{obj._meta.model_name}",
+            "path": raw,
+            "status": getattr(obj, "status", None),
+        }
+    )

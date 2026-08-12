@@ -99,3 +99,44 @@ def test_default_richtext_widget_is_textarea():
     from mezzanine.conf import settings
 
     assert "AdminTextareaWidget" in settings.RICHTEXT_WIDGET_CLASS
+
+
+@pytest.mark.django_db
+def test_api_resolve_and_openapi():
+    user = User.objects.create_superuser(
+        "apiadmin", "api@example.com", "passwordpassword"
+    )
+    page = RichTextPage.objects.create(
+        title="Resolve Me",
+        content="<p>hi</p>",
+        status=2,  # published
+    )
+    # Ensure published status constant
+    from mezzanine.core.models import CONTENT_STATUS_PUBLISHED
+
+    page.status = CONTENT_STATUS_PUBLISHED
+    page.save()
+    client = Client()
+    # Anonymous → 404 (no existence leak)
+    assert client.get(reverse("nova_api_resolve"), {"path": "/"}).status_code in (
+        302,
+        404,
+    )
+    client.force_login(user)
+    openapi = client.get(reverse("nova_api_openapi"))
+    assert openapi.status_code == 200
+    assert openapi.json()["openapi"].startswith("3.")
+    # Resolve by slug path if available
+    path = page.get_absolute_url()
+    resp = client.get(reverse("nova_api_resolve"), {"path": path})
+    # url_map may or may not include draft-default pages; publish first
+    if resp.status_code == 404:
+        # publish and retry
+        page.status = CONTENT_STATUS_PUBLISHED
+        page.save()
+        resp = client.get(reverse("nova_api_resolve"), {"path": path})
+    assert resp.status_code == 200, resp.content
+    data = resp.json()
+    assert data["ok"] is True
+    assert data["id"] == page.pk
+    assert "Resolve" in data["title"]

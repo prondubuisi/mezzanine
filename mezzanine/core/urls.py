@@ -34,11 +34,13 @@ urlpatterns += [
     path("edit/", core_views.edit, name="edit"),
     path("search/", core_views.search, name="search"),
     path("set_site/", core_views.set_site, name="set_site"),
-    # Y1.5 ops / media (PR-036b, PR-026)
+    # Y1.5 ops / media / private API (PR-036b, PR-026, PR-036)
     path("_nova/healthz", core_views.healthz, name="nova_healthz"),
     path(
         "_nova/media/<int:pk>/",
         core_views.media_detail,
         name="nova_media_detail",
     ),
+    path("_nova/api/openapi.json", core_views.api_openapi, name="nova_api_openapi"),
+    path("_nova/api/resolve", core_views.api_resolve, name="nova_api_resolve"),
 ]
