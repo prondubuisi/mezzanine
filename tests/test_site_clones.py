@@ -1,7 +1,6 @@
 """IA site clones: profiles + seed_site_clone for six public-site shapes."""
 
 import pytest
-from django.contrib.auth import get_user_model
 from django.core.management import call_command
 from django.core.management.base import CommandError
 from django.test import Client
@@ -10,8 +9,7 @@ from mezzanine.blog.models import BlogPost
 from mezzanine.core.models import CONTENT_STATUS_PUBLISHED
 from mezzanine.demos.site_profiles import PROFILES, get_profile, list_sites
 from mezzanine.pages.models import RichTextPage
-
-User = get_user_model()
+from tests.factories import SuperUserFactory
 
 ALL_SITES = (
     "techcrunch",
@@ -40,7 +38,7 @@ def test_list_sites_sorted():
 @pytest.mark.django_db
 @pytest.mark.parametrize("slug", ALL_SITES)
 def test_seed_each_site_clone(slug):
-    User.objects.create_superuser("admin", "a@example.com", "passwordpassword")
+    SuperUserFactory(username="admin", email="a@example.com")
     call_command("seed_site_clone", site=slug, verbosity=0, flush=True)
     profile = get_profile(slug)
     for title, page_slug, _html in profile["pages"]:

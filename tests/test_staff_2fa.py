@@ -4,12 +4,10 @@ import os
 from unittest import mock
 
 import pytest
-from django.contrib.auth import get_user_model
 from django.test import RequestFactory, override_settings
 
 from mezzanine.core import staff_2fa
-
-User = get_user_model()
+from tests.factories import SuperUserFactory
 
 
 @pytest.fixture(autouse=True)
@@ -75,9 +73,7 @@ def test_check_errors_when_package_missing():
 
 @pytest.mark.django_db
 def test_user_without_device_passes_enrollment_grace():
-    user = User.objects.create_superuser(
-        "otpgrace", "g@example.com", "passwordpassword"
-    )
+    user = SuperUserFactory(username="otpgrace", email="g@example.com")
     rf = RequestFactory()
     request = rf.get("/admin/")
     request.user = user
@@ -88,9 +84,7 @@ def test_user_without_device_passes_enrollment_grace():
 @pytest.mark.django_db
 def test_user_with_device_requires_verification():
     pytest.importorskip("django_otp")
-    user = User.objects.create_superuser(
-        "otpuser", "o@example.com", "passwordpassword"
-    )
+    user = SuperUserFactory(username="otpuser", email="o@example.com")
     rf = RequestFactory()
     request = rf.get("/admin/")
     request.user = user

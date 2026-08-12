@@ -3,7 +3,6 @@
 from pathlib import Path
 
 import pytest
-from django.contrib.auth import get_user_model
 from django.core.files.storage import default_storage
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import Client
@@ -17,16 +16,14 @@ from mezzanine.core.forms import (
     _normalize_media_path,
 )
 from mezzanine.core.models import Media
+from tests.factories import SuperUserFactory
 
-User = get_user_model()
 REPO = Path(mezzanine.__file__).resolve().parent
 
 
 @pytest.mark.django_db
 def test_media_chooser_popup_lists_assets():
-    user = User.objects.create_superuser(
-        "chooser", "c@example.com", "passwordpassword"
-    )
+    user = SuperUserFactory(username="chooser", email="c@example.com")
     upload = SimpleUploadedFile(
         "pick.jpg", b"\xff\xd8\xff\xd9", content_type="image/jpeg"
     )

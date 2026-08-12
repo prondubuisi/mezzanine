@@ -1,14 +1,12 @@
 """Featured image placeholders on seed_site_clone (parity S5)."""
 
 import pytest
-from django.contrib.auth import get_user_model
 from django.core.management import call_command
 
 from mezzanine.blog.models import BlogPost
 from mezzanine.demos.seed_images import placeholder_png
 from mezzanine.kits.loader import apply_kit
-
-User = get_user_model()
+from tests.factories import SuperUserFactory
 
 
 def test_placeholder_png_is_valid_png():
@@ -39,7 +37,7 @@ def test_editorial_kit_enables_featured_image_setting(tmp_path):
 
 @pytest.mark.django_db
 def test_seed_attaches_featured_images():
-    User.objects.create_superuser("admin", "a@example.com", "passwordpassword")
+    SuperUserFactory(username="admin", email="a@example.com")
     call_command("seed_site_clone", site="techcrunch", flush=True, verbosity=0)
     posts = BlogPost.objects.all()
     assert posts.count() >= 4

@@ -8,7 +8,6 @@ import sys
 from pathlib import Path
 
 import pytest
-from django.contrib.auth import get_user_model
 from django.contrib.auth.models import AnonymousUser
 from django.contrib.messages.storage.fallback import FallbackStorage
 from django.template.loader import get_template
@@ -25,9 +24,9 @@ from mezzanine.kits.loader import (
     validate_kit,
 )
 from mezzanine.pages.models import Page, RichTextPage
+from tests.factories import UserFactory
 
 REPO_ROOT = Path(mezzanine.__file__).resolve().parent.parent
-User = get_user_model()
 
 # Brochure apps only — matches --kit brochure rewrite.
 BROCHURE_APPS = [
@@ -179,8 +178,11 @@ def test_base_html_jquery_absent_for_anonymous():
 
 @pytest.mark.django_db
 def test_base_html_jquery_present_for_staff():
-    staff = User.objects.create_user(
-        "staffer", "s@example.com", "passwordpassword", is_staff=True
+    staff = UserFactory(
+        username="staffer",
+        email="s@example.com",
+        password="passwordpassword",
+        is_staff=True,
     )
     html = _render_base(staff)
     assert "jquery-" in html.lower()

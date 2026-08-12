@@ -3,7 +3,6 @@
 from pathlib import Path
 
 import pytest
-from django.contrib.auth import get_user_model
 from django.core.management import call_command
 from django.test import Client
 
@@ -11,9 +10,9 @@ import mezzanine
 from mezzanine.core.models import CONTENT_STATUS_PUBLISHED
 from mezzanine.kits.loader import apply_kit, load_kit_meta, validate_kit
 from mezzanine.pages.models import RichTextPage
+from tests.factories import SuperUserFactory
 
 REPO = Path(mezzanine.__file__).resolve().parent.parent
-User = get_user_model()
 
 
 def test_wporg_kit_meta_and_shared_base():
@@ -52,7 +51,7 @@ def test_apply_wporg_copies_shared_kit_base(tmp_path):
 
 @pytest.mark.django_db
 def test_seed_wporg_demo_creates_ia():
-    User.objects.create_superuser("admin", "a@example.com", "passwordpassword")
+    SuperUserFactory(username="admin", email="a@example.com")
     call_command("seed_wporg_demo", verbosity=0)
     slugs = set(RichTextPage.objects.values_list("slug", flat=True))
     for needed in (
@@ -81,9 +80,7 @@ def test_seed_wporg_demo_creates_ia():
 
 @pytest.mark.django_db
 def test_import_wporg_inspired_wxr(import_user=None):
-    user = User.objects.create_superuser(
-        "wpimport", "w@example.com", "passwordpassword"
-    )
+    user = SuperUserFactory(username="wpimport", email="w@example.com")
     wxr = REPO / "tests/fixtures/wxr_wporg_inspired.xml"
     assert wxr.is_file()
     call_command(

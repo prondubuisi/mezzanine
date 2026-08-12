@@ -1,7 +1,6 @@
 """Y1.5: document body (025), Media (026), healthz (036b), TinyMCE (028)."""
 
 import pytest
-from django.contrib.auth import get_user_model
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import Client
 from django.urls import reverse
@@ -14,8 +13,7 @@ from mezzanine.core.document import (
 )
 from mezzanine.core.models import Media
 from mezzanine.pages.models import RichTextPage
-
-User = get_user_model()
+from tests.factories import SuperUserFactory
 
 
 def test_body_schema_roundtrip():
@@ -54,9 +52,7 @@ def test_richtextpage_body_syncs_content():
 
 @pytest.mark.django_db
 def test_media_requires_alt_and_site_prefix(settings):
-    user = User.objects.create_superuser(
-        "admin", "a@example.com", "passwordpassword"
-    )
+    user = SuperUserFactory(username="admin", email="a@example.com")
     upload = SimpleUploadedFile(
         "shot.jpg", b"\xff\xd8\xff\xd9", content_type="image/jpeg"
     )
@@ -125,9 +121,7 @@ def test_default_richtext_widget_is_textarea():
 
 @pytest.mark.django_db
 def test_api_resolve_and_openapi():
-    user = User.objects.create_superuser(
-        "apiadmin", "api@example.com", "passwordpassword"
-    )
+    user = SuperUserFactory(username="apiadmin", email="api@example.com")
     page = RichTextPage.objects.create(
         title="Resolve Me",
         content="<p>hi</p>",
