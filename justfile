@@ -59,6 +59,13 @@ demo-whitehouse *args:
 	set -euo pipefail
 	just demo-clone whitehouse --flush "$@"
 
+# Seed tech news desk demo. Project: nova-project tcdemo --kit techcrunch
+# Usage: just demo-techcrunch
+demo-techcrunch *args:
+	#!/usr/bin/env bash
+	set -euo pipefail
+	just demo-clone techcrunch --flush "$@"
+
 # Activate a theme package (ACTIVE_THEME). Usage: just activate-theme spotify
 # Optional: just activate-theme spotify --seed
 activate-theme *args:

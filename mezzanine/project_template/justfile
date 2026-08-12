@@ -59,6 +59,12 @@ demo-whitehouse *args:
 	set -euo pipefail
 	just demo-clone whitehouse --flush "$@"
 
+# Seed tech news desk demo. Project: nova-project tcdemo --kit techcrunch
+demo-techcrunch *args:
+	#!/usr/bin/env bash
+	set -euo pipefail
+	just demo-clone techcrunch --flush "$@"
+
 
 # Seed a named IA site clone. Usage: just demo-clone techcrunch
 # Also: just demo-clone -- --list

@@ -425,6 +425,7 @@ def profile_theme_map() -> dict[str, str]:
     """Map demo site profile slugs → theme kit names (when one exists)."""
     return {
         "whitehouse": "whitehouse",
+        "techcrunch": "techcrunch",
         # Listening CMS demo uses music seed, not newsroom profile.
         "spotify_listen": "spotify",
     }

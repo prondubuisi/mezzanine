@@ -1,0 +1,24 @@
+{
+  "name": "techcrunch",
+  "version": "0.1.0",
+  "description": "Dense tech-news chrome for startups/venture/AI desks.",
+  "kind": "theme",
+  "slots": {
+    "chrome": "kit_base.html",
+    "home": "index.html",
+    "section": "pages/richtextpage.html",
+    "single": "blog/blog_post_detail.html",
+    "page": "pages/richtextpage.html"
+  },
+  "menus": ["primary", "footer"],
+  "colors": {
+    "ink": "#0a0a0a",
+    "accent": "#0a7c42",
+    "accent_ink": "#065f32",
+    "canvas": "#f4f4f5",
+    "paper": "#ffffff"
+  },
+  "tokens": "static/techcrunch/tokens.css",
+  "plugins": [],
+  "seed_profile": "techcrunch"
+}

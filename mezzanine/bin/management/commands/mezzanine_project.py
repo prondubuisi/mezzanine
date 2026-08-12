@@ -32,7 +32,7 @@ class Command(BaseCommand):
             help=(
                 "Site kit to install after the project is written "
                 "(e.g. brochure, magazine, institute, wporg, whitehouse, "
-                "spotify [web player UI])."
+                "techcrunch, spotify)."
             ),
         )
 

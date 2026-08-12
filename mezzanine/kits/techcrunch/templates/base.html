@@ -1,0 +1,27 @@
+{% extends "kit_base.html" %}
+{% load i18n static %}
+
+{% block kit_tokens %}
+<link rel="stylesheet" href="{% static "techcrunch/tokens.css" %}">
+{% endblock %}
+
+{% block kit_primary_nav %}
+<li><a href="{% url 'blog_post_list' %}">{% trans "Latest" %}</a></li>
+<li><a href="/startups/">{% trans "Startups" %}</a></li>
+<li><a href="/venture/">{% trans "Venture" %}</a></li>
+<li><a href="/ai/">{% trans "AI" %}</a></li>
+<li><a href="/apps/">{% trans "Apps" %}</a></li>
+<li><a href="/security/">{% trans "Security" %}</a></li>
+{% endblock %}
+
+{% block kit_footer_nav %}
+<ul class="footer-links">
+  <li><a href="/startups/">{% trans "Startups" %}</a></li>
+  <li><a href="/venture/">{% trans "Venture" %}</a></li>
+  <li><a href="/ai/">{% trans "AI" %}</a></li>
+  <li><a href="/events/">{% trans "Events" %}</a></li>
+  <li><a href="/contact/">{% trans "Contact" %}</a></li>
+  <li><a href="/about/">{% trans "About this demo" %}</a></li>
+  <li><a href="{% url 'blog_post_list' %}">{% trans "All posts" %}</a></li>
+</ul>
+{% endblock %}
