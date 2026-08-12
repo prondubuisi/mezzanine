@@ -58,15 +58,42 @@ _ROLE_CAPS = {
 
 
 def role_for_user(user, site_id=None):
-    """Return the ``SiteRole.role`` string, or ``None``."""
+    """Return the ``SiteRole.role`` string, or ``None``.
+
+    Memoized per request when a request is bound (DESIGN.md Amendment 2 N1 /
+    PR-039). Cache key is ``(user_id, site_id)`` on the request, matching the
+    shape of ``SitePermissionMiddleware``'s ``has_site_permission`` cache.
+    """
     if user is None or not is_authenticated(user):
         return None
     if site_id is None:
         site_id = current_site_id()
+
+    request = None
     try:
-        return SiteRole.objects.get(user=user, site_id=site_id).role
+        from mezzanine.core.request import current_request
+
+        request = current_request()
+    except Exception:  # noqa: BLE001 — never fail capability checks
+        request = None
+
+    cache_key = (getattr(user, "pk", None), site_id)
+    if request is not None:
+        cache = getattr(request, "_nova_role_cache", None)
+        if cache is None:
+            cache = {}
+            request._nova_role_cache = cache
+        if cache_key in cache:
+            return cache[cache_key]
+
+    try:
+        role = SiteRole.objects.get(user=user, site_id=site_id).role
     except SiteRole.DoesNotExist:
-        return None
+        role = None
+
+    if request is not None:
+        request._nova_role_cache[cache_key] = role
+    return role
 
 
 def user_has_capability(user, capability, *, site_id=None, obj=None):
