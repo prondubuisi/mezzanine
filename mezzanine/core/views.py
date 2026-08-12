@@ -396,6 +396,64 @@ def _require_staff_site(request):
 
 
 @require_GET
+def demo_sites_index(request):
+    """
+    Local IA site-clone lab (no auth while pre-public).
+
+    Switch content via POST to ``demo_sites_switch`` or CLI
+    ``seed_site_clone --site=… --flush``. Gate this before any public deploy.
+    """
+    from mezzanine.demos.site_profiles import PROFILES
+
+    current = request.session.get("nova_demo_site", "")
+    sites = [
+        {
+            "slug": slug,
+            "name": meta.get("display_name", slug),
+            "inspired_by": meta.get("inspired_by", ""),
+            "tagline": meta.get("tagline", ""),
+            "pages": [p[0] for p in meta.get("pages", [])],
+            "post_count": len(meta.get("posts", [])),
+            "active": slug == current,
+        }
+        for slug, meta in sorted(PROFILES.items())
+    ]
+    return TemplateResponse(
+        request,
+        "admin/demo_sites.html",
+        {
+            "title": "Site clone lab",
+            "sites": sites,
+            "current": current,
+            "switch_hint": "just demo-clone <slug> --flush",
+        },
+    )
+
+
+@require_POST
+def demo_sites_switch(request):
+    """Load a named IA clone (no auth while pre-public). Gate before deploy."""
+    from django.contrib import messages
+    from django.core.management import call_command
+    from django.http import HttpResponseRedirect
+
+    from mezzanine.demos.site_profiles import get_profile
+
+    slug = (request.POST.get("site") or "").strip()
+    try:
+        get_profile(slug)
+    except KeyError:
+        raise Http404 from None
+    call_command("seed_site_clone", site=slug, flush=True, verbosity=0)
+    request.session["nova_demo_site"] = slug
+    messages.success(
+        request,
+        "Switched demo content to %s. Hard-refresh if needed." % slug,
+    )
+    return HttpResponseRedirect("/")
+
+
+@require_GET
 def api_openapi(request):
     """Minimal OpenAPI 3 skeleton for private Nova API (PR-036)."""
     _require_staff_site(request)

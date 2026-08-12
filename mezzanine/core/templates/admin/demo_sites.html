@@ -1,0 +1,68 @@
+{% load i18n %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>{{ title }} | Nova</title>
+  <style>
+    body { font-family: system-ui, sans-serif; margin: 1.5rem; color: #111; max-width: 52rem; }
+    h1 { font-size: 1.35rem; }
+    .hint { color: #555; font-size: 0.9rem; margin-bottom: 1.25rem; }
+    .card {
+      border: 1px solid #e5e7eb; border-radius: 6px; padding: 0.85rem 1rem;
+      margin-bottom: 0.75rem; background: #fafafa;
+    }
+    .card.active { border-color: #2563eb; background: #eff6ff; }
+    .card h2 { font-size: 1.05rem; margin: 0 0 0.35rem; }
+    .card .meta { font-size: 0.85rem; color: #555; }
+    .card ul { margin: 0.4rem 0 0.6rem 1.1rem; padding: 0; font-size: 0.9rem; }
+    form { display: inline; }
+    button {
+      background: #0f766e; color: #fff; border: 0; border-radius: 4px;
+      padding: 0.4rem 0.75rem; cursor: pointer; font-size: 0.875rem;
+    }
+    button:hover { background: #115e59; }
+    .badge { font-size: 0.75rem; color: #1d4ed8; font-weight: 600; }
+    a { color: #1d4ed8; }
+    code { background: #f3f4f6; padding: 0.1rem 0.3rem; border-radius: 3px; }
+  </style>
+</head>
+<body>
+  <h1>{% trans "Site clone lab" %}</h1>
+  <p class="hint">
+    {% trans "IA demos inspired by public sites (original copy). Prefer a WordPress-like theme package later; today we swap content under one chrome." %}
+    {% if current %}
+    <br>{% trans "Session last switched to:" %} <strong>{{ current }}</strong>
+    {% endif %}
+  </p>
+  <p class="hint">
+    CLI: <code>{{ switch_hint }}</code> ·
+    <a href="/">{% trans "View site" %}</a> ·
+    <a href="{% url 'admin:index' %}">{% trans "Admin" %}</a>
+  </p>
+  {% for site in sites %}
+  <div class="card{% if site.active %} active{% endif %}">
+    <h2>
+      {{ site.name }}
+      {% if site.active %}<span class="badge">{% trans "active" %}</span>{% endif %}
+    </h2>
+    <div class="meta">
+      <code>{{ site.slug }}</code> ·
+      <a href="{{ site.inspired_by }}" rel="noopener" target="_blank">{{ site.inspired_by }}</a>
+      <br>{{ site.tagline }}
+      · {{ site.post_count }} posts
+    </div>
+    <ul>
+      {% for p in site.pages %}<li>{{ p }}</li>{% endfor %}
+      <li>{% trans "News" %} → /blog/</li>
+      <li>{% trans "Contact" %} → /contact/</li>
+    </ul>
+    <form method="post" action="{% url 'nova_demo_sites_switch' %}">
+      {% csrf_token %}
+      <input type="hidden" name="site" value="{{ site.slug }}">
+      <button type="submit">{% trans "Load this site" %}</button>
+    </form>
+  </div>
+  {% endfor %}
+</body>
+</html>

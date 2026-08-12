@@ -279,8 +279,9 @@
       <button data-mode="desk">Editorial desk</button>
       <button data-mode="forms">Forms</button>
       <button data-mode="preview">Draft preview</button>
+      <button data-mode="themes">Themes (KD12b)</button>
     </div>
-    <div class="hint">Clickable mock of A0′ features — not the 2014 Grappelli admin</div>
+    <div class="hint">A0′ mocks + Ecosystem theme package mock — not Grappelli admin</div>
   </header>
 
   <div class="app">
@@ -290,6 +291,7 @@
       <button data-mode="public">View site</button>
       <button data-mode="forms">Form entries</button>
       <button data-mode="preview">Share preview</button>
+      <button data-mode="themes">Themes</button>
       <h2>Institute kit</h2>
       <button disabled>People</button>
       <button disabled>Events</button>
@@ -412,6 +414,63 @@
           </div>
         </div>
       </section>
+
+      <!-- Ecosystem Track mock: WordPress-like theme packages (KD12b / Amendment 1) -->
+      <section class="screen" id="themes">
+        <div class="editor" style="max-width:none;flex:1">
+          <div class="ed-bar">
+            <div>
+              <div class="crumbs">Appearance / Themes</div>
+              <h2 class="ed-title" style="font-size:22px;margin:4px 0 0">Installable themes</h2>
+            </div>
+            <div class="actions">
+              <span class="pill draft">Mock only · not implemented</span>
+              <button class="btn primary" type="button">Upload theme.zip</button>
+            </div>
+          </div>
+          <p style="margin:0 0 14px;color:var(--muted);font-size:13px;max-width:52rem">
+            Preferred abstraction (not kits that copy chrome once): a package with
+            <code>theme.json</code>, template slots (home / section / single / page),
+            menu locations, and CSS tokens. Runtime activate — like WordPress themes,
+            on Django templates. Kits become <em>theme + seed recipe</em>.
+          </p>
+          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px">
+            <div style="border:1px solid var(--line);border-radius:8px;padding:12px;background:var(--white)">
+              <div style="height:72px;border-radius:6px;background:linear-gradient(135deg,#0f766e,#99f6e4);margin-bottom:8px"></div>
+              <strong>Brochure</strong>
+              <div style="font-size:12px;color:var(--muted)">Active · marketing pages</div>
+              <div class="actions" style="margin-top:8px"><button class="btn ghost" type="button">Customize</button></div>
+            </div>
+            <div style="border:2px solid var(--accent);border-radius:8px;padding:12px;background:var(--white)">
+              <div style="height:72px;border-radius:6px;background:linear-gradient(135deg,#1d4ed8,#93c5fd);margin-bottom:8px"></div>
+              <strong>Newsroom</strong>
+              <div style="font-size:12px;color:var(--muted)">Slots: home river, section, single</div>
+              <div class="actions" style="margin-top:8px"><button class="btn primary" type="button">Activate</button></div>
+            </div>
+            <div style="border:1px solid var(--line);border-radius:8px;padding:12px;background:var(--white)">
+              <div style="height:72px;border-radius:6px;background:linear-gradient(135deg,#b45309,#fde68a);margin-bottom:8px"></div>
+              <strong>Magazine</strong>
+              <div style="font-size:12px;color:var(--muted)">Sections · packages · ideas</div>
+              <div class="actions" style="margin-top:8px"><button class="btn ghost" type="button">Activate</button></div>
+            </div>
+            <div style="border:1px solid var(--line);border-radius:8px;padding:12px;background:var(--white)">
+              <div style="height:72px;border-radius:6px;background:linear-gradient(135deg,#334155,#cbd5e1);margin-bottom:8px"></div>
+              <strong>Institution</strong>
+              <div style="font-size:12px;color:var(--muted)">Gov / university chrome</div>
+              <div class="actions" style="margin-top:8px"><button class="btn ghost" type="button">Activate</button></div>
+            </div>
+          </div>
+          <div style="margin-top:18px;border:1px dashed var(--line);border-radius:8px;padding:12px;font-size:13px">
+            <b>theme.json (sketch)</b>
+            <pre style="margin:8px 0 0;font-family:var(--mono);font-size:11px;overflow:auto">{
+  "name": "newsroom",
+  "slots": ["chrome","home","section","single","page","form"],
+  "menus": ["primary","footer","social"],
+  "tokens": "static/newsroom/tokens.css"
+}</pre>
+          </div>
+        </div>
+      </section>
     </main>
   </div>
 
@@ -419,7 +478,7 @@
     <div><b>Page tree</b> Hierarchical nav. Blog is not a page.</div>
     <div><b>Draft / preview</b> Opaque token. Staff no longer sees every draft.</div>
     <div><b>Forms</b> Page-native builder, CSV, site-scoped files.</div>
-    <div><b>Typed + Django</b> Models, not wp_posts. Escape hatch is still admin.</div>
+    <div><b>Themes (KD12b)</b> WP-like packages: slots, menus, tokens — mock only.</div>
   </footer>
 
   <script>
