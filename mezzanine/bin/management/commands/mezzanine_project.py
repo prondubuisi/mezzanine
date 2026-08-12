@@ -29,7 +29,10 @@ class Command(BaseCommand):
             dest="kit",
             metavar="NAME",
             default=None,
-            help="Site kit to install after the project is written (e.g. brochure).",
+            help=(
+                "Site kit to install after the project is written "
+                "(e.g. brochure, magazine)."
+            ),
         )
 
     def handle(self, *args, **options):

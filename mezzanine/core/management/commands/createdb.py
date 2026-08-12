@@ -116,18 +116,30 @@ class Command(BaseCommand):
         User.objects.create_superuser(*args)
 
     def create_pages(self):
-        # Brochure Friday path: kit fixture only (no blog page, no gallery).
-        if "mezzanine.kits.brochure" in settings.INSTALLED_APPS:
+        # First-party kits: load kit demo fixture (and seed blog for magazine).
+        kit_apps = (
+            ("mezzanine.kits.brochure", "Brochure", "About, Services, Contact form."),
+            (
+                "mezzanine.kits.magazine",
+                "Magazine",
+                "About, Contact form, and a sample blog post.",
+            ),
+        )
+        for app_label, label, desc in kit_apps:
+            if app_label not in settings.INSTALLED_APPS:
+                continue
             if self.no_data:
                 return
             install = self.confirm(
-                "\nWould you like to install Brochure demo pages?\n"
-                "About, Services, Contact form. (yes/no): "
+                f"\nWould you like to install {label} demo content?\n"
+                f"{desc} (yes/no): "
             )
             if install:
                 if self.verbosity >= 1:
-                    print("\nLoading Brochure demo pages ...\n")
+                    print(f"\nLoading {label} demo content ...\n")
                 call_command("loaddata", "demo")
+                if app_label == "mezzanine.kits.magazine":
+                    self._seed_magazine_blog_post()
             return
 
         # Required fixture is pages-only. Optional dump spans pages + forms +
@@ -154,6 +166,32 @@ class Command(BaseCommand):
         gallery = Gallery.objects.get()
         gallery.zip_import = zip_name
         gallery.save()
+
+    def _seed_magazine_blog_post(self):
+        """Create one published sample post for Magazine kit demos."""
+        if "mezzanine.blog" not in settings.INSTALLED_APPS:
+            return
+        from django.contrib.auth import get_user_model
+
+        from mezzanine.blog.models import BlogPost
+        from mezzanine.core.models import CONTENT_STATUS_PUBLISHED
+
+        if BlogPost.objects.exists():
+            return
+        user = get_user_model().objects.order_by("id").first()
+        if user is None:
+            return
+        BlogPost.objects.create(
+            title="Welcome to the magazine",
+            user=user,
+            content=(
+                "<p>This is a sample editorial post. Replace it with your "
+                "own WordPress import or write new posts in admin.</p>"
+            ),
+            status=CONTENT_STATUS_PUBLISHED,
+        )
+        if self.verbosity >= 1:
+            print("Created sample magazine blog post.\n")
 
     def create_shop(self):
         call_command("loaddata", "cartridge_required.json")

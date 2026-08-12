@@ -36,16 +36,26 @@ if "django.contrib.sitemaps" in settings.INSTALLED_APPS:
         path("sitemap.xml", sitemap, sitemaps),
     ]
 
-# Return a robots.txt that disallows all spiders when DEBUG is True.
-if getattr(settings, "DEBUG", False):
-    urlpatterns += [
-        path(
-            "robots.txt",
-            lambda r: HttpResponse(
-                "User-agent: *\nDisallow: /", content_type="text/plain"
-            ),
-        ),
-    ]
+# robots.txt: block crawlers in DEBUG; allow with sitemap pointer when live
+# (WordPress marketing-site SEO parity).
+def _robots_txt(request):
+    if getattr(settings, "DEBUG", False):
+        body = "User-agent: *\nDisallow: /\n"
+    else:
+        body = (
+            "User-agent: *\n"
+            "Allow: /\n"
+            "Disallow: /admin/\n"
+            "Disallow: /_nova/\n"
+            "Sitemap: %s/sitemap.xml\n"
+            % request.build_absolute_uri("/").rstrip("/")
+        )
+    return HttpResponse(body, content_type="text/plain")
+
+
+urlpatterns += [
+    path("robots.txt", _robots_txt),
+]
 
 # Miscellanous Mezzanine patterns.
 urlpatterns += [

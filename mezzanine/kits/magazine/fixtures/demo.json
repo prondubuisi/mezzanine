@@ -1,0 +1,94 @@
+[
+  {
+    "pk": 2,
+    "model": "pages.page",
+    "fields": {
+      "status": 2,
+      "_order": 0,
+      "parent": null,
+      "description": "About this magazine",
+      "title": "About",
+      "titles": "About",
+      "content_model": "richtextpage",
+      "in_menus": [1, 2, 3],
+      "slug": "about",
+      "site": 1
+    }
+  },
+  {
+    "pk": 3,
+    "model": "pages.page",
+    "fields": {
+      "status": 2,
+      "_order": 1,
+      "parent": null,
+      "description": "Contact the editors",
+      "title": "Contact",
+      "titles": "Contact",
+      "content_model": "form",
+      "in_menus": [1, 2, 3],
+      "slug": "contact",
+      "site": 1
+    }
+  },
+  {
+    "pk": 2,
+    "model": "pages.richtextpage",
+    "fields": {
+      "content": "<p>A Magazine site pairs brochure pages with a blog for editorial posts.</p>"
+    }
+  },
+  {
+    "pk": 3,
+    "model": "forms.form",
+    "fields": {
+      "send_email": true,
+      "email_copies": "",
+      "content": "<p>Send a note to the newsroom.</p>",
+      "response": "<p>Thanks — editors will reply soon.</p>",
+      "email_from": ""
+    }
+  },
+  {
+    "pk": 1,
+    "model": "forms.field",
+    "fields": {
+      "field_type": 1,
+      "_order": 0,
+      "form": 3,
+      "required": true,
+      "label": "Name",
+      "visible": true,
+      "choices": "",
+      "default": ""
+    }
+  },
+  {
+    "pk": 2,
+    "model": "forms.field",
+    "fields": {
+      "field_type": 3,
+      "_order": 1,
+      "form": 3,
+      "required": true,
+      "label": "Email",
+      "visible": true,
+      "choices": "",
+      "default": ""
+    }
+  },
+  {
+    "pk": 3,
+    "model": "forms.field",
+    "fields": {
+      "field_type": 2,
+      "_order": 2,
+      "form": 3,
+      "required": true,
+      "label": "Message",
+      "visible": true,
+      "choices": "",
+      "default": ""
+    }
+  }
+]

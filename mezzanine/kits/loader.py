@@ -144,7 +144,9 @@ def apply_kit(name: str, project_dir: str | Path, project_app: str) -> dict:
 
     # Settings first so a rewrite failure does not leave kit templates alone.
     if name == "brochure":
-        _apply_brochure_settings(project_app_dir)
+        _apply_kit_settings(project_app_dir, name, with_blog=False)
+    elif name == "magazine":
+        _apply_kit_settings(project_app_dir, name, with_blog=True)
 
     templates_src = root / "templates"
     if templates_src.is_dir():
@@ -164,39 +166,45 @@ def apply_kit(name: str, project_dir: str | Path, project_app: str) -> dict:
     return meta
 
 
-def _apply_brochure_settings(project_app_dir: Path) -> None:
+def _apply_kit_settings(
+    project_app_dir: Path, kit_name: str, *, with_blog: bool
+) -> None:
+    """Rewrite INSTALLED_APPS for a first-party kit (brochure / magazine)."""
     settings_path = project_app_dir / "settings.py"
     text = settings_path.read_text(encoding="utf-8")
-    brochure_apps = """INSTALLED_APPS = [
-    "django.contrib.admin",
-    "django.contrib.auth",
-    "django.contrib.contenttypes",
-    "django.contrib.redirects",
-    "django.contrib.sessions",
-    "django.contrib.sites",
-    "django.contrib.sitemaps",
-    "django.contrib.messages",
-    "django.contrib.staticfiles",
-    "mezzanine.kits.brochure",
-    "mezzanine.boot",
-    "mezzanine.conf",
-    "mezzanine.core",
-    "mezzanine.generic",
-    "mezzanine.pages",
-    "mezzanine.forms",
-    "mezzanine.migrate",
-]
-"""
+    apps = [
+        "django.contrib.admin",
+        "django.contrib.auth",
+        "django.contrib.contenttypes",
+        "django.contrib.redirects",
+        "django.contrib.sessions",
+        "django.contrib.sites",
+        "django.contrib.sitemaps",
+        "django.contrib.messages",
+        "django.contrib.staticfiles",
+        f"mezzanine.kits.{kit_name}",
+        "mezzanine.boot",
+        "mezzanine.conf",
+        "mezzanine.core",
+        "mezzanine.generic",
+        "mezzanine.pages",
+        "mezzanine.forms",
+        "mezzanine.migrate",
+    ]
+    if with_blog:
+        apps.insert(apps.index("mezzanine.pages") + 1, "mezzanine.blog")
+    apps_block = "INSTALLED_APPS = [\n" + "".join(
+        f'    "{app}",\n' for app in apps
+    ) + "]"
     new_text, n = re.subn(
         r"INSTALLED_APPS\s*=\s*\[[^\]]*\]",
-        brochure_apps.rstrip(),
+        apps_block,
         text,
         count=1,
         flags=re.S,
     )
     if n != 1:
-        raise KitError("Could not rewrite INSTALLED_APPS for brochure kit")
-    # Project templates dir is already in TEMPLATES DIRS; ensure static dir.
+        raise KitError("Could not rewrite INSTALLED_APPS for %s kit" % kit_name)
     if "STATICFILES_DIRS" not in new_text:
         new_text = new_text.replace(
             "STATIC_ROOT = os.path.join(PROJECT_ROOT, STATIC_URL.strip(\"/\"))",
@@ -204,4 +212,16 @@ def _apply_brochure_settings(project_app_dir: Path) -> None:
             "STATICFILES_DIRS = [os.path.join(PROJECT_ROOT, \"static\")]",
             1,
         )
+    # Magazine: comments stay off for WP marketing parity without plugin hell.
+    if with_blog and "COMMENTS_DEFAULT_APPROVED" not in new_text:
+        new_text += (
+            "\n# Magazine kit: comments off by default (design Y1).\n"
+            "COMMENTS_DEFAULT_APPROVED = False\n"
+            "COMMENTS_ACCOUNT_REQUIRED = True\n"
+        )
     settings_path.write_text(new_text, encoding="utf-8")
+
+
+def _apply_brochure_settings(project_app_dir: Path) -> None:
+    """Backward-compatible alias for tests."""
+    _apply_kit_settings(project_app_dir, "brochure", with_blog=False)

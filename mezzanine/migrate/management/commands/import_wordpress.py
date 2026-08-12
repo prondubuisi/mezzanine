@@ -357,7 +357,8 @@ class Command(BaseImporterCommand):
             else:
                 self.report.note_unmapped(str(post_type))
 
-        # Residual attachments: not used as a post featured image (no Media yet).
+        # Residual attachments → Media library (PR-026 SiteRelated), not
+        # featured on a post.
         for att_id, att in attachments.items():
             if att_id in used_attachment_ids:
                 continue
@@ -365,10 +366,26 @@ class Command(BaseImporterCommand):
                 self.report.skipped.append(
                     "attachment skipped (--skip-attachments): %s" % att["url"]
                 )
-            else:
+                continue
+            fetched = self._fetch_attachment_bytes(att["url"])
+            if not fetched:
+                continue
+            name, content = fetched
+            try:
+                from django.core.files.base import ContentFile
+
+                from mezzanine.core.models import Media
+
+                media = Media(
+                    title=att.get("title") or name,
+                    alt=att.get("title") or name,
+                )
+                media.file.save(name, ContentFile(content), save=False)
+                media.save()
+                self.report.attachments_imported += 1
+            except Exception as exc:  # noqa: BLE001
                 self.report.note_attachment_failure(
-                    "attachment not linked to a post featured image "
-                    "(no Media model in Y1): %s" % att["url"]
+                    "media library import failed for %s: %s" % (att["url"], exc)
                 )
 
     def wp_caption(self, post):

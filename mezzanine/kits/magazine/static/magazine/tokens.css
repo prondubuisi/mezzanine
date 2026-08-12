@@ -1,0 +1,69 @@
+/* Magazine design tokens (PR-033): editorial blog + pages. */
+:root {
+  --nova-ink: #111827;
+  --nova-muted: #6b7280;
+  --nova-line: #e5e7eb;
+  --nova-paper: #ffffff;
+  --nova-canvas: #f9fafb;
+  --nova-accent: #b45309;
+  --nova-accent-ink: #78350f;
+  --nova-font-serif: "Source Serif 4", "Iowan Old Style", Georgia, serif;
+  --nova-font-sans: "Source Sans 3", "Avenir Next", system-ui, sans-serif;
+  --nova-measure: 42rem;
+  --nova-space: 1.25rem;
+  --nova-radius: 4px;
+}
+
+body {
+  color: var(--nova-ink);
+  background: var(--nova-canvas);
+  font-family: var(--nova-font-sans);
+  line-height: 1.65;
+}
+
+h1, h2, h3, .navbar-brand, .blog-post-title {
+  font-family: var(--nova-font-serif);
+  letter-spacing: -0.01em;
+}
+
+a { color: var(--nova-accent); }
+a:hover, a:focus { color: var(--nova-accent-ink); }
+
+.navbar-default {
+  background: var(--nova-paper);
+  border-color: var(--nova-line);
+  box-shadow: 0 1px 0 var(--nova-line);
+}
+
+.navbar-default .navbar-brand {
+  color: var(--nova-ink);
+  font-weight: 600;
+}
+
+.blog-list-detail,
+.blog-post-detail {
+  max-width: var(--nova-measure);
+}
+
+.site-info, .breadcrumb, .blog-list-detail .post-meta {
+  color: var(--nova-muted);
+}
+
+.panel-default {
+  border-color: var(--nova-line);
+  border-radius: var(--nova-radius);
+}
+
+.btn-primary,
+.btn-primary:hover,
+.btn-primary:focus {
+  background-color: var(--nova-accent);
+  border-color: var(--nova-accent-ink);
+}
+
+.middle {
+  background: var(--nova-paper);
+  padding: calc(var(--nova-space) * 1.5);
+  border: 1px solid var(--nova-line);
+  border-radius: var(--nova-radius);
+}
