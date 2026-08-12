@@ -47,6 +47,16 @@ up *args:
 	fi
 	docker compose up "$@"
 
+
+# Seed a wordpress.org–inspired marketing site (kit wporg project).
+# Usage (from monorepo or generated project with wporg kit):
+#   just demo-wporg
+#   just demo-wporg --flush
+demo-wporg *args:
+	#!/usr/bin/env bash
+	set -euo pipefail
+	just _django seed_wporg_demo "$@"
+
 # Import a WordPress WXR export.
 # Usage:
 #   just import-wp path/to/export.xml

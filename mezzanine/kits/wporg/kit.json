@@ -1,0 +1,13 @@
+{
+  "name": "wporg",
+  "version": "0.1.0",
+  "nova_compat": ">=0.1,<2",
+  "types": [
+    "pages.RichTextPage",
+    "pages.Link",
+    "forms.Form",
+    "blog.BlogPost"
+  ],
+  "tokens": "static/wporg/tokens.css",
+  "description": "IA inspired by wordpress.org — marketing pages + news blog (PoC)."
+}

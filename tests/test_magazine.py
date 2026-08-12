@@ -18,6 +18,8 @@ def test_magazine_kit_json_shape():
     assert (root / "static/magazine/tokens.css").is_file()
     assert (root / "fixtures/demo.json").is_file()
     assert (root / "templates/base.html").is_file()
+    base = (root / "templates/base.html").read_text(encoding="utf-8")
+    assert "kit_base.html" in base
     tokens = (root / "static/magazine/tokens.css").read_text(encoding="utf-8")
     assert "--nova-accent" in tokens
     assert "Source Serif" in tokens or "serif" in tokens

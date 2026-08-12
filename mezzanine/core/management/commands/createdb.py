@@ -118,11 +118,21 @@ class Command(BaseCommand):
     def create_pages(self):
         # First-party kits: load kit demo fixture (and seed blog for magazine).
         kit_apps = (
+            (
+                "mezzanine.kits.wporg",
+                "wordpress.org-style",
+                "Features, Learn, Community, News, Get started (seed_wporg_demo).",
+            ),
             ("mezzanine.kits.brochure", "Brochure", "About, Services, Contact form."),
             (
                 "mezzanine.kits.magazine",
                 "Magazine",
                 "About, Contact form, and a sample blog post.",
+            ),
+            (
+                "mezzanine.kits.institute",
+                "Institute",
+                "Higher-ed pages + news (demo fixture).",
             ),
         )
         for app_label, label, desc in kit_apps:
@@ -137,9 +147,12 @@ class Command(BaseCommand):
             if install:
                 if self.verbosity >= 1:
                     print(f"\nLoading {label} demo content ...\n")
-                call_command("loaddata", "demo")
-                if app_label == "mezzanine.kits.magazine":
-                    self._seed_magazine_blog_post()
+                if app_label == "mezzanine.kits.wporg":
+                    call_command("seed_wporg_demo")
+                else:
+                    call_command("loaddata", "demo")
+                    if app_label == "mezzanine.kits.magazine":
+                        self._seed_magazine_blog_post()
             return
 
         # Required fixture is pages-only. Optional dump spans pages + forms +

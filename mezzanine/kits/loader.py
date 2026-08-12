@@ -145,16 +145,35 @@ def apply_kit(name: str, project_dir: str | Path, project_app: str) -> dict:
     # Settings first so a rewrite failure does not leave kit templates alone.
     if name == "brochure":
         _apply_kit_settings(project_app_dir, name, with_blog=False)
-    elif name in ("magazine", "institute"):
-        # Magazine + Institute both need blog + forms for editorial/news.
+    elif name in ("magazine", "institute", "wporg"):
+        # Editorial / news kits need blog + forms.
         _apply_kit_settings(project_app_dir, name, with_blog=True)
+
+    templates_dest = project_dir / "templates"
+    if templates_dest.exists():
+        shutil.rmtree(templates_dest)
+    templates_dest.mkdir(parents=True, exist_ok=True)
+
+    # Shared kit chrome first (kit_base.html), then kit-specific overlay.
+    shared_templates = Path(mezzanine.__path__[0]) / "kits" / "shared" / "templates"
+    if shared_templates.is_dir():
+        for item in shared_templates.iterdir():
+            target = templates_dest / item.name
+            if item.is_dir():
+                shutil.copytree(item, target)
+            else:
+                shutil.copy2(item, target)
 
     templates_src = root / "templates"
     if templates_src.is_dir():
-        dest = project_dir / "templates"
-        if dest.exists():
-            shutil.rmtree(dest)
-        shutil.copytree(templates_src, dest)
+        for item in templates_src.iterdir():
+            target = templates_dest / item.name
+            if item.is_dir():
+                if target.exists():
+                    shutil.rmtree(target)
+                shutil.copytree(item, target)
+            else:
+                shutil.copy2(item, target)
 
     static_src = root / "static"
     if static_src.is_dir():

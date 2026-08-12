@@ -31,7 +31,7 @@ class Command(BaseCommand):
             default=None,
             help=(
                 "Site kit to install after the project is written "
-                "(e.g. brochure, magazine, institute)."
+                "(e.g. brochure, magazine, institute, wporg)."
             ),
         )
 

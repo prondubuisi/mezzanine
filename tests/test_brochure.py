@@ -263,12 +263,14 @@ def test_nova_project_kit_brochure(tmp_path):
     assert (project / ".nova-kit").read_text().strip() == "brochure"
     assert (project / "static" / "brochure" / "tokens.css").is_file()
     assert (project / "templates" / "base.html").is_file()
+    assert (project / "templates" / "kit_base.html").is_file()
     base = (project / "templates" / "base.html").read_text()
+    chrome = (project / "templates" / "kit_base.html").read_text()
     assert "brochure/tokens.css" in base
-    assert "bs3-compat.css" in base
-    assert "user.is_staff" in base
-    # No public jQuery on brochure base either.
-    staff_block = base.split("user.is_authenticated and user.is_staff", 1)[1]
+    assert "bs3-compat.css" in chrome
+    assert "user.is_staff" in chrome
+    # No public jQuery on kit chrome either.
+    staff_block = chrome.split("user.is_authenticated and user.is_staff", 1)[1]
     staff_block = staff_block.split("{% endnevercache %}", 1)[0]
     assert "JQUERY_FILENAME" in staff_block
 
