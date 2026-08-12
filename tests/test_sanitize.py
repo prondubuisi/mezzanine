@@ -29,10 +29,10 @@ from mezzanine.blog.models import BlogPost
 from mezzanine.conf import settings
 from mezzanine.core.defaults import RICHTEXT_FILTER_LEVEL_NONE
 from mezzanine.core.models import CONTENT_STATUS_PUBLISHED
-from mezzanine.utils.html import escape as richtext_escape
 from mezzanine.forms import fields
 from mezzanine.forms.models import FieldEntry, Form, FormEntry
 from mezzanine.pages.models import RichTextPage
+from mezzanine.utils.html import escape as richtext_escape
 from mezzanine.utils.importing import path_for_import
 from mezzanine.utils.tests import TestCase
 

@@ -51,7 +51,6 @@ from mezzanine.utils.importing import import_dotted_path
 from mezzanine.utils.sites import current_site_id, override_current_site_id
 from mezzanine.utils.tests import TestCase
 from mezzanine.utils.urls import admin_url
-
 from tests.factories import RichTextPageFactory
 
 BRANCH_NAME = (

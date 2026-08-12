@@ -22,8 +22,8 @@ from mezzanine.core.models import (
     PREVIEW_ROLE_STAFF,
     PreviewToken,
 )
-from mezzanine.pages.models import Page
 from mezzanine.pages.middleware import PageMiddleware
+from mezzanine.pages.models import Page
 from mezzanine.pages.views import page as page_view
 from mezzanine.utils.cache import cache_get, cache_installed, cache_key_prefix
 from mezzanine.utils.deprecation import (

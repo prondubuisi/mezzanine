@@ -124,7 +124,8 @@ def validate_kit(meta: dict, *, version: str | None = None) -> None:
         source = Path(spec.origin).read_text(encoding="utf-8")
         if not re.search(r"class\s+%s\b" % re.escape(attr), source):
             raise KitError(
-                "kit %r type %r is not installed (no class %s)" % (name, type_name, attr)
+                "kit %r type %r is not installed (no class %s)"
+                % (name, type_name, attr)
             )
 
 

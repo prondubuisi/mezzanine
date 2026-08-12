@@ -122,6 +122,7 @@ def test_feedparser_in_migrate_extra():
 
 
 def test_migrate_app_packaged():
-    assert (REPO_ROOT / "mezzanine/migrate/management/commands/import_wordpress.py").is_file()
+    cmd = REPO_ROOT / "mezzanine/migrate/management/commands/import_wordpress.py"
+    assert cmd.is_file()
     assert (REPO_ROOT / "mezzanine/migrate/base.py").is_file()
     assert (REPO_ROOT / "mezzanine/migrate/report.py").is_file()

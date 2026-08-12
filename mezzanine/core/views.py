@@ -27,8 +27,8 @@ from django.views.decorators.csrf import requires_csrf_token
 from django.views.decorators.http import require_http_methods, require_POST
 
 from mezzanine.conf import settings
-from mezzanine.core.forms import get_edit_form
 from mezzanine.core.capabilities import user_can_edit
+from mezzanine.core.forms import get_edit_form
 from mezzanine.core.models import Displayable, SiteRole
 from mezzanine.utils.sites import has_site_permission
 from mezzanine.utils.urls import next_url

@@ -11,7 +11,6 @@ import pytest
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import AnonymousUser
 from django.contrib.messages.storage.fallback import FallbackStorage
-from django.core.management import call_command
 from django.template.loader import get_template
 from django.test import RequestFactory, override_settings
 

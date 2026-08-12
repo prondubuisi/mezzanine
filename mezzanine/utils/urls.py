@@ -8,7 +8,6 @@ from django.utils import translation
 from django.utils.encoding import smart_str
 from django.utils.http import url_has_allowed_host_and_scheme
 
-
 from mezzanine.conf import settings
 from mezzanine.utils.importing import import_dotted_path
 

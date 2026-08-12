@@ -220,7 +220,11 @@ class TestsForm(TestCase):
             ("payload.html", b"<script>alert(1)</script>", "text/html"),
             ("malware.exe", b"MZ", "application/octet-stream"),
             ("xss.js", b"alert(1)", "text/javascript"),
-            ("image.svg", b"<svg xmlns='http://www.w3.org/2000/svg'></svg>", "image/svg+xml"),
+            (
+                "image.svg",
+                b"<svg xmlns='http://www.w3.org/2000/svg'></svg>",
+                "image/svg+xml",
+            ),
         ):
             uploaded = SimpleUploadedFile(name, content, content_type=content_type)
             form = FormForForm(
