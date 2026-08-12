@@ -47,12 +47,18 @@ up *args:
 	fi
 	docker compose up "$@"
 
-# Import a WordPress WXR export. Usage: just import-wp path/to/export.xml
+# Import a WordPress WXR export.
+# Usage:
+#   just import-wp path/to/export.xml
+#   just import-wp path/to/export.xml --report-json=./migration-report.json
+#   just import-wp path/to/export.xml --skip-attachments
+# Env: NOVA_IMPORT_USER (default admin). Needs nova-cms[migrate] / feedparser.
 import-wp *args:
 	#!/usr/bin/env bash
 	set -euo pipefail
 	if [ "$#" -lt 1 ]; then
-		echo "usage: just import-wp path/to/export.xml" >&2
+		echo "usage: just import-wp path/to/export.xml [--report-json=PATH] [import_wordpress flags…]" >&2
+		echo "Prints a human MigrationReport plus one-line JSON; use --report-json to save it." >&2
 		exit 2
 	fi
 	url="$1"

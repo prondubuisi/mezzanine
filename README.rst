@@ -47,7 +47,12 @@ mounted so the container can ``pip install -e`` it::
 ``nova-project`` writes the project. Optionally::
 
     $ just import-wp ./export.xml   # requires nova-cms[migrate] (feedparser)
+    $ just import-wp ./export.xml --report-json=./migration-report.json
     $ just test
+
+WordPress import prints a migration report (posts/pages/redirects/
+attachments, unmapped types, URL fidelity) and optional JSON via
+``--report-json``. See ``docs/blog-importing.rst``.
 
 Without compose/just::
 
@@ -70,6 +75,37 @@ documentation overview for dependencies and adding Nova to an existing
 Django project.
 
 
+Publishing ``nova-cms`` (PyPI)
+==============================
+
+Package name on PyPI is ``nova-cms``; import path remains ``mezzanine``.
+In-tree version is the hatchling sentinel ``9999dev0`` until a release
+tag rewrites it.
+
+Releases are published by ``.github/workflows/publish.yml`` on a
+published GitHub Release or a ``v*`` tag, using **Trusted Publishing**
+(OIDC) — no long-lived ``PYPI_TOKEN``. One-time setup:
+
+1. Create a GitHub Environment named ``pypi`` on this repository.
+2. On https://pypi.org/manage/account/publishing/ add a trusted
+   publisher for project ``nova-cms``: this repo, workflow
+   ``publish.yml``, environment ``pypi``.
+3. Tag and push (or publish a GitHub Release)::
+
+       $ git tag v0.1.0a1
+       $ git push origin v0.1.0a1
+
+Local smoke check (does not upload)::
+
+    $ python -m pip install -U build
+    $ python -m build
+    $ twine check dist/*
+
+The first live upload needs the Trusted Publisher + environment above;
+without them CI publish will fail at the OIDC exchange — that is the
+only intentional ship gate for PyPI.
+
+
 Features
 ========
 
@@ -81,10 +117,12 @@ still ships:
 * Per-(user, site) roles for on-site edit and preview issue
 * Scheduled publishing
 * Drag-and-drop page ordering
-* WYSIWYG editing in admin (TinyMCE 4 until Y1.5)
+* WYSIWYG editing in admin (TinyMCE 7 via optional CDN; plain textarea by default)
+* Media library + admin file chooser (no filebrowser required)
+* Scheduled publish / expiry on every Displayable in admin
 * `In-line page editing`_ via HTMX textarea islands (no public jQuery)
 * Brochure site kit for Friday install of a marketing site
-* Adult WordPress WXR import (permalinks, Yoast meta, redirect report)
+* Adult WordPress WXR import (permalinks, Yoast meta, redirect + JSON report)
 * Drag-and-drop HTML5 forms builder with CSV export
 * SEO friendly URLs and meta data
 * Configurable `dashboard`_ widgets

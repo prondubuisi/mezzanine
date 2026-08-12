@@ -63,6 +63,39 @@ The next step is to run the ``import_wordpress`` command where the
 
     $ python manage.py import_wordpress --mezzanine-user=.. --url=[path|URL]
 
+Or from a Friday-path project (or this monorepo)::
+
+    $ just import-wp ./export.xml
+    $ just import-wp ./export.xml --report-json=./migration-report.json
+
+What gets imported
+------------------
+
+* **Posts** → ``BlogPost`` (when ``mezzanine.blog`` is installed), with
+  categories, tags, comments, and Yoast title/description when present.
+* **Pages** → ``RichTextPage`` with parent tree preserved.
+* **Permalinks** → ``django.contrib.redirects.Redirect`` (old → new).
+* **Featured images** → ``BlogPost.featured_image`` (FileField).
+* **Other attachments** → ``Media`` library rows for the current site
+  (Core → Media), so they appear in the admin chooser.
+
+Migration report
+----------------
+
+At the end of a successful import the command prints a human summary
+(``=== Nova WordPress migration report ===``) and a one-line JSON object
+on stdout (KD15). Write the same JSON to a file with::
+
+    $ python manage.py import_wordpress \
+        --mezzanine-user=admin \
+        --url=./export.xml \
+        --report-json=./migration-report.json
+
+The report includes counts (posts, pages, comments, redirects,
+attachments), unmapped post types, failed attachment downloads, and a
+URL fidelity list (``old`` → ``new``). Use ``--skip-attachments`` to skip
+downloading featured images and residual media.
+
 Importing RSS
 =============
 
