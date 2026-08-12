@@ -9,19 +9,29 @@ from mezzanine.core.admin import (
     BaseTranslationModelAdmin,
     DisplayableAdmin,
     OwnableAdmin,
+    extend_fieldsets,
 )
 
-blogpost_fieldsets = deepcopy(DisplayableAdmin.fieldsets)
-blogpost_fieldsets[0][1]["fields"].insert(1, "categories")
-blogpost_fieldsets[0][1]["fields"].extend(["content", "allow_comments"])
+_blogpost_insertions = [
+    (1, "categories"),
+    "content",
+    "allow_comments",
+]
 blogpost_list_display = ["title", "user", "status", "admin_link", "view_draft_link"]
 if settings.BLOG_USE_FEATURED_IMAGE:
-    blogpost_fieldsets[0][1]["fields"].insert(-2, "featured_image")
+    _blogpost_insertions.append((-2, "featured_image"))
     blogpost_list_display.insert(0, "admin_thumb")
-blogpost_fieldsets = list(blogpost_fieldsets)
-blogpost_fieldsets.insert(
-    1,
-    (_("Other posts"), {"classes": ("collapse-closed",), "fields": ("related_posts",)}),
+_blogpost_insertions.append(
+    (
+        1,
+        (
+            _("Other posts"),
+            {"classes": ("collapse-closed",), "fields": ("related_posts",)},
+        ),
+    )
+)
+blogpost_fieldsets = extend_fieldsets(
+    DisplayableAdmin.fieldsets, _blogpost_insertions
 )
 blogpost_list_filter = deepcopy(DisplayableAdmin.list_filter) + ("categories",)
 

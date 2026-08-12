@@ -70,6 +70,59 @@ else:
 User = get_user_model()
 
 
+def extend_fieldsets(base_fieldsets, insertions=()):
+    """
+    Deep-copy admin *base_fieldsets* and apply *insertions*.
+
+    Each item in *insertions* is one of:
+
+    - ``str``: append a field name to the first fieldset's ``fields``
+    - ``(index, field_name)``: insert a single field name into the first
+      fieldset (negative indexes match ``list.insert``)
+    - ``(index, [field, ...])``: insert several field names at *index*
+    - ``(index, (title, options))``: insert a whole fieldset group into
+      the outer list, where *options* is a dict with a ``fields`` key
+
+    Returns a list (not a tuple) so further group inserts remain possible.
+    """
+    fieldsets = deepcopy(list(base_fieldsets))
+    if fieldsets:
+        fieldsets[0][1]["fields"] = list(fieldsets[0][1]["fields"])
+
+    for item in insertions:
+        if isinstance(item, str):
+            fieldsets[0][1]["fields"].append(item)
+            continue
+        if not (isinstance(item, (list, tuple)) and len(item) == 2):
+            raise TypeError(
+                "extend_fieldsets insertion must be a field name or "
+                f"(index, payload); got {item!r}"
+            )
+        index, payload = item
+        if _is_fieldset_group(payload):
+            fieldsets.insert(index, payload)
+            continue
+        fields = fieldsets[0][1]["fields"]
+        names = (payload,) if isinstance(payload, str) else list(payload)
+        if index < 0:
+            for name in reversed(names):
+                fields.insert(index, name)
+        else:
+            for offset, name in enumerate(names):
+                fields.insert(index + offset, name)
+    return fieldsets
+
+
+def _is_fieldset_group(payload):
+    """True if *payload* looks like an admin fieldset ``(title, options)``."""
+    return (
+        isinstance(payload, (list, tuple))
+        and len(payload) == 2
+        and isinstance(payload[1], dict)
+        and "fields" in payload[1]
+    )
+
+
 class DisplayableAdminForm(ModelForm):
     def clean_content(form):
         status = form.cleaned_data.get("status")

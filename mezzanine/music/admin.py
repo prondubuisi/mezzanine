@@ -1,8 +1,6 @@
-from copy import deepcopy
-
 from django.contrib import admin
 
-from mezzanine.core.admin import DisplayableAdmin
+from mezzanine.core.admin import DisplayableAdmin, extend_fieldsets
 from mezzanine.music.models import Album, Artist, Playlist, PlaylistTrack, Track
 
 
@@ -14,11 +12,7 @@ class PlaylistTrackInline(admin.TabularInline):
 
 
 def _displayable_fieldsets(*extra_fields):
-    fieldsets = deepcopy(DisplayableAdmin.fieldsets)
-    fields = list(fieldsets[0][1]["fields"])
-    fields.extend(extra_fields)
-    fieldsets[0][1]["fields"] = fields
-    return fieldsets
+    return extend_fieldsets(DisplayableAdmin.fieldsets, extra_fields)
 
 
 @admin.register(Artist)
