@@ -65,6 +65,10 @@ migrate = [
 # RICHTEXT_WIDGET_CLASS). This extra is a packaging marker for operators
 # who opt into the admin rich editor (PR-028).
 tinymce = []
+# PR-023b / KD19: optional staff TOTP. Gate with NOVA_STAFF_2FA=1.
+otp = [
+    "django-otp>=1.5",
+]
 # PR-030: admin skin / media browser are opt-in extras, not kernel deps.
 grappelli = [
     "grappelli_safe>=1.1.1",
@@ -84,6 +88,8 @@ testing = [
     # Present so OPTIONAL_APPS / FileField fallback paths still load in CI.
     "grappelli_safe>=1.1.1",
     "filebrowser_safe>=1.1.1",
+    # PR-023b exercises enrollment / verification paths when opted in.
+    "django-otp>=1.5",
 ]
 codestyle = [
     "ruff>=0.16,<0.17",

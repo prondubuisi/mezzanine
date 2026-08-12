@@ -171,3 +171,27 @@ def check_richtext_document_body(app_configs, **kwargs):
             )
         )
     return issues
+
+
+STAFF_2FA_MISSING_PKG_ERROR = (
+    "NOVA_STAFF_2FA is enabled but django-otp is not installed. "
+    "Install with: pip install 'nova-cms[otp]' (or pip install django-otp), "
+    "or unset NOVA_STAFF_2FA."
+)
+
+
+@register()
+def check_staff_2fa_package(app_configs, **kwargs):
+    """PR-023b: fail loudly when 2FA is requested without django-otp."""
+    from mezzanine.core.staff_2fa import django_otp_available, staff_2fa_setting_on
+
+    # Clear import cache so a late install is visible in the same process.
+    django_otp_available.cache_clear()
+    if staff_2fa_setting_on() and not django_otp_available():
+        return [
+            Error(
+                STAFF_2FA_MISSING_PKG_ERROR,
+                id="mezzanine.core.E02",
+            )
+        ]
+    return []

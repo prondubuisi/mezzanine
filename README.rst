@@ -54,6 +54,18 @@ WordPress import prints a migration report (posts/pages/redirects/
 attachments, unmapped types, URL fidelity) and optional JSON via
 ``--report-json``. See ``docs/blog-importing.rst``.
 
+Optional staff TOTP (off by default)::
+
+    $ pip install 'nova-cms[otp]'   # django-otp
+    # Enroll a TOTP device for your superuser in admin while 2FA is off,
+    # then enable and restart:
+    $ export NOVA_STAFF_2FA=1
+
+Hardened CSP (scripts require ``request.csp_nonce``; admin may need work)::
+
+    $ export NOVA_CSP_STRICT=1
+
+
 Without compose/just::
 
     $ pip install 'nova-cms[migrate]'
