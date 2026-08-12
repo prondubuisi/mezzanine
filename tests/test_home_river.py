@@ -3,14 +3,13 @@
 from pathlib import Path
 
 import pytest
-from django.contrib.auth import get_user_model
 from django.core.management import call_command
 from django.test import Client, override_settings
 
 import mezzanine
 from mezzanine.pages.models import RichTextPage
+from tests.factories import SuperUserFactory
 
-User = get_user_model()
 REPO = Path(mezzanine.__file__).resolve().parent
 
 
@@ -48,7 +47,7 @@ def test_shared_newsroom_css_exists():
 
 @pytest.mark.django_db
 def test_time_politics_section_links_category():
-    User.objects.create_superuser("admin", "a@example.com", "passwordpassword")
+    SuperUserFactory(username="admin", email="a@example.com")
     call_command("seed_site_clone", site="time", flush=True, verbosity=0)
     politics = RichTextPage.objects.get(slug="politics")
     assert "/blog/category/politics/" in politics.content

@@ -13,6 +13,7 @@ from mezzanine.accounts.views import (
 )
 from mezzanine.conf import settings
 from mezzanine.utils.tests import TestCase
+from tests.factories import UserFactory
 
 User = get_user_model()
 
@@ -125,8 +126,10 @@ class AccountsTests(TestCase):
         """
         Submitting the reset form emails a verification link.
         """
-        user = User.objects.create_user(
-            "resetmail", "resetmail@example.com", "old-password-12"
+        user = UserFactory(
+            username="resetmail",
+            email="resetmail@example.com",
+            password="old-password-12",
         )
         emails = len(mail.outbox)
         response = self.client.post(
@@ -142,8 +145,10 @@ class AccountsTests(TestCase):
         token URL redirects to a token-free confirm page; the user
         sets a new password, then logs in separately.
         """
-        user = User.objects.create_user(
-            "resetme", "resetme@example.com", "old-password-12"
+        user = UserFactory(
+            username="resetme",
+            email="resetme@example.com",
+            password="old-password-12",
         )
         confirm_url = self._open_reset_confirm(user)
 
@@ -172,8 +177,10 @@ class AccountsTests(TestCase):
         """
         A bad token does not log anyone in and does not change the password.
         """
-        user = User.objects.create_user(
-            "badtoken", "badtoken@example.com", "old-password-12"
+        user = UserFactory(
+            username="badtoken",
+            email="badtoken@example.com",
+            password="old-password-12",
         )
         url = reverse(
             "password_reset_verify",
@@ -192,8 +199,10 @@ class AccountsTests(TestCase):
         """
         The confirm form enforces the same minimum length.
         """
-        user = User.objects.create_user(
-            "resetshort", "resetshort@example.com", "old-password-12"
+        user = UserFactory(
+            username="resetshort",
+            email="resetshort@example.com",
+            password="old-password-12",
         )
         confirm_url = self._open_reset_confirm(user)
         response = self.client.post(
@@ -211,8 +220,10 @@ class AccountsTests(TestCase):
         key are dead: GET/POST the original URL again does not log in
         or change the password.
         """
-        user = User.objects.create_user(
-            "resetonce", "resetonce@example.com", "old-password-12"
+        user = UserFactory(
+            username="resetonce",
+            email="resetonce@example.com",
+            password="old-password-12",
         )
         token_url = self._reset_url(user)
         confirm_url = self._open_reset_confirm(user)

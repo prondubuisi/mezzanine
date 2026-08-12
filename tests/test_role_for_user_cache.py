@@ -17,7 +17,7 @@ from mezzanine.core.capabilities import (
 from mezzanine.core.models import ROLE_AUTHOR, ROLE_EDITOR, ROLE_PUBLISHER
 from mezzanine.core.request import current_request
 from mezzanine.utils.sites import current_site_id
-from tests.factories import AuthorFactory, EditorFactory, PublisherFactory
+from tests.factories import AuthorFactory, EditorFactory, PublisherFactory, UserFactory
 
 
 @pytest.mark.django_db
@@ -33,8 +33,8 @@ def test_role_for_user_returns_role_string():
 
 
 @pytest.mark.django_db
-def test_role_for_user_none_without_siterole(django_user_model):
-    user = django_user_model.objects.create_user("no-role", "n@example.com", "x" * 12)
+def test_role_for_user_none_without_siterole():
+    user = UserFactory(username="no-role", email="n@example.com", password="x" * 12)
     assert role_for_user(user) is None
 
 

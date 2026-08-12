@@ -3,7 +3,6 @@
 from pathlib import Path
 
 import pytest
-from django.contrib.auth import get_user_model
 from django.core.management import call_command
 from django.test import Client
 
@@ -20,8 +19,8 @@ from mezzanine.kits.loader import (
 )
 from mezzanine.kits.theme import load_theme_meta, profile_theme_map
 from mezzanine.pages.models import RichTextPage
+from tests.factories import SuperUserFactory
 
-User = get_user_model()
 REPO = Path(mezzanine.__file__).resolve().parent.parent
 
 
@@ -74,7 +73,7 @@ def test_profile_page_slugs_match_categories():
 
 @pytest.mark.django_db
 def test_seed_techcrunch_sections_list_posts():
-    User.objects.create_superuser("admin", "a@example.com", "passwordpassword")
+    SuperUserFactory(username="admin", email="a@example.com")
     call_command("seed_site_clone", site="techcrunch", flush=True, verbosity=0)
 
     for slug in ("startups", "venture", "ai", "apps", "security", "events", "about"):

@@ -5,7 +5,6 @@ import re
 from pathlib import Path
 
 import pytest
-from django.contrib.auth import get_user_model
 from django.contrib.redirects.models import Redirect
 from django.core.management import call_command
 from django.core.management.base import CommandError
@@ -15,17 +14,15 @@ from mezzanine.blog.models import BlogPost
 from mezzanine.core.models import CONTENT_STATUS_DRAFT, CONTENT_STATUS_PUBLISHED
 from mezzanine.migrate.report import MigrationReport
 from mezzanine.pages.models import Page, RichTextPage
+from tests.factories import SuperUserFactory
 
 REPO_ROOT = Path(mezzanine.__file__).resolve().parent.parent
 WXR = REPO_ROOT / "tests" / "fixtures" / "wxr_sample.xml"
-User = get_user_model()
 
 
 @pytest.fixture
 def import_user(db):
-    return User.objects.create_superuser(
-        "admin", "admin@example.com", "passwordpassword"
-    )
+    return SuperUserFactory(username="admin", email="admin@example.com")
 
 
 @pytest.mark.django_db
