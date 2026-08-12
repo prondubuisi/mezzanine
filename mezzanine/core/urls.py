@@ -38,6 +38,11 @@ urlpatterns += [
     path("_nova/healthz", core_views.healthz, name="nova_healthz"),
     path("_nova/media/", core_views.media_list, name="nova_media_list"),
     path(
+        "_nova/media/chooser/",
+        core_views.media_chooser,
+        name="nova_media_chooser",
+    ),
+    path(
         "_nova/media/<int:pk>/",
         core_views.media_detail,
         name="nova_media_detail",

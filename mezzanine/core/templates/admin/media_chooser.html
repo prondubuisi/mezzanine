@@ -1,0 +1,106 @@
+{% load i18n static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>{% trans "Select media" %}</title>
+  <style>
+    body { font-family: system-ui, sans-serif; margin: 1rem; color: #111; }
+    h1 { font-size: 1.25rem; margin: 0 0 1rem; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { text-align: left; padding: 0.4rem 0.5rem; border-bottom: 1px solid #e5e7eb; vertical-align: middle; }
+    th { font-size: 0.8rem; color: #6b7280; text-transform: uppercase; letter-spacing: 0.04em; }
+    img.thumb { max-width: 72px; max-height: 48px; object-fit: contain; background: #f3f4f6; }
+    button.select {
+      background: #0f766e; color: #fff; border: 0; border-radius: 4px;
+      padding: 0.35rem 0.7rem; cursor: pointer; font-size: 0.875rem;
+    }
+    button.select:hover { background: #115e59; }
+    .empty { color: #6b7280; padding: 1.5rem 0; }
+    .meta { font-size: 0.85rem; color: #6b7280; }
+    form.search { margin-bottom: 1rem; display: flex; gap: 0.5rem; }
+    form.search input[type=search] { flex: 1; padding: 0.4rem 0.5rem; }
+  </style>
+</head>
+<body>
+  <h1>{% trans "Media library" %}</h1>
+  <form class="search" method="get" action="">
+    <input type="search" name="q" value="{{ q }}" placeholder="{% trans 'Search title or alt…' %}">
+    <button type="submit">{% trans "Search" %}</button>
+  </form>
+  {% if assets %}
+  <table>
+    <thead>
+      <tr>
+        <th>{% trans "Preview" %}</th>
+        <th>{% trans "Title / alt" %}</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for asset in assets %}
+      <tr>
+        <td>
+          {% if asset.file %}
+          <img class="thumb" src="{{ asset.file.url }}" alt="{{ asset.alt }}">
+          {% endif %}
+        </td>
+        <td>
+          <strong>{{ asset.title|default:asset.alt }}</strong>
+          <div class="meta">{{ asset.alt }}</div>
+        </td>
+        <td>
+          <button type="button" class="select"
+            data-url="{% if asset.file %}{{ asset.file.url }}{% endif %}"
+            data-alt="{{ asset.alt|escape }}">
+            {% trans "Select" %}
+          </button>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p class="empty">
+    {% trans "No media yet. Upload files under Core → Media in the admin." %}
+  </p>
+  {% endif %}
+  <script>
+  (function () {
+    function choose(url, alt) {
+      // TinyMCE 7 file_picker_callback path
+      if (window.opener && typeof window.opener.novaMediaPickerCallback === "function") {
+        window.opener.novaMediaPickerCallback(url, { alt: alt || "" });
+        window.close();
+        return;
+      }
+      // Classic TinyMCE / filebrowser-style field fill
+      if (window.opener && window.opener.tinymce) {
+        try {
+          var ed = window.opener.tinymce.activeEditor;
+          if (ed && ed.windowManager) {
+            // Best-effort close of dialog after setting value via callback already handled
+          }
+        } catch (e) {}
+      }
+      if (window.opener && window.opener.document) {
+        var field = window.opener.document.getElementById(
+          new URLSearchParams(window.location.search).get("field") || ""
+        );
+        if (field) {
+          field.value = url;
+          window.close();
+          return;
+        }
+      }
+      window.close();
+    }
+    document.querySelectorAll("button.select").forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        choose(btn.getAttribute("data-url") || "", btn.getAttribute("data-alt") || "");
+      });
+    });
+  })();
+  </script>
+</body>
+</html>

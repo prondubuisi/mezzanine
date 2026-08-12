@@ -546,3 +546,4 @@ class MediaAdmin(admin.ModelAdmin):
     search_fields = ("title", "alt", "file")
     readonly_fields = ("created", "updated")
     fields = ("title", "file", "alt", "created", "updated")
+    change_list_template = "admin/core/media/change_list.html"

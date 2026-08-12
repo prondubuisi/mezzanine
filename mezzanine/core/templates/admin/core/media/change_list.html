@@ -1,0 +1,11 @@
+{% extends "admin/change_list.html" %}
+{% load i18n %}
+
+{% block object-tools-items %}
+  {{ block.super }}
+  <li>
+    <a href="{% url 'nova_media_chooser' %}" target="_blank" rel="noopener">
+      {% trans "Open chooser popup" %}
+    </a>
+  </li>
+{% endblock %}
