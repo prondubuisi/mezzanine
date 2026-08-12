@@ -1,0 +1,23 @@
+{% extends "music/base.html" %}
+{% block title %}{{ greeting }} · {{ site_name }}{% endblock %}
+{% block content %}
+<h1>{{ greeting }}</h1>
+<section>
+  <h2>Playlists</h2>
+  <ul>
+  {% for pl in playlists %}
+    <li><a href="{{ pl.get_absolute_url }}">{{ pl.title }}</a> — {{ pl.description }}</li>
+  {% empty %}
+    <li>No playlists. Run <code>seed_music_demo</code>.</li>
+  {% endfor %}
+  </ul>
+</section>
+<section>
+  <h2>Albums</h2>
+  <ul>
+  {% for al in albums %}
+    <li><a href="{{ al.get_absolute_url }}">{{ al.title }}</a> — {{ al.artist.title }}</li>
+  {% endfor %}
+  </ul>
+</section>
+{% endblock %}

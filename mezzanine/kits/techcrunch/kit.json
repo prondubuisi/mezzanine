@@ -1,0 +1,14 @@
+{
+  "name": "techcrunch",
+  "version": "0.1.0",
+  "nova_compat": ">=0.1,<2",
+  "types": [
+    "pages.RichTextPage",
+    "pages.Link",
+    "forms.Form",
+    "blog.BlogPost"
+  ],
+  "tokens": "static/techcrunch/tokens.css",
+  "seed_profile": "techcrunch",
+  "description": "Tech news desk demo (IA inspired by TechCrunch; not affiliated)."
+}

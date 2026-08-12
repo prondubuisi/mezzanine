@@ -238,6 +238,12 @@ def set_dynamic_settings(s):
         )
         s["MIDDLEWARE"].insert(session + 1, "django.middleware.locale.LocaleMiddleware")
 
+    # WordPress-style active theme: load kit package templates before
+    # project copy-on-create templates (see mezzanine.kits.theme).
+    _wire_active_theme_loader(s)
+    _wire_theme_context_processor(s)
+    _wire_theme_plugins(s)
+
     # Revert tuple settings back to tuples.
     for setting in tuple_list_settings:
         s[setting] = tuple(s[setting])
@@ -254,6 +260,103 @@ def set_dynamic_settings(s):
         elif shortname == "mysql":
             # Required MySQL collation for tests.
             db.setdefault("TEST", {}).setdefault("COLLATION", "utf8_general_ci")
+
+
+def _wire_active_theme_loader(s):
+    """Prepend ACTIVE_THEME template loader when TEMPLATES define loaders."""
+    active_loader = "mezzanine.template.loaders.active_theme.Loader"
+    templates = s.get("TEMPLATES") or []
+    for engine in templates:
+        if not isinstance(engine, dict):
+            continue
+        options = engine.setdefault("OPTIONS", {})
+        loaders = options.get("loaders")
+        if not loaders:
+            continue
+        loaders = list(loaders)
+        if active_loader not in loaders:
+            # After host_themes (if present), before filesystem.
+            host = "mezzanine.template.loaders.host_themes.Loader"
+            if host in loaders:
+                loaders.insert(loaders.index(host) + 1, active_loader)
+            else:
+                loaders.insert(0, active_loader)
+            options["loaders"] = loaders
+
+
+def _wire_theme_context_processor(s):
+    """Ensure theme customizer context is available in templates."""
+    cp = "mezzanine.conf.context_processors.theme"
+    for engine in s.get("TEMPLATES") or []:
+        if not isinstance(engine, dict):
+            continue
+        options = engine.setdefault("OPTIONS", {})
+        processors = options.get("context_processors")
+        if processors is None:
+            continue
+        processors = list(processors)
+        if cp not in processors:
+            processors.append(cp)
+            options["context_processors"] = processors
+
+
+def _wire_theme_plugins(s):
+    """
+    Auto-append kit + theme.json plugins when importable.
+
+    Sources for active theme name (process start):
+    1. settings.ACTIVE_THEME / NOVA_ACTIVE_THEME env
+    2. PROJECT_ROOT/.nova-theme marker (written by activate_theme)
+    3. Any already-installed mezzanine.kits.* apps (ensure their plugins)
+
+    Django cannot load apps mid-request; a restart after first activate
+    is still required when plugins were missing from INSTALLED_APPS.
+    """
+    import os
+
+    from mezzanine.kits.theme import (
+        apps_for_theme,
+        list_theme_names,
+        read_nova_theme_marker,
+    )
+
+    apps = list(s.get("INSTALLED_APPS") or [])
+
+    def _append(app_label):
+        if app_label in apps:
+            return
+        try:
+            __import__(app_label)
+        except ImportError:
+            return
+        apps.append(app_label)
+
+    theme_names = []
+    env_theme = os.environ.get("NOVA_ACTIVE_THEME", "").strip()
+    if env_theme:
+        theme_names.append(env_theme)
+    setting_theme = str(s.get("ACTIVE_THEME") or "").strip()
+    if setting_theme:
+        theme_names.append(setting_theme)
+    marker = read_nova_theme_marker(s.get("PROJECT_ROOT"))
+    if marker:
+        theme_names.append(marker)
+    # Installed kit apps
+    for app in apps:
+        if app.startswith("mezzanine.kits."):
+            theme_names.append(app.rsplit(".", 1)[-1])
+
+    seen = set()
+    for name in theme_names:
+        if not name or name in seen:
+            continue
+        seen.add(name)
+        if name not in list_theme_names() and not name.replace("-", "_").isidentifier():
+            continue
+        for app_label in apps_for_theme(name):
+            _append(app_label)
+
+    s["INSTALLED_APPS"] = apps
 
 
 def _wire_staff_2fa(s, append):

@@ -197,6 +197,67 @@ register_setting(
 )
 
 register_setting(
+    name="ACTIVE_THEME",
+    label=_("Active theme"),
+    description=_(
+        "First-party kit name that supplies the active theme package "
+        "(WordPress-style). When set, templates under "
+        "mezzanine/kits/<name>/templates/ load before the project's "
+        "copied templates. Empty disables runtime theme override. "
+        "Requires the kit app (and any theme plugins) in INSTALLED_APPS."
+    ),
+    editable=True,
+    default="",
+)
+
+# Theme Customizer (lean WP Customizer analogue) — overrides theme.json colors.
+register_setting(
+    name="THEME_COLOR_INK",
+    label=_("Theme color: ink"),
+    description=_("Override active theme ink/primary text color (CSS)."),
+    editable=True,
+    default="",
+)
+register_setting(
+    name="THEME_COLOR_ACCENT",
+    label=_("Theme color: accent"),
+    description=_("Override active theme accent color (CSS)."),
+    editable=True,
+    default="",
+)
+register_setting(
+    name="THEME_COLOR_ACCENT_INK",
+    label=_("Theme color: accent ink"),
+    description=_("Override secondary accent / link hover color."),
+    editable=True,
+    default="",
+)
+register_setting(
+    name="THEME_COLOR_CANVAS",
+    label=_("Theme color: canvas"),
+    description=_("Override page background color."),
+    editable=True,
+    default="",
+)
+register_setting(
+    name="THEME_COLOR_PAPER",
+    label=_("Theme color: paper"),
+    description=_("Override surface / card background color."),
+    editable=True,
+    default="",
+)
+register_setting(
+    name="THEME_LOGO_URL",
+    label=_("Theme logo URL"),
+    description=_(
+        "Optional logo image URL shown in theme chrome when the template "
+        "supports it (Customizer)."
+    ),
+    editable=True,
+    default="",
+)
+
+register_setting(
     name="INLINE_EDITING_ENABLED",
     description=_("If ``True``, front-end inline editing will be enabled."),
     editable=False,
@@ -995,6 +1056,8 @@ register_setting(
         "LOGOUT_URL",
         "SITE_TITLE",
         "SITE_TAGLINE",
+        "ACTIVE_THEME",
+        "THEME_LOGO_URL",
         "USE_L10N",
         "USE_MODELTRANSLATION",
     ),

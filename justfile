@@ -59,6 +59,43 @@ demo-whitehouse *args:
 	set -euo pipefail
 	just demo-clone whitehouse --flush "$@"
 
+# Seed tech news desk demo. Project: nova-project tcdemo --kit techcrunch
+# Usage: just demo-techcrunch
+demo-techcrunch *args:
+	#!/usr/bin/env bash
+	set -euo pipefail
+	just demo-clone techcrunch --flush "$@"
+
+# Activate a theme package (ACTIVE_THEME). Usage: just activate-theme spotify
+# Optional: just activate-theme spotify --seed
+activate-theme *args:
+	#!/usr/bin/env bash
+	set -euo pipefail
+	if [ "$#" -lt 1 ]; then
+		just _django activate_theme --list
+		exit 2
+	fi
+	just _django activate_theme "$@"
+
+# Seed CMS music catalog + print listening-theme flow URLs.
+# Project: nova-project spotdemo --kit spotify  (theme + mezzanine.music plugin)
+demo-spotify *args:
+	#!/usr/bin/env bash
+	set -euo pipefail
+	just _django activate_theme spotify --seed "$@" || just _django seed_music_demo --flush "$@"
+	just demo-spotify-flow
+
+demo-spotify-flow *args:
+	#!/usr/bin/env bash
+	set -euo pipefail
+	host="${NOVA_DEMO_HOST:-http://127.0.0.1:8002}"
+	echo "Spotify listening theme — content is CMS (mezzanine.music)."
+	echo "  Home $host/   Search $host/search/?q=Luna"
+	echo "  Playlist $host/playlist/daily-mix-1/   Album $host/album/night-bus/"
+	echo "  Artist $host/artist/luna-park/   Library $host/library/"
+	echo "  Admin $host/admin/  → Music (edit playlists/tracks)"
+	echo "Editorial newsroom IA (blog): just demo-clone spotify_newsroom"
+
 # Seed a named IA site clone. Usage: just demo-clone techcrunch
 # Also: just demo-clone -- --list
 demo-clone *args:

@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% load i18n %}
+
+{% block meta_title %}{% trans "Home" %}{% endblock %}
+{% block title %}{% endblock %}
+
+{% block breadcrumb_menu %}
+<li class="active">{% trans "Home" %}</li>
+{% endblock %}
+
+{% block main %}
+<div class="nova-banner">
+  <h1>{% trans "Open Signal" %}</h1>
+  {% blocktrans %}
+  <p>A dense tech-news desk demo: startups, venture, AI, apps, and security —
+  original copy on Nova pages and posts. Unofficial IA inspired by TechCrunch.
+  Not affiliated with TechCrunch or Yahoo.</p>
+  {% endblocktrans %}
+  <p style="margin-top:0.85rem">
+    <a href="/startups/">{% trans "Startups" %}</a>
+    ·
+    <a href="/venture/">{% trans "Venture" %}</a>
+    ·
+    <a href="{% url 'blog_post_list' %}">{% trans "All stories" %}</a>
+  </p>
+</div>
+
+<nav class="nova-grid" aria-label="{% trans 'Desks' %}">
+  <a class="nova-card" href="/startups/">
+    <strong>{% trans "Startups" %}</strong>
+    <span>{% trans "Launches & founders" %}</span>
+  </a>
+  <a class="nova-card" href="/venture/">
+    <strong>{% trans "Venture" %}</strong>
+    <span>{% trans "Funding & markets" %}</span>
+  </a>
+  <a class="nova-card" href="/ai/">
+    <strong>{% trans "AI" %}</strong>
+    <span>{% trans "Models & chips" %}</span>
+  </a>
+  <a class="nova-card" href="/apps/">
+    <strong>{% trans "Apps" %}</strong>
+    <span>{% trans "Products" %}</span>
+  </a>
+  <a class="nova-card" href="/security/">
+    <strong>{% trans "Security" %}</strong>
+    <span>{% trans "Threats & identity" %}</span>
+  </a>
+  <a class="nova-card" href="/events/">
+    <strong>{% trans "Events" %}</strong>
+    <span>{% trans "Static listing (gap)" %}</span>
+  </a>
+</nav>
+
+{% include "includes/recent_posts.html" %}
+{% endblock %}

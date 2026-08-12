@@ -1,0 +1,10 @@
+{% extends "music/base.html" %}
+{% block content %}
+<h1>{{ album.title }}</h1>
+<p><a href="{{ album.artist.get_absolute_url }}">{{ album.artist.title }}</a> · {{ album.year }}</p>
+<ol>
+{% for t in tracks %}
+  <li>{{ t.title }} ({{ t.duration }})</li>
+{% endfor %}
+</ol>
+{% endblock %}

@@ -1,0 +1,24 @@
+{
+  "name": "whitehouse",
+  "version": "0.1.0",
+  "description": "Official-style briefing chrome (tokens + home/section presentation).",
+  "kind": "theme",
+  "slots": {
+    "chrome": "kit_base.html",
+    "home": "index.html",
+    "section": "pages/richtextpage.html",
+    "single": "blog/blog_post_detail.html",
+    "page": "pages/richtextpage.html"
+  },
+  "menus": ["primary", "footer"],
+  "colors": {
+    "ink": "#0a3161",
+    "accent": "#0a3161",
+    "accent_ink": "#b31942",
+    "canvas": "#f5f7fa",
+    "paper": "#ffffff"
+  },
+  "tokens": "static/whitehouse/tokens.css",
+  "plugins": [],
+  "seed_profile": "whitehouse"
+}

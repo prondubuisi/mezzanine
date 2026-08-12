@@ -109,7 +109,14 @@ def test_kit_help_lists_wporg():
 def test_magazine_and_institute_bases_are_thin_wrappers():
     """Redundancy check: kit bases extend shared kit_base."""
     root = Path(mezzanine.__file__).resolve().parent / "kits"
-    for name in ("magazine", "institute", "brochure", "wporg"):
+    for name in (
+        "magazine",
+        "institute",
+        "brochure",
+        "wporg",
+        "whitehouse",
+        "techcrunch",
+    ):
         text = (root / name / "templates/base.html").read_text(encoding="utf-8")
-        assert "kit_base.html" in text
+        assert "kit_base.html" in text, name
         assert text.count("<!doctype") == 0

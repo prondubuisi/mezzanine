@@ -246,10 +246,13 @@ TEMPLATES = [
                 "django.template.context_processors.request",
                 "django.template.context_processors.tz",
                 "mezzanine.conf.context_processors.settings",
+                "mezzanine.conf.context_processors.theme",
                 "mezzanine.pages.context_processors.page",
             ],
             "loaders": [
                 "mezzanine.template.loaders.host_themes.Loader",
+                # ACTIVE_THEME kit templates (runtime switch; before project copy).
+                "mezzanine.template.loaders.active_theme.Loader",
                 "django.template.loaders.filesystem.Loader",
                 "django.template.loaders.app_directories.Loader",
             ],

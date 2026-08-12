@@ -99,14 +99,28 @@ Theme packages only override tokens + a few layout blocks.
 
 See also `PARITY-BACKLOG.md`. Theme-specific:
 
-1. No installable theme package contract (`theme.json`)  
-2. Kits **copy** templates into the project — switching theme is manual  
-3. No home/section/single **slot** map; one `base.html` + content types  
-4. Section pages ≠ category archives (dual IA)  
-5. Featured image default off; no theme supports “post thumbnail” UX  
-6. No Customizer-equivalent for logo/colors without code  
+1. ~~theme.json contract~~ **Done**  
+2. ~~Runtime chrome switch~~ **Done** (`ACTIVE_THEME` + loader)  
+3. ~~Slot map router~~ **Done** — `resolve_slot_template(slot, fallback)` used by music views  
+4. Section pages ≠ category archives — mitigated for WH-style seeds  
+5. Featured image default off — still open (editorial)  
+6. ~~Customizer UI~~ **Done** — `/_nova/theme-customizer/` (colors + logo → CSS vars)  
+7. ~~Plugin auto-append~~ **Done** — conf appends importable kit+plugins from `ACTIVE_THEME` / `.nova-theme` / installed kits (restart once if apps changed)  
 
----
+### Runtime theme API
+
+```bash
+python manage.py activate_theme --list
+python manage.py activate_theme whitehouse --seed
+python manage.py activate_theme spotify --seed
+# Customizer (staff or DEBUG):
+#   http://127.0.0.1:8002/_nova/theme-customizer/
+# Demo lab: /_nova/demo-sites/  → Themes · Customizer link
+```
+
+Setting: **ACTIVE_THEME** (editable). Loader order: host_themes → **active_theme** → project filesystem → app_directories.
+
+Customizer settings: `THEME_COLOR_*`, `THEME_LOGO_URL` (override theme.json colors).---
 
 ## Sit lab testing protocol
 
@@ -134,10 +148,38 @@ Append observations under **Session notes** below.
 
 ---
 
+## Implemented slice (2026-08-12)
+
+### Editorial (White House / newsroom clones)
+
+| Piece | Status |
+|-------|--------|
+| `kit_base.html` + tokens | Done |
+| Shared `nova_kits/newsroom.css` | Done |
+| `kit_wants_blog` / `seed_profile` | Done |
+| Section slug ↔ category listing | Done |
+
+### Listening (Spotify) — WordPress plugin + theme
+
+| Piece | Status |
+|-------|--------|
+| Plugin `mezzanine.music` (Artist/Album/Track/Playlist + admin) | Done |
+| Theme kit `spotify` (templates/CSS only) | Done |
+| `kit.json` `plugins` + `seed_command` + `urlconf` | Done |
+| Runtime data from **DB**, not theme Python | Done |
+| Installable `theme.json` + `ACTIVE_THEME` loader | **Done** |
+| Demo lab theme activate (+ seed) | **Done** |
+| Customizer UI (colors + logo) | **Done** (`/_nova/theme-customizer/`) |
+| Slot template resolution | **Done** (`resolve_slot_template`) |
+| Auto-append theme plugins on boot | **Done** (importable apps + `.nova-theme`) |
+
+**Rule:** kits/themes never own catalog data; plugins own content types.
+
 ## Session notes
 
 _(fill while testing)_
 
 | Site | Time | Observation | Theme implication |
 |------|------|-------------|-------------------|
-| | | | |
+| whitehouse | 2026-08-12 | IA demo good; shared classes replace wh-* | Tokens-only kit works |
+| spotify_newsroom | 2026-08-12 | Kit + slug-aligned sections | Same shell, dark tokens |

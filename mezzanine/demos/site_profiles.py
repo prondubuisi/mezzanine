@@ -13,77 +13,126 @@ from typing import Any
 
 PROFILES: dict[str, dict[str, Any]] = {
     "techcrunch": {
-        "display_name": "TechCrunch-shaped demo",
-        "site_name": "TC Demo",
-        "tagline": "Startup and technology news (IA demo)",
+        "display_name": "Tech news desk demo",
+        "site_name": "Open Signal",
+        "tagline": "Startups, venture, and AI news (IA demo)",
         "inspired_by": "https://techcrunch.com/",
         "primary_nav_label": "Latest",
+        # Page slugs match BlogCategory slugs so section landings list posts.
         "pages": [
             (
                 "Startups",
                 "startups",
-                "<p>Coverage of early-stage companies, product launches, and "
-                "founder stories — modeled after a tech news startup desk.</p>",
+                "<p>Early-stage companies, product launches, and founder "
+                "stories. Posts below are in the <strong>Startups</strong> "
+                "category.</p>",
             ),
             (
                 "Venture",
                 "venture",
-                "<p>Funding rounds, VCs, and market maps. In production this "
-                "would be a filtered river of posts by category.</p>",
+                "<p>Funding rounds, VCs, and market maps — a filtered river "
+                "of Venture desk posts.</p>",
+            ),
+            (
+                "AI",
+                "ai",
+                "<p>Models, chips, and on-device intelligence coverage from "
+                "the AI desk.</p>",
             ),
             (
                 "Apps",
                 "apps",
-                "<p>Mobile and web product news. Nova maps this to pages + "
-                "blog categories rather than a custom post type zoo.</p>",
+                "<p>Mobile and web product news mapped to pages + blog "
+                "categories rather than a custom post-type zoo.</p>",
+            ),
+            (
+                "Security",
+                "security",
+                "<p>Threats, identity, and infrastructure security briefs.</p>",
             ),
             (
                 "Events",
                 "events",
                 "<p>Conference and meetup listings. Gap: no first-class Events "
-                "model or calendar UI in Y1 Nova.</p>",
+                "model or calendar UI in Y1 Nova — this page is static copy.</p>",
             ),
             (
                 "About",
                 "about",
-                "<p>About this <strong>IA demo</strong> inspired by TechCrunch. "
-                "Not affiliated with TechCrunch or Yahoo.</p>",
+                "<p>About this <strong>unofficial IA demo</strong> inspired by "
+                "TechCrunch. Not affiliated with TechCrunch or Yahoo.</p>"
+                "<p>Recreate with <code>nova-project … --kit techcrunch</code> "
+                "then <code>seed_site_clone --site techcrunch</code>.</p>",
             ),
         ],
-        "categories": ["AI", "Startups", "Venture", "Apps", "Security"],
+        "categories": ["Startups", "Venture", "AI", "Apps", "Security"],
         "posts": [
             (
                 "Series A chatter: why vertical SaaS still raises",
                 "series-a-vertical-saas",
                 "Venture",
-                "<p>Sample analysis post for a tech news river.</p>",
+                "<p>Investors keep writing checks for niche workflow tools "
+                "with clear expansion paths. Sample analysis for a tech news "
+                "river.</p>",
+            ),
+            (
+                "Seed notes: three patterns in climate software",
+                "seed-notes-climate-software",
+                "Venture",
+                "<p>Carbon accounting, industrial sensors, and permitting "
+                "automation — a sample venture desk roundup.</p>",
             ),
             (
                 "On-device models ship to laptops first",
                 "on-device-models-laptops",
                 "AI",
-                "<p>Sample AI desk brief.</p>",
+                "<p>Hardware vendors are racing to ship local inference for "
+                "privacy-sensitive workflows. Sample AI desk brief.</p>",
+            ),
+            (
+                "Open weights and the enterprise procurement maze",
+                "open-weights-enterprise-procurement",
+                "AI",
+                "<p>Legal review, not model quality, is blocking adoption for "
+                "many IT buyers. Sample AI policy note.</p>",
             ),
             (
                 "Password managers and the browser wars",
                 "password-managers-browser-wars",
                 "Security",
-                "<p>Sample security short.</p>",
+                "<p>Browser vendors are folding credential vaults into the "
+                "chrome. Sample security short.</p>",
             ),
             (
                 "Indie apps find distribution without storefronts",
                 "indie-apps-distribution",
                 "Apps",
-                "<p>Sample apps desk post.</p>",
+                "<p>Newsletters, community installs, and web apps sidestep "
+                "app-store taxes. Sample apps desk post.</p>",
+            ),
+            (
+                "From side project to seed: a logistics OS story",
+                "side-project-to-seed-logistics",
+                "Startups",
+                "<p>A two-person team turned a warehouse spreadsheet into a "
+                "seed-stage product. Sample startups narrative.</p>",
+            ),
+            (
+                "Launch day: what still works for B2B launches",
+                "launch-day-b2b-still-works",
+                "Startups",
+                "<p>Warm intros and vertical communities still outperform "
+                "spray-and-pray Product Hunt posts. Sample startups brief.</p>",
             ),
         ],
         "contact": True,
         "notes": [
-            "Needs infinite scroll / river homepage, not static index.",
-            "Needs topic taxonomy beyond flat BlogCategory.",
-            "Needs author bylines and staff pages as first-class entities.",
-            "Needs related-posts and most-read modules.",
-            "Needs newsletter capture (Form exists; not embedded in chrome).",
+            "Homepage river via shared include (kit index).",
+            "Topic taxonomy still flat BlogCategory.",
+            "Author bylines / staff pages not first-class.",
+            "Related-posts and most-read widgets not seeded.",
+            "Newsletter capture: Form exists; not embedded in chrome yet.",
+            "Events page is static — no Events model.",
         ],
     },
     "time": {
@@ -443,58 +492,131 @@ PROFILES: dict[str, dict[str, Any]] = {
     },
     "spotify_newsroom": {
         "display_name": "Spotify Newsroom-shaped demo",
-        "site_name": "Newsroom Demo",
-        "tagline": "Company newsroom (IA demo)",
+        "site_name": "Nova Newsroom",
+        "tagline": "Company news, product, culture (demo)",
         "inspired_by": "https://newsroom.spotify.com/",
-        "primary_nav_label": "Company",
+        "primary_nav_label": "News",
+        # Page slugs match BlogCategory slugs so section landings list posts.
         "pages": [
             (
                 "Company News",
                 "company-news",
-                "<p>Corporate announcements landing.</p>",
+                "<p>Corporate announcements and company milestones. Items "
+                "below are published posts in the <strong>Company News</strong> "
+                "category.</p>",
             ),
             (
                 "Product & Features",
                 "product-features",
-                "<p>Product launch narratives.</p>",
+                "<p>Product launches, feature narratives, and listening "
+                "experience stories for this newsroom demo.</p>",
             ),
             (
                 "Culture",
                 "culture",
-                "<p>Workplace and culture stories.</p>",
+                "<p>Workplace, teams, and culture stories from across the "
+                "organization.</p>",
+            ),
+            (
+                "Creators",
+                "creators",
+                "<p>Stories about artists, podcasters, and the creator "
+                "economy — sample posts for press and partners.</p>",
+            ),
+            (
+                "Policy",
+                "policy",
+                "<p>Trust, safety, and policy updates relevant to creators "
+                "and the public.</p>",
             ),
             (
                 "For the Press",
                 "for-the-press",
-                "<p>Media kit and contact paths for journalists. Gap: asset "
-                "kit downloads and embargo workflow.</p>",
+                "<p>Media kit overview and journalist contact paths. Full "
+                "asset packs and embargo workflows are later enhancements; "
+                "use the contact form for demo press inquiries.</p>"
+                "<ul>"
+                "<li>Brand assets — placeholder (Media library)</li>"
+                "<li>Executive bios — placeholder</li>"
+                '<li><a href="/contact/">Press contact form</a></li>'
+                "</ul>",
             ),
             (
                 "About",
                 "about",
-                "<p>About this <strong>IA demo</strong> inspired by Spotify "
-                "Newsroom. Not affiliated with Spotify AB.</p>",
+                "<p>This is an <strong>unofficial Nova demo</strong> of a "
+                "corporate newsroom. Information architecture is inspired by "
+                "newsroom.spotify.com. It is not affiliated with Spotify AB.</p>"
+                "<p>Recreate it with <code>nova-project … --kit spotify</code> "
+                "then <code>seed_site_clone --site spotify_newsroom</code>.</p>",
             ),
         ],
-        "categories": ["Company", "Product", "Culture", "Creators", "Policy"],
+        "categories": [
+            "Company News",
+            "Product & Features",
+            "Culture",
+            "Creators",
+            "Policy",
+        ],
         "posts": [
             (
-                "Introducing a new listening feature",
+                "Introducing a smarter home listening mode",
                 "new-listening-feature",
-                "Product",
-                "<p>Sample product launch post.</p>",
+                "Product & Features",
+                "<p>Sample product launch: a new listening mode that adapts "
+                "playlists to room activity. Press quotes and screenshots "
+                "would attach here in a fuller newsroom package.</p>"
+                "<p><em>Original demo copy — not a real product announcement.</em></p>",
+            ),
+            (
+                "Q2 product roadmap themes for creators",
+                "q2-product-roadmap-creators",
+                "Product & Features",
+                "<p>Sample feature narrative covering discovery tools, "
+                "analytics improvements, and monetization experiments.</p>",
             ),
             (
                 "How our teams build in public",
                 "teams-build-in-public",
                 "Culture",
-                "<p>Sample culture story.</p>",
+                "<p>Sample culture story about engineering blogs, open design "
+                "critiques, and cross-team demo days.</p>",
             ),
             (
-                "Policy update for creators",
+                "Mentorship circles expand across hubs",
+                "mentorship-circles-expand",
+                "Culture",
+                "<p>Sample workplace story on peer mentorship programs in "
+                "design, data, and trust &amp; safety teams.</p>",
+            ),
+            (
+                "Company update: new regional studio partnership",
+                "regional-studio-partnership",
+                "Company News",
+                "<p>Sample company announcement about a partnership to support "
+                "emerging creators in two regions. Financial details omitted "
+                "in this demo stub.</p>",
+            ),
+            (
+                "Annual transparency report summary",
+                "annual-transparency-report",
+                "Company News",
+                "<p>Sample corporate post summarizing content moderation "
+                "metrics and appeals outcomes for the past year.</p>",
+            ),
+            (
+                "Creator fund: what changed this season",
+                "creator-fund-season-update",
+                "Creators",
+                "<p>Sample creators desk post explaining eligibility updates "
+                "and payout timelines for a fictional fund.</p>",
+            ),
+            (
+                "Policy update for creators on synthetic media",
                 "policy-update-creators",
                 "Policy",
-                "<p>Sample policy note for press.</p>",
+                "<p>Sample policy note describing labeling requirements for "
+                "AI-assisted audio and how appeals work.</p>",
             ),
         ],
         "contact": True,

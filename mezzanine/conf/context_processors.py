@@ -77,3 +77,30 @@ def settings(request=None):
     template_settings["MEZZANINE_ADMIN_PREFIX"] = admin_prefix
 
     return {"settings": template_settings}
+
+
+def theme(request=None):
+    """
+    Active theme customizer values for templates (colors, logo, CSS).
+    """
+    try:
+        from mezzanine.kits.theme import (
+            get_active_theme_name,
+            get_theme_colors,
+            get_theme_logo_url,
+            theme_customizer_css,
+        )
+
+        return {
+            "theme_name": get_active_theme_name(),
+            "theme_colors": get_theme_colors(),
+            "theme_logo_url": get_theme_logo_url(),
+            "theme_customizer_css": theme_customizer_css(),
+        }
+    except Exception:  # noqa: BLE001 — never break public pages
+        return {
+            "theme_name": "",
+            "theme_colors": {},
+            "theme_logo_url": "",
+            "theme_customizer_css": "",
+        }

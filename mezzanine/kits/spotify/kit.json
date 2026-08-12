@@ -1,0 +1,16 @@
+{
+  "name": "spotify",
+  "version": "0.3.0",
+  "nova_compat": ">=0.1,<2",
+  "types": [
+    "music.Artist",
+    "music.Album",
+    "music.Track",
+    "music.Playlist"
+  ],
+  "plugins": ["mezzanine.music"],
+  "urlconf": "mezzanine.music.urls",
+  "seed_command": "seed_music_demo",
+  "tokens": "static/spotify/player.css",
+  "description": "Theme (presentation) for the music plugin — Spotify Web Player–inspired UI. Content is CMS-owned."
+}

@@ -1,6 +1,9 @@
 # Next (lean)
 
-1. **Done here:** homepage post river (`includes/recent_posts.html`); section→category links in `seed_site_clone`; demo lab only if `DEBUG`.
-2. **Next candidates (small):** featured images on seed; stagger already done; author profile pages.
-3. **Not next:** marketplace, commerce, full WP theme engine — mock only until A0′ gates clear.
-4. Full gap list: `PARITY-BACKLOG.md` (reference, not a sprint plan).
+1. **Done:** White House kit — CMS pages/posts + theme kit.
+2. **Done:** Spotify listening — plugin `music` + theme kit `spotify`.
+3. **Done:** theme.json + ACTIVE_THEME + Customizer + slots + plugin auto-append.
+4. **Done:** Tech news desk kit (`--kit techcrunch` + seed profile).
+5. **Separate:** `spotify_newsroom` = editorial blog IA (not listening theme).
+6. **Next:** TIME kit; featured images on seed; merge PR stack to master.
+7. See `TECHCRUNCH.md`, `SPOTIFY.md`, `WHITEHOUSE.md`, `THEME-ABSTRACTION.md`.

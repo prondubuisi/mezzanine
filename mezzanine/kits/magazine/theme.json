@@ -1,0 +1,21 @@
+{
+  "name": "magazine",
+  "version": "0.1.0",
+  "description": "Editorial magazine chrome for blog + pages.",
+  "kind": "theme",
+  "slots": {
+    "chrome": "kit_base.html",
+    "home": "index.html",
+    "single": "blog/blog_post_detail.html",
+    "page": "pages/richtextpage.html"
+  },
+  "menus": ["primary", "footer"],
+  "colors": {
+    "ink": "#111827",
+    "accent": "#b45309",
+    "canvas": "#f9fafb",
+    "paper": "#ffffff"
+  },
+  "tokens": "static/magazine/tokens.css",
+  "plugins": []
+}

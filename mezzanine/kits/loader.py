@@ -17,6 +17,10 @@ _TYPE_IMPORTS = {
     "forms.Form": "mezzanine.forms.models.Form",
     "blog.BlogPost": "mezzanine.blog.models.BlogPost",
     "galleries.Gallery": "mezzanine.galleries.models.Gallery",
+    "music.Artist": "mezzanine.music.models.Artist",
+    "music.Album": "mezzanine.music.models.Album",
+    "music.Track": "mezzanine.music.models.Track",
+    "music.Playlist": "mezzanine.music.models.Playlist",
 }
 
 
@@ -129,13 +133,66 @@ def validate_kit(meta: dict, *, version: str | None = None) -> None:
             )
 
 
+def kit_wants_blog(meta: dict) -> bool:
+    """True when kit.json types include blog (editorial / newsroom kits)."""
+    types = meta.get("types") or []
+    return any(str(t).startswith("blog.") for t in types)
+
+
+def kit_seed_profile(meta: dict) -> str | None:
+    """Optional seed_site_clone profile slug from kit.json."""
+    seed = meta.get("seed_profile")
+    if seed is None:
+        return None
+    seed = str(seed).strip()
+    return seed or None
+
+
+def kit_urlconf(meta: dict) -> str | None:
+    """Optional dotted urlpatterns module mounted at site root."""
+    urlconf = meta.get("urlconf")
+    if urlconf is None:
+        return None
+    urlconf = str(urlconf).strip()
+    return urlconf or None
+
+
+def kit_plugins(meta: dict) -> list[str]:
+    """
+    Extra Django apps required by the kit (WordPress “plugins”).
+
+    Declared in kit.json as ``plugins``: [\"mezzanine.music\", …].
+    Types like ``music.Track`` also imply ``mezzanine.music``.
+    """
+    plugins: list[str] = []
+    for raw in meta.get("plugins") or []:
+        p = str(raw).strip()
+        if p and p not in plugins:
+            plugins.append(p)
+    for type_name in meta.get("types") or []:
+        if str(type_name).startswith("music."):
+            if "mezzanine.music" not in plugins:
+                plugins.append("mezzanine.music")
+            break
+    return plugins
+
+
+def kit_seed_command(meta: dict) -> str | None:
+    """Optional management command name to seed CMS content after createdb."""
+    cmd = meta.get("seed_command")
+    if cmd is None:
+        return None
+    cmd = str(cmd).strip()
+    return cmd or None
+
+
 def apply_kit(name: str, project_dir: str | Path, project_app: str) -> dict:
     """
     Overlay a kit onto a project written by nova-project.
 
     - validates kit.json
-    - copies templates/ and static/ into the project
-    - rewrites INSTALLED_APPS for brochure (no blog/galleries)
+    - copies shared + kit templates/static into the project
+    - rewrites INSTALLED_APPS from kit types (blog optional)
     """
     root, meta = load_kit_meta(name)
     validate_kit(meta)
@@ -143,19 +200,23 @@ def apply_kit(name: str, project_dir: str | Path, project_app: str) -> dict:
     project_app_dir = project_dir / project_app
 
     # Settings first so a rewrite failure does not leave kit templates alone.
-    if name == "brochure":
-        _apply_kit_settings(project_app_dir, name, with_blog=False)
-    elif name in ("magazine", "institute", "wporg", "whitehouse"):
-        # Editorial / news kits need blog + forms.
-        _apply_kit_settings(project_app_dir, name, with_blog=True)
+    # Blog from types; plugins from kit.json / music.* types (WP theme+plugins).
+    _apply_kit_settings(
+        project_app_dir,
+        name,
+        with_blog=kit_wants_blog(meta),
+        plugins=kit_plugins(meta),
+    )
+    _apply_kit_urls(project_app_dir, meta)
 
     templates_dest = project_dir / "templates"
     if templates_dest.exists():
         shutil.rmtree(templates_dest)
     templates_dest.mkdir(parents=True, exist_ok=True)
 
+    kits_root = Path(mezzanine.__path__[0]) / "kits"
     # Shared kit chrome first (kit_base.html), then kit-specific overlay.
-    shared_templates = Path(mezzanine.__path__[0]) / "kits" / "shared" / "templates"
+    shared_templates = kits_root / "shared" / "templates"
     if shared_templates.is_dir():
         for item in shared_templates.iterdir():
             target = templates_dest / item.name
@@ -182,21 +243,42 @@ def apply_kit(name: str, project_dir: str | Path, project_app: str) -> dict:
             else:
                 shutil.copy2(item, target)
 
+    # Shared static (layout utilities) then kit tokens/static overlay.
+    static_dest = project_dir / "static"
+    if static_dest.exists():
+        shutil.rmtree(static_dest)
+    static_dest.mkdir(parents=True, exist_ok=True)
+    shared_static = kits_root / "shared" / "static"
+    if shared_static.is_dir():
+        for item in shared_static.iterdir():
+            target = static_dest / item.name
+            if item.is_dir():
+                shutil.copytree(item, target)
+            else:
+                shutil.copy2(item, target)
     static_src = root / "static"
     if static_src.is_dir():
-        dest = project_dir / "static"
-        if dest.exists():
-            shutil.rmtree(dest)
-        shutil.copytree(static_src, dest)
+        for item in static_src.iterdir():
+            target = static_dest / item.name
+            if item.is_dir():
+                if target.exists():
+                    shutil.rmtree(target)
+                shutil.copytree(item, target)
+            else:
+                shutil.copy2(item, target)
 
     (project_dir / ".nova-kit").write_text(name + "\n", encoding="utf-8")
     return meta
 
 
 def _apply_kit_settings(
-    project_app_dir: Path, kit_name: str, *, with_blog: bool
+    project_app_dir: Path,
+    kit_name: str,
+    *,
+    with_blog: bool,
+    plugins: list[str] | None = None,
 ) -> None:
-    """Rewrite INSTALLED_APPS for a first-party kit (brochure / magazine)."""
+    """Rewrite INSTALLED_APPS for a first-party kit from its feature flags."""
     settings_path = project_app_dir / "settings.py"
     text = settings_path.read_text(encoding="utf-8")
     apps = [
@@ -220,6 +302,12 @@ def _apply_kit_settings(
     ]
     if with_blog:
         apps.insert(apps.index("mezzanine.pages") + 1, "mezzanine.blog")
+    for plugin in plugins or []:
+        if not re.fullmatch(r"[\w.]+", plugin):
+            raise KitError("Invalid kit plugin %r" % plugin)
+        if plugin not in apps:
+            # Plugins sit with other content apps (after pages).
+            apps.insert(apps.index("mezzanine.forms") + 1, plugin)
     apps_block = "INSTALLED_APPS = [\n" + "".join(
         f'    "{app}",\n' for app in apps
     ) + "]"
@@ -239,7 +327,7 @@ def _apply_kit_settings(
             "STATICFILES_DIRS = [os.path.join(PROJECT_ROOT, \"static\")]",
             1,
         )
-    # Magazine / Institute: comments stay off for marketing parity.
+    # Editorial kits: comments stay off for marketing / newsroom parity.
     if with_blog and "COMMENTS_DEFAULT_APPROVED" not in new_text:
         new_text += (
             f"\n# {kit_name.capitalize()} kit: comments off by default.\n"
@@ -251,4 +339,52 @@ def _apply_kit_settings(
 
 def _apply_brochure_settings(project_app_dir: Path) -> None:
     """Backward-compatible alias for tests."""
-    _apply_kit_settings(project_app_dir, "brochure", with_blog=False)
+    _apply_kit_settings(project_app_dir, "brochure", with_blog=False, plugins=None)
+
+
+def _apply_kit_urls(project_app_dir: Path, meta: dict) -> None:
+    """
+    Mount kit urlconf at site root when kit.json declares ``urlconf``.
+
+    Replaces the default static ``index.html`` homepage pattern so player /
+    app kits own ``/`` without fighting mezzanine.pages catch-all ordering.
+    """
+    urlconf = kit_urlconf(meta)
+    if not urlconf:
+        return
+    if not re.fullmatch(r"[\w.]+", urlconf):
+        raise KitError("Invalid kit urlconf %r" % urlconf)
+    urls_path = project_app_dir / "urls.py"
+    if not urls_path.is_file():
+        raise KitError("Project urls.py missing; cannot mount kit urlconf")
+    text = urls_path.read_text(encoding="utf-8")
+    if urlconf in text and "include(\"%s\")" % urlconf in text:
+        return
+    # Strip any prior kit homepage include we may have written.
+    text = re.sub(
+        r'\n?\s*path\(""\s*,\s*include\("[^"]+"\)\),\s*'
+        r"# kit urlconf \(nova\)\n",
+        "\n",
+        text,
+    )
+    home_static = (
+        'path("", TemplateView.as_view(template_name="index.html"), name="home"),'
+    )
+    kit_home = (
+        'path("", include("%s")),  # kit urlconf (nova)' % urlconf
+    )
+    if home_static in text:
+        text = text.replace(home_static, kit_home, 1)
+    else:
+        # Insert before mezzanine.urls include.
+        needle = 'path("", include("mezzanine.urls")),'
+        if needle not in text:
+            raise KitError("Could not mount kit urlconf in urls.py")
+        text = text.replace(needle, kit_home + "\n    " + needle, 1)
+    if "include" not in text.split("from django.urls import", 1)[-1].split("\n", 1)[0]:
+        text = text.replace(
+            "from django.urls import path",
+            "from django.urls import include, path",
+            1,
+        )
+    urls_path.write_text(text, encoding="utf-8")

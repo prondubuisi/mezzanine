@@ -1,0 +1,5 @@
+{% extends "music/base.html" %}
+{% block content %}
+<h1>Library</h1>
+<ul>{% for pl in playlists %}<li><a href="{{ pl.get_absolute_url }}">{{ pl.title }}</a></li>{% endfor %}</ul>
+{% endblock %}

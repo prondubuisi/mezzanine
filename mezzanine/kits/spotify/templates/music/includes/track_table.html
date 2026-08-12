@@ -1,0 +1,40 @@
+{% load i18n %}
+<table class="sp-tracks">
+  <thead>
+    <tr>
+      <th class="sp-col-num">#</th>
+      <th>{% trans "Title" %}</th>
+      <th class="sp-hide-sm">{% trans "Album" %}</th>
+      <th class="sp-col-dur">{% trans "Time" %}</th>
+    </tr>
+  </thead>
+  <tbody>
+  {% for t in tracks %}
+    <tr class="sp-track-row"
+      data-play-title="{{ t.title }}"
+      data-play-artist="{{ t.artist.title }}"
+      data-play-duration="{{ t.duration }}"
+      data-play-cover="{{ t.cover_key }}"
+      tabindex="0" role="button">
+      <td class="sp-col-num">{{ forloop.counter }}</td>
+      <td>
+        <div class="sp-track-title">
+          {{ t.title }}
+          {% if t.explicit %}<span class="sp-e" title="{% trans 'Explicit' %}">E</span>{% endif %}
+        </div>
+        <div class="sp-track-artist">
+          <a href="{{ t.artist.get_absolute_url }}" onclick="event.stopPropagation()">{{ t.artist.title }}</a>
+        </div>
+      </td>
+      <td class="sp-hide-sm">
+        {% if t.album %}
+        <a href="{{ t.album.get_absolute_url }}" onclick="event.stopPropagation()">{{ t.album.title }}</a>
+        {% endif %}
+      </td>
+      <td class="sp-col-dur">{{ t.duration }}</td>
+    </tr>
+  {% empty %}
+    <tr><td colspan="4" class="sp-empty">{% trans "No tracks" %}</td></tr>
+  {% endfor %}
+  </tbody>
+</table>

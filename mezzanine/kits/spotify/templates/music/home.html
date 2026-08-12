@@ -1,0 +1,53 @@
+{% extends "music/base.html" %}
+{% load i18n %}
+{% block title %}{{ greeting }} · {{ site_name }}{% endblock %}
+{% block content %}
+<section class="sp-hero">
+  <h1>{{ greeting }}</h1>
+  <p class="sp-lede">{% trans "Shelves are built from published Playlist and Album records in the CMS." %}</p>
+</section>
+<section class="sp-shelf">
+  <div class="sp-shelf-head">
+    <h2>{% trans "Made for you" %}</h2>
+    <a href="{% url 'music_library' %}">{% trans "Show all" %}</a>
+  </div>
+  <div class="sp-grid">
+    {% for pl in playlists %}
+    <a class="sp-card" href="{{ pl.get_absolute_url }}">
+      <div class="sp-cover cover-{{ pl.cover_key }}"></div>
+      <div class="sp-card-title">{{ pl.title }}</div>
+      <div class="sp-card-sub">{{ pl.description }}</div>
+    </a>
+    {% empty %}
+    <p class="sp-empty">{% trans "No playlists yet. Run seed_music_demo or create them in Admin." %}</p>
+    {% endfor %}
+  </div>
+</section>
+<section class="sp-shelf">
+  <div class="sp-shelf-head"><h2>{% trans "Popular albums" %}</h2></div>
+  <div class="sp-grid">
+    {% for al in albums %}
+    <a class="sp-card" href="{{ al.get_absolute_url }}">
+      <div class="sp-cover cover-{{ al.cover_key }}"></div>
+      <div class="sp-card-title">{{ al.title }}</div>
+      <div class="sp-card-sub">{{ al.artist.title }}</div>
+    </a>
+    {% endfor %}
+  </div>
+</section>
+<section class="sp-shelf">
+  <div class="sp-shelf-head"><h2>{% trans "Jump back in" %}</h2></div>
+  <div class="sp-quick">
+    {% for t in recent %}
+    <button type="button" class="sp-quick-item"
+      data-play-title="{{ t.title }}"
+      data-play-artist="{{ t.artist.title }}"
+      data-play-duration="{{ t.duration }}"
+      data-play-cover="{{ t.cover_key }}">
+      <div class="sp-cover sp-cover-sm cover-{{ t.cover_key }}"></div>
+      <span>{{ t.title }}</span>
+    </button>
+    {% endfor %}
+  </div>
+</section>
+{% endblock %}

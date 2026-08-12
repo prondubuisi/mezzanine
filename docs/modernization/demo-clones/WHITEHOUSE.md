@@ -51,6 +51,7 @@ Login: `admin` / `default` (DEBUG createdb default).
 2. **`seed_site_clone --site whitehouse`** — pages + categories + 8 posts (slugs aligned).
 3. **Page processor** — RichText section pages whose slug matches a `BlogCategory` list posts on the page.
 4. **Homepage river** — shared `includes/recent_posts.html`.
+5. **Shared newsroom shell** — `kit_base.html`, `nova_kits/newsroom.css` (`.nova-banner` / `.nova-grid` / `.nova-card`), same as the Spotify kit.
 
 ## Not in scope (yet)
 

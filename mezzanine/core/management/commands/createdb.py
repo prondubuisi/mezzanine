@@ -116,8 +116,18 @@ class Command(BaseCommand):
         User.objects.create_superuser(*args)
 
     def create_pages(self):
-        # First-party kits: load kit demo fixture (and seed blog for magazine).
+        # First-party kits: seed_profile (kit.json), special commands, or fixtures.
         kit_apps = (
+            (
+                "mezzanine.kits.techcrunch",
+                "Tech news desk",
+                "Startups/venture/AI river (seed_site_clone techcrunch).",
+            ),
+            (
+                "mezzanine.kits.spotify",
+                "Spotify listening theme",
+                "Theme + music plugin: seed CMS artists/albums/tracks/playlists.",
+            ),
             (
                 "mezzanine.kits.whitehouse",
                 "White House–style",
@@ -152,8 +162,25 @@ class Command(BaseCommand):
             if install:
                 if self.verbosity >= 1:
                     print(f"\nLoading {label} demo content ...\n")
-                if app_label == "mezzanine.kits.whitehouse":
-                    call_command("seed_site_clone", site="whitehouse")
+                kit_name = app_label.rsplit(".", 1)[-1]
+                seed_profile = None
+                seed_command = None
+                try:
+                    from mezzanine.kits.loader import (
+                        kit_seed_command,
+                        kit_seed_profile,
+                        load_kit_meta,
+                    )
+
+                    _, meta = load_kit_meta(kit_name)
+                    seed_profile = kit_seed_profile(meta)
+                    seed_command = kit_seed_command(meta)
+                except Exception:  # noqa: BLE001 — fall back to fixtures
+                    pass
+                if seed_profile:
+                    call_command("seed_site_clone", site=seed_profile)
+                elif seed_command:
+                    call_command(seed_command)
                 elif app_label == "mezzanine.kits.wporg":
                     call_command("seed_wporg_demo")
                 else:

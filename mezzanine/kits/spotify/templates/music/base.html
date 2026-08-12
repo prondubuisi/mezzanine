@@ -1,0 +1,99 @@
+{% load static i18n %}
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}{{ site_name }}{% endblock %}</title>
+  <meta name="description" content="{{ disclaimer }}">
+  <link rel="stylesheet" href="{% static 'spotify/player.css' %}">
+  {% include "includes/theme_customizer_css.html" %}
+</head>
+<body class="sp-body">
+  <div class="sp-app" id="sp-app">
+    <aside class="sp-sidebar" aria-label="{% trans 'Main' %}">
+      <div class="sp-brand">
+        <a href="{% url 'home' %}" class="sp-logo">
+          {% if theme_logo_url %}
+          <img src="{{ theme_logo_url }}" alt="" class="sp-logo-img" style="height:1.5rem;width:auto;border-radius:4px">
+          {% else %}
+          <span class="sp-logo-mark" aria-hidden="true"></span>
+          {% endif %}
+          {{ site_name }}
+        </a>
+      </div>
+      <nav class="sp-nav">
+        <a class="sp-nav-item{% if page == 'home' %} is-active{% endif %}" href="{% url 'home' %}">
+          <span class="sp-ico" aria-hidden="true">⌂</span> {% trans "Home" %}
+        </a>
+        <a class="sp-nav-item{% if page == 'search' %} is-active{% endif %}" href="{% url 'music_search' %}">
+          <span class="sp-ico" aria-hidden="true">⌕</span> {% trans "Search" %}
+        </a>
+        <a class="sp-nav-item{% if page == 'library' %} is-active{% endif %}" href="{% url 'music_library' %}">
+          <span class="sp-ico" aria-hidden="true">☰</span> {% trans "Your Library" %}
+        </a>
+      </nav>
+      <div class="sp-sidebar-section">
+        <div class="sp-sidebar-label">{% trans "Playlists" %}</div>
+        <ul class="sp-playlist-list">
+          {% for pl in library_playlists %}
+          <li><a href="{{ pl.get_absolute_url }}">{{ pl.title }}</a></li>
+          {% empty %}
+          <li class="sp-muted">{% trans "Seed music content to populate." %}</li>
+          {% endfor %}
+        </ul>
+      </div>
+      <p class="sp-sidebar-note">{{ disclaimer }}</p>
+    </aside>
+
+    <main class="sp-main">
+      <header class="sp-topbar">
+        <div class="sp-topbar-left">
+          <button type="button" class="sp-chip" onclick="history.back()" aria-label="{% trans 'Back' %}">‹</button>
+          <button type="button" class="sp-chip" onclick="history.forward()" aria-label="{% trans 'Forward' %}">›</button>
+        </div>
+        <div class="sp-topbar-right">
+          <a class="sp-pill" href="{% url 'music_search' %}">{% trans "Search" %}</a>
+          <span class="sp-user" title="{% trans 'Demo account' %}">D</span>
+        </div>
+      </header>
+      <div class="sp-content">{% block content %}{% endblock %}</div>
+    </main>
+
+    <footer class="sp-player" role="region" aria-label="{% trans 'Now playing' %}">
+      <div class="sp-player-track">
+        {% if now_playing %}
+        <div class="sp-cover sp-cover-sm cover-{{ now_playing.cover_key }}" id="np-cover"></div>
+        <div class="sp-player-meta">
+          <div class="sp-player-title" id="np-title">{{ now_playing.title }}</div>
+          <div class="sp-player-artist" id="np-artist">
+            <a href="{{ now_playing.artist.get_absolute_url }}">{{ now_playing.artist.title }}</a>
+          </div>
+        </div>
+        {% else %}
+        <div class="sp-player-meta">
+          <div class="sp-player-title" id="np-title">{% trans "Nothing playing" %}</div>
+          <div class="sp-player-artist" id="np-artist">{% trans "Seed tracks in Admin → Music" %}</div>
+        </div>
+        {% endif %}
+      </div>
+      <div class="sp-player-controls">
+        <div class="sp-player-buttons">
+          <button type="button" class="sp-ctrl" id="np-prev" aria-label="{% trans 'Previous' %}">⏮</button>
+          <button type="button" class="sp-ctrl sp-ctrl-play" id="np-play" aria-label="{% trans 'Play' %}">▶</button>
+          <button type="button" class="sp-ctrl" id="np-next" aria-label="{% trans 'Next' %}">⏭</button>
+        </div>
+        <div class="sp-player-progress">
+          <span id="np-elapsed">0:00</span>
+          <div class="sp-bar" id="np-bar"><div class="sp-bar-fill" id="np-fill"></div></div>
+          <span id="np-duration">{% if now_playing %}{{ now_playing.duration }}{% else %}0:00{% endif %}</span>
+        </div>
+      </div>
+      <div class="sp-player-extra">
+        <span class="sp-muted">{% trans "Demo player — CMS data, no audio" %}</span>
+      </div>
+    </footer>
+  </div>
+  <script src="{% static 'spotify/player.js' %}"></script>
+</body>
+</html>
