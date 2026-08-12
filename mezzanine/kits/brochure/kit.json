@@ -1,0 +1,7 @@
+{
+  "name": "brochure",
+  "version": "0.1.0",
+  "nova_compat": ">=0.1,<2",
+  "types": ["pages.RichTextPage", "pages.Link", "forms.Form"],
+  "tokens": "static/brochure/tokens.css"
+}

@@ -1,0 +1,165 @@
+/*
+ * Bootstrap 3 class shims for operators who keep an old base.html while
+ * dropping full bootstrap.css. Not a full grid — common layout only.
+ */
+.container {
+  width: 100%;
+  max-width: 1170px;
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: 15px;
+  padding-right: 15px;
+}
+
+.container:before,
+.container:after,
+.row:before,
+.row:after,
+.clearfix:before,
+.clearfix:after {
+  content: " ";
+  display: table;
+}
+
+.container:after,
+.row:after,
+.clearfix:after {
+  clear: both;
+}
+
+.row {
+  margin-left: -15px;
+  margin-right: -15px;
+}
+
+.col-md-2,
+.col-md-3,
+.col-md-7,
+.col-md-12,
+.col-xs-12 {
+  position: relative;
+  min-height: 1px;
+  padding-left: 15px;
+  padding-right: 15px;
+  box-sizing: border-box;
+}
+
+@media (min-width: 992px) {
+  .col-md-2 { width: 16.66666667%; float: left; }
+  .col-md-3 { width: 25%; float: left; }
+  .col-md-7 { width: 58.33333333%; float: left; }
+  .col-md-12 { width: 100%; float: left; }
+}
+
+.col-xs-12 { width: 100%; float: left; }
+
+.text-center { text-align: center; }
+.text-right { text-align: right; }
+.pull-right { float: right; }
+.pull-left { float: left; }
+.hidden { display: none !important; }
+.visible-lg { display: none !important; }
+
+@media (min-width: 1200px) {
+  .visible-lg { display: block !important; }
+}
+
+.navbar {
+  position: relative;
+  min-height: 50px;
+  margin-bottom: 20px;
+  border: 1px solid transparent;
+}
+
+.navbar-fixed-top {
+  position: fixed;
+  right: 0;
+  left: 0;
+  top: 0;
+  z-index: 1030;
+  border-width: 0 0 1px;
+}
+
+.navbar-brand {
+  float: left;
+  height: 50px;
+  padding: 15px;
+  font-size: 18px;
+  line-height: 20px;
+  text-decoration: none;
+}
+
+.navbar-text {
+  margin-top: 15px;
+  margin-bottom: 15px;
+}
+
+.breadcrumb {
+  padding: 8px 0;
+  margin-bottom: 20px;
+  list-style: none;
+}
+
+.breadcrumb > li {
+  display: inline-block;
+}
+
+.breadcrumb > li + li:before {
+  content: "/ ";
+  padding: 0 5px;
+  color: #78716c;
+}
+
+.panel {
+  margin-bottom: 20px;
+  background-color: #fff;
+  border: 1px solid transparent;
+}
+
+.panel-body {
+  padding: 15px;
+}
+
+.panel-default {
+  border-color: #e7e5e4;
+}
+
+.alert {
+  padding: 10px 15px;
+  margin-bottom: 20px;
+  border: 1px solid transparent;
+}
+
+.btn {
+  display: inline-block;
+  padding: 6px 12px;
+  margin-bottom: 0;
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 1.42857143;
+  text-align: center;
+  white-space: nowrap;
+  vertical-align: middle;
+  cursor: pointer;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  text-decoration: none;
+}
+
+.form-control {
+  display: block;
+  width: 100%;
+  height: 34px;
+  padding: 6px 12px;
+  font-size: 14px;
+  line-height: 1.42857143;
+  color: #1c1917;
+  background-color: #fff;
+  border: 1px solid #e7e5e4;
+  border-radius: 4px;
+  box-sizing: border-box;
+}
+
+.form-group {
+  margin-bottom: 15px;
+}

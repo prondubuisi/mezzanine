@@ -1,0 +1,62 @@
+/* Brochure design tokens (KD12). Operators override these in the project. */
+:root {
+  --nova-ink: #1c1917;
+  --nova-muted: #78716c;
+  --nova-line: #e7e5e4;
+  --nova-paper: #fafaf9;
+  --nova-white: #ffffff;
+  --nova-accent: #0f766e;
+  --nova-accent-ink: #134e4a;
+  --nova-font-serif: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+  --nova-font-sans: "Avenir Next", "Segoe UI", system-ui, sans-serif;
+  --nova-measure: 40rem;
+  --nova-space: 1.25rem;
+  --nova-radius: 6px;
+}
+
+body {
+  color: var(--nova-ink);
+  background: var(--nova-paper);
+  font-family: var(--nova-font-sans);
+  line-height: 1.6;
+}
+
+a {
+  color: var(--nova-accent);
+}
+
+a:hover,
+a:focus {
+  color: var(--nova-accent-ink);
+}
+
+.navbar-default {
+  background: var(--nova-white);
+  border-color: var(--nova-line);
+}
+
+.navbar-default .navbar-brand {
+  color: var(--nova-ink);
+  font-family: var(--nova-font-serif);
+}
+
+.site-info,
+.breadcrumb {
+  color: var(--nova-muted);
+}
+
+.panel-default {
+  border-color: var(--nova-line);
+  border-radius: var(--nova-radius);
+}
+
+.btn-primary,
+.btn-primary:hover,
+.btn-primary:focus {
+  background-color: var(--nova-accent);
+  border-color: var(--nova-accent-ink);
+}
+
+.middle {
+  max-width: var(--nova-measure);
+}
