@@ -34,7 +34,7 @@ def test_merge_preview_ancestors_bounded_queries(author_user, rf):
         )
         parent = page
     leaf = parent
-    raw = PreviewToken.issue(leaf, created_by=author_user)
+    PreviewToken.issue(leaf, created_by=author_user)
     token = PreviewToken.objects.get()
 
     # Warm contenttypes / site caches outside the measured window.
